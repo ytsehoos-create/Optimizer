@@ -372,13 +372,41 @@ class TradingViewConnector:
     # ------------------------------------------------------------------
 
     def _open_strategy_tester(self):
-        try:
-            tab = self._wait_for(By.XPATH, _SEL["strategy_tester_tab"], timeout=15)
-            tab.click()
-            time.sleep(2)
-            log.debug("Strategy Tester tab opened.")
-        except TimeoutException:
-            log.warning("Could not find Strategy Tester tab — it may already be open.")
+        selectors = [
+            (By.XPATH,       "//div[contains(@class,'tab-label') and contains(.,'Strategy Tester')]"),
+            (By.XPATH,       "//*[@role='tab' and contains(.,'Strategy Tester')]"),
+            (By.XPATH,       "//*[normalize-space(text())='Strategy Tester']"),
+            (By.CSS_SELECTOR,"[data-name='backtesting']"),
+            (By.XPATH,       "//button[contains(@aria-label,'Strategy Tester')]"),
+            (By.XPATH,       "//div[contains(@class,'tabsBar')]//span[contains(normalize-space(),'Strategy Tester')]"),
+        ]
+        for by, sel in selectors:
+            try:
+                tab = WebDriverWait(self.driver, 5).until(EC.element_to_be_clickable((by, sel)))
+                tab.click()
+                time.sleep(2)
+                log.debug("Strategy Tester tab opened via: %s", sel)
+                return
+            except (TimeoutException, Exception):
+                continue
+        log.warning("Could not find Strategy Tester tab — it may already be open.")
+
+    def _ensure_overview_tab(self):
+        """Activate the Overview sub-tab inside Strategy Tester so metrics are visible."""
+        selectors = [
+            (By.XPATH,        "//button[normalize-space()='Overview']"),
+            (By.XPATH,        "//*[@role='tab' and normalize-space()='Overview']"),
+            (By.CSS_SELECTOR, "[data-name='backtesting-overview-tab']"),
+            (By.XPATH,        "//div[contains(@class,'tabs')]//span[normalize-space()='Overview']"),
+        ]
+        for by, sel in selectors:
+            try:
+                tab = WebDriverWait(self.driver, 4).until(EC.element_to_be_clickable((by, sel)))
+                tab.click()
+                time.sleep(0.5)
+                return
+            except (TimeoutException, Exception):
+                continue
 
     # ------------------------------------------------------------------
     # Changing strategy inputs
@@ -398,35 +426,93 @@ class TradingViewConnector:
         time.sleep(wait_time)
 
     def _open_settings_dialog(self):
-        for selector in [_SEL["strategy_settings_gear"], _SEL["strategy_gear_alt"]]:
+        """Open the strategy-specific Settings dialog; raises if it cannot be opened."""
+        selectors = [
+            # data-name attributes — most stable across TradingView deployments
+            (By.CSS_SELECTOR, "[data-name='strategy-tester-properties-button']"),
+            (By.CSS_SELECTOR, "[data-action='open-strategy-dialog']"),
+            # Legend/data-window gear next to the strategy name
+            (By.XPATH, "//div[contains(@class,'legend') or contains(@class,'Legend')]"
+                       "//button[@aria-label='Settings' or @data-tooltip='Settings' or @aria-label='Format']"),
+            # Gear specifically NOT inside the top header bar
+            (By.XPATH, "//button[@data-tooltip='Settings' and not(ancestor::header)]"),
+            (By.XPATH, "//button[@data-tooltip='Strategy settings']"),
+            (By.XPATH, "//button[@aria-label='Settings' and not(ancestor::header)]"),
+            (By.XPATH, "//button[@aria-label='Format' and not(ancestor::header)]"),
+            # Strategy controls bar
+            (By.XPATH, "//div[contains(@class,'strategy-controls') or contains(@class,'strategyGroup')]//button"),
+            # Any visible gear-class button
+            (By.XPATH, "//button[contains(@class,'gear') or contains(@class,'Gear')]"),
+            # Original selectors from _SEL as final fallback
+            (By.XPATH, _SEL["strategy_settings_gear"]),
+            (By.XPATH, _SEL["strategy_gear_alt"]),
+        ]
+        for by, sel in selectors:
             try:
-                gear = self._wait_for(By.XPATH, selector, timeout=10)
-                gear.click()
-                time.sleep(1)
-                return
-            except TimeoutException:
+                el = WebDriverWait(self.driver, 4).until(EC.element_to_be_clickable((by, sel)))
+                if not el.is_displayed():
+                    continue
+                self.driver.execute_script("arguments[0].click();", el)
+                time.sleep(1.5)
+                if self._is_settings_dialog_open():
+                    log.debug("Settings dialog opened via: %s", sel)
+                    return
+            except (TimeoutException, Exception):
                 continue
 
-        # Last resort: find any visible settings gear near the strategy
+        self.take_screenshot("settings_dialog_debug.png")
+        raise RuntimeError(
+            "Could not open the strategy Settings dialog.\n"
+            "Screenshot saved as settings_dialog_debug.png — check that a PineScript "
+            "strategy is loaded on the chart URL you provided."
+        )
+
+    def _is_settings_dialog_open(self) -> bool:
+        """Return True if a settings/properties modal is currently visible."""
+        for css in [
+            "[role='dialog']",
+            ".tv-dialog",
+            "[data-name='pine-script-properties-dialog']",
+            "[data-name*='dialog']",
+            "[class*='Dialog'][class*='open']",
+            "[class*='dialog--open']",
+            "[class*='modal'][class*='open']",
+        ]:
+            try:
+                if any(e.is_displayed() for e in self.driver.find_elements(By.CSS_SELECTOR, css)):
+                    return True
+            except Exception:
+                pass
+        # Broader check: is any overlay/modal visible at all?
         try:
-            gears = self.driver.find_elements(By.CSS_SELECTOR, "button[data-tooltip='Settings']")
-            for g in gears:
-                if g.is_displayed():
-                    g.click()
-                    time.sleep(1)
-                    return
+            overlays = self.driver.find_elements(
+                By.XPATH, "//*[contains(@class,'Dialog') or contains(@class,'dialog') or contains(@class,'modal')]"
+            )
+            if any(o.is_displayed() for o in overlays):
+                return True
         except Exception:
             pass
-
-        raise RuntimeError("Could not find the strategy Settings button.")
+        return False
 
     def _navigate_to_inputs_tab(self):
-        try:
-            tab = self._wait_for(By.XPATH, _SEL["inputs_tab"], timeout=8)
-            tab.click()
-            time.sleep(0.5)
-        except TimeoutException:
-            log.debug("Inputs tab click skipped (may already be active).")
+        selectors = [
+            (By.XPATH,        _SEL["inputs_tab"]),
+            (By.XPATH,        "//button[normalize-space()='Inputs']"),
+            (By.XPATH,        "//*[@role='tab' and normalize-space()='Inputs']"),
+            (By.CSS_SELECTOR, "[data-name='inputs-tab']"),
+            (By.XPATH,        "//div[contains(@class,'tabs')]//span[normalize-space()='Inputs']"),
+            (By.XPATH,        "//*[normalize-space(text())='Inputs' and (self::button or self::span or self::li)]"),
+        ]
+        for by, sel in selectors:
+            try:
+                tab = WebDriverWait(self.driver, 5).until(EC.element_to_be_clickable((by, sel)))
+                tab.click()
+                time.sleep(0.5)
+                log.debug("Inputs tab activated via: %s", sel)
+                return
+            except (TimeoutException, Exception):
+                continue
+        log.debug("Inputs tab click skipped (may already be active).")
 
     def _set_input_field(self, label: str, value: Any):
         """Find the input field by its label text and update its value."""
@@ -507,6 +593,10 @@ class TradingViewConnector:
 
     def read_metrics(self) -> BacktestMetrics:
         """Extract performance metrics from the Strategy Tester overview panel."""
+        # Make sure the Overview sub-tab is visible
+        self._ensure_overview_tab()
+        time.sleep(1)
+
         # Try many different selectors for TradingView's ever-changing DOM
         panel_candidates = [
             (By.CSS_SELECTOR, "[data-name='performance-overview-table']"),
@@ -548,6 +638,24 @@ class TradingViewConnector:
         except Exception:
             pass
 
+        # Absolute last resort: scan every element that mentions Net Profit
+        try:
+            els = self.driver.find_elements(
+                By.XPATH,
+                "//*[.//span[normalize-space()='Net Profit'] or .//div[normalize-space()='Net Profit']]"
+            )
+            # prefer smaller containers (more specific)
+            for el in sorted(els, key=lambda e: len(e.text or "")):
+                text = el.text or ""
+                if "Net Profit" in text:
+                    m = self._parse_overview_text(text)
+                    if m.net_profit is not None or m.profit_factor is not None:
+                        return m
+        except Exception:
+            pass
+
+        self.take_screenshot("metrics_debug.png")
+        log.warning("Metrics extraction failed. Screenshot: metrics_debug.png")
         return self._extract_metrics_row_by_row()
 
     def _parse_overview_text(self, text: str) -> BacktestMetrics:
