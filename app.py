@@ -427,6 +427,13 @@ class App(ctk.CTk):
         ctk.CTkCheckBox(sb, text="Headless browser (no window)",
                         variable=self._headless_var).pack(padx=16, pady=(8, 0), anchor="w")
 
+        self._manual_login_var = ctk.BooleanVar(value=False)
+        ctk.CTkCheckBox(sb, text="Manual login (log in yourself)",
+                        variable=self._manual_login_var).pack(padx=16, pady=(4, 0), anchor="w")
+        ctk.CTkLabel(sb, text="  ↑ use if auto-login fails",
+                     font=ctk.CTkFont(size=10), text_color="#8b949e").pack(
+                     padx=16, anchor="w")
+
         section("Optimization")
         ctk.CTkLabel(sb, text="Algorithm", font=ctk.CTkFont(size=11)).pack(
             padx=16, pady=(4, 0), anchor="w")
@@ -1084,7 +1091,8 @@ class App(ctk.CTk):
         tv["chart_url"]    = self._url_var.get().strip()
         tv["username"]     = self._user_var.get().strip()
         tv["password"]     = self._pass_var.get()
-        tv["headless"]     = self._headless_var.get()
+        tv["headless"]      = self._headless_var.get()
+        tv["manual_login"]  = self._manual_login_var.get()
         try:
             tv["backtest_wait"] = int(self._wait_var.get())
         except ValueError:
@@ -1156,8 +1164,9 @@ class App(ctk.CTk):
         data = {
             "chart_url":    self._url_var.get(),
             "username":     self._user_var.get(),
-            "headless":     self._headless_var.get(),
-            "algorithm":    self._algo_var.get(),
+            "headless":      self._headless_var.get(),
+            "manual_login":  self._manual_login_var.get(),
+            "algorithm":     self._algo_var.get(),
             "metric":       self._metric_var.get(),
             "maximize":     self._maximize_var.get(),
             "trials":       self._trials_var.get(),
@@ -1200,6 +1209,7 @@ class App(ctk.CTk):
         self._url_var.set(d.get("chart_url", ""))
         self._user_var.set(d.get("username", ""))
         self._headless_var.set(d.get("headless", False))
+        self._manual_login_var.set(d.get("manual_login", False))
         self._algo_var.set(d.get("algorithm", "random"))
         self._metric_var.set(d.get("metric", "net_profit"))
         self._maximize_var.set(d.get("maximize", True))

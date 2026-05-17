@@ -153,70 +153,82 @@ class TradingViewConnector:
         password  = self.config.get("password")  or os.getenv("TV_PASSWORD", "")
         chart_url = self.config.get("chart_url") or os.getenv("TV_CHART_URL", "")
 
-        if not username or not password:
-            raise RuntimeError(
-                "TradingView credentials not set. "
-                "Enter your username and password in the Settings sidebar."
-            )
         if not chart_url:
             raise RuntimeError(
                 "Chart URL not set. Paste your TradingView chart URL in the Settings sidebar."
             )
 
-        # ── Step 1: navigate directly to the signin page ────────────────
-        # Avoids the fragile header-button click entirely.
-        log.info("Navigating to TradingView sign-in page…")
-        self.driver.get("https://www.tradingview.com/accounts/signin/")
-        time.sleep(3)
+        manual = self.config.get("manual_login", False)
 
-        # ── Step 2: pick the Email option ────────────────────────────────
-        self._click_email_option()
-
-        # ── Step 3: fill credentials (handles 1-step and 2-step flows) ──
-        time.sleep(2)  # let form animate in after email button click
-
-        # Try to fill username / email
-        if not self._fill_credential_field(["username", "email"], username):
-            self.take_screenshot("login_debug.png")
-            raise RuntimeError(
-                "Could not find the username/email input.\n"
-                "A screenshot was saved as login_debug.png next to app.py — "
-                "check what the browser is showing."
-            )
-
-        # Some flows show only the email field first, then a Continue button
-        self._click_continue_if_present()
-
-        # Now fill password
-        if not self._fill_credential_field(["password"], password):
-            self.take_screenshot("login_debug.png")
-            raise RuntimeError("Could not find the password input.")
-
-        # ── Step 4: submit ───────────────────────────────────────────────
-        self._submit_login()
-        time.sleep(4)
-
-        # ── Step 5: detect failure ───────────────────────────────────────
-        if "accounts/signin" in self.driver.current_url:
-            # Still on the sign-in page — wrong credentials or captcha
-            page_text = self.driver.find_element(By.TAG_NAME, "body").text.lower()
-            if "captcha" in page_text or "robot" in page_text:
+        if manual:
+            # ── Manual login mode ────────────────────────────────────────
+            # Open the signin page and wait up to 3 minutes for the user
+            # to log in themselves, then take over.
+            log.info("Manual login mode — waiting for you to sign in to TradingView…")
+            self.driver.get("https://www.tradingview.com/accounts/signin/")
+            print("\n" + "="*60)
+            print("  ACTION REQUIRED")
+            print("  Please log in to TradingView in the Chrome window.")
+            print("  You have 3 minutes.")
+            print("="*60 + "\n")
+            # Wait until we leave the signin page (up to 180s)
+            for _ in range(180):
+                time.sleep(1)
+                if "accounts/signin" not in self.driver.current_url:
+                    break
+            else:
+                raise RuntimeError("Timed out waiting for manual login (3 minutes).")
+        else:
+            # ── Automated login ──────────────────────────────────────────
+            if not username or not password:
                 raise RuntimeError(
-                    "TradingView is showing a CAPTCHA. Run with headless=False, "
-                    "complete the CAPTCHA manually, then retry."
+                    "Credentials not set. Enter username and password in the sidebar,\n"
+                    "or enable Manual Login mode."
                 )
-            raise RuntimeError(
-                "Login failed. Check your TradingView username and password."
-            )
+            log.info("Navigating to TradingView sign-in page…")
+            self.driver.get("https://www.tradingview.com/accounts/signin/")
+            time.sleep(3)
 
-        # ── Step 6: load chart ───────────────────────────────────────────
+            self._click_email_option()
+            time.sleep(2)
+
+            if not self._fill_credential_field(["username", "email"], username):
+                self.take_screenshot("login_debug.png")
+                raise RuntimeError(
+                    "Could not fill the username/email field.\n"
+                    "Screenshot saved as login_debug.png — send it for debugging,\n"
+                    "or enable Manual Login mode in the sidebar."
+                )
+
+            self._click_continue_if_present()
+
+            if not self._fill_credential_field(["password"], password):
+                self.take_screenshot("login_debug.png")
+                raise RuntimeError(
+                    "Could not fill the password field.\n"
+                    "Screenshot saved as login_debug.png."
+                )
+
+            self._submit_login()
+            time.sleep(4)
+
+            if "accounts/signin" in self.driver.current_url:
+                page_text = self.driver.find_element(By.TAG_NAME, "body").text.lower()
+                if "captcha" in page_text or "robot" in page_text:
+                    raise RuntimeError(
+                        "TradingView is showing a CAPTCHA.\n"
+                        "Enable Manual Login mode in the sidebar to complete it yourself."
+                    )
+                raise RuntimeError(
+                    "Login failed — check your TradingView username and password."
+                )
+
         log.info("Login successful. Loading chart: %s", chart_url)
         self.driver.get(chart_url)
         time.sleep(5)
-
         self._open_strategy_tester()
         self._logged_in = True
-        log.info("Login and chart load complete.")
+        log.info("Chart loaded.")
 
     def _click_email_option(self):
         """Click whichever 'continue with email' button TradingView is showing."""
