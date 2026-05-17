@@ -89,7 +89,10 @@ class StrategyOptimizer:
     def _evaluate(self, params: Dict[str, Any], metric: str,
                   maximize: bool, weights: dict) -> OptimizationResult:
         try:
-            self._connector.set_inputs(params)
+            # Convert name→label so TradingView can find inputs by their UI label text
+            name_to_label = {p.name: p.label for p in self.space.parameters}
+            tv_params = {name_to_label.get(k, k): v for k, v in params.items()}
+            self._connector.set_inputs(tv_params)
             metrics = self._connector.read_metrics()
             score = compute_score(metrics, metric, maximize, weights)
             result = OptimizationResult(params=params, metrics=metrics, score=score)

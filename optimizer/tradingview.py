@@ -430,29 +430,53 @@ class TradingViewConnector:
 
     def _set_input_field(self, label: str, value: Any):
         """Find the input field by its label text and update its value."""
-        # Build XPath: find the row containing the label, then the input inside it
-        xpath = (
-            f"//div[contains(@class,'input-wrapper') or contains(@class,'cell-title')]"
-            f"[.//label[normalize-space()='{label}'] or "
-            f".//span[normalize-space()='{label}']]"
-            f"//following-sibling::div//input | "
-            # Alternative structure
-            f"//tr[.//td[normalize-space()='{label}']]//input | "
-            f"//div[@class and .//div[normalize-space()='{label}']]//input[@type='text' or @type='number']"
-        )
+        escaped = label.replace("'", "\\'")
+
+        # Try progressively broader XPath strategies for TradingView's inputs dialog
+        xpaths = [
+            # Table row containing the label → input in same row
+            f"//tr[.//*[normalize-space()='{escaped}']]//input",
+            # Any ancestor up to 3 levels that also contains the label → input
+            f"//*[normalize-space(text())='{escaped}']/ancestor::*[3]//input",
+            f"//*[normalize-space(text())='{escaped}']/ancestor::*[2]//input",
+            # Label followed immediately by an input
+            f"//*[normalize-space(text())='{escaped}']/following::input[1]",
+            # Parent's sibling contains input
+            f"//*[normalize-space(text())='{escaped}']/../following-sibling::*//input",
+            f"//*[normalize-space(text())='{escaped}']/../following-sibling::input",
+            # Contains match for partial label text (last resort)
+            f"//*[contains(normalize-space(text()),'{escaped}')]/following::input[1]",
+        ]
+
+        inp = None
+        for xpath in xpaths:
+            try:
+                candidates = self.driver.find_elements(By.XPATH, xpath)
+                visible = [el for el in candidates if el.is_displayed()]
+                if visible:
+                    inp = visible[0]
+                    break
+            except Exception:
+                continue
+
+        if inp is None:
+            log.warning("Input field for '%s' not found — skipping.", label)
+            return
+
         try:
-            inputs = self.driver.find_elements(By.XPATH, xpath)
-            if not inputs:
-                # Broader fallback
-                inputs = self._find_input_by_label_proximity(label)
-
-            if not inputs:
-                log.warning("Input field for '%s' not found — skipping.", label)
-                return
-
-            inp = inputs[0]
-            self.driver.execute_script("arguments[0].scrollIntoView(true);", inp)
+            self.driver.execute_script("arguments[0].scrollIntoView({block:'center'});", inp)
             time.sleep(0.1)
+            # Use JS native value setter (works with React controlled inputs)
+            self.driver.execute_script("""
+                var el = arguments[0], val = arguments[1];
+                var setter = Object.getOwnPropertyDescriptor(
+                    window.HTMLInputElement.prototype, 'value').set;
+                setter.call(el, val);
+                el.dispatchEvent(new Event('input',  {bubbles: true}));
+                el.dispatchEvent(new Event('change', {bubbles: true}));
+            """, inp, str(value))
+            time.sleep(0.05)
+            # Belt-and-braces: also send_keys so the browser sees the value
             inp.click()
             inp.send_keys(Keys.CONTROL + "a")
             inp.send_keys(str(value))
@@ -460,23 +484,6 @@ class TradingViewConnector:
             log.debug("Set '%s' = %s", label, value)
         except (StaleElementReferenceException, Exception) as e:
             log.warning("Failed to set input '%s': %s", label, e)
-
-    def _find_input_by_label_proximity(self, label: str):
-        """Scan all visible labels and return the sibling/nearby input."""
-        all_labels = self.driver.find_elements(
-            By.XPATH,
-            f"//label[normalize-space()='{label}'] | //span[normalize-space()='{label}']"
-        )
-        for lbl in all_labels:
-            try:
-                # Try parent row's input
-                row = lbl.find_element(By.XPATH, "./ancestor::tr[1] | ./ancestor::div[@class][1]")
-                inputs = row.find_elements(By.TAG_NAME, "input")
-                if inputs:
-                    return inputs
-            except Exception:
-                continue
-        return []
 
     def _click_ok(self):
         ok_xpaths = [
@@ -500,22 +507,48 @@ class TradingViewConnector:
 
     def read_metrics(self) -> BacktestMetrics:
         """Extract performance metrics from the Strategy Tester overview panel."""
-        metrics = BacktestMetrics()
+        # Try many different selectors for TradingView's ever-changing DOM
+        panel_candidates = [
+            (By.CSS_SELECTOR, "[data-name='performance-overview-table']"),
+            (By.CSS_SELECTOR, "[class*='report-overview']"),
+            (By.CSS_SELECTOR, "[class*='performanceReport']"),
+            (By.CSS_SELECTOR, "[class*='backtestReport']"),
+            (By.CSS_SELECTOR, "[class*='strategy-report']"),
+            # Find a container that has "Net Profit" text inside it
+            (By.XPATH, "//div[.//span[normalize-space()='Net Profit'] or .//div[normalize-space()='Net Profit']]"),
+            (By.XPATH, "//div[contains(@class,'overview') or contains(@class,'Overview')]"),
+            (By.XPATH, "//div[contains(@class,'report') or contains(@class,'Report')][.//span[contains(text(),'Profit')]]"),
+        ]
 
-        # Try the structured overview table approach
+        for by, sel in panel_candidates:
+            try:
+                el = WebDriverWait(self.driver, 6).until(EC.presence_of_element_located((by, sel)))
+                text = el.text
+                if "Net Profit" in text or "Profit Factor" in text:
+                    return self._parse_overview_text(text)
+            except (TimeoutException, Exception):
+                continue
+
+        # Last resort: dump text from the entire strategy tester bottom panel
+        log.warning("Overview panel not found; attempting row-by-row extraction.")
         try:
-            overview = self._wait_for(
-                By.XPATH,
-                "//div[contains(@class,'report-overview') or contains(@class,'performance')]",
-                timeout=10,
-            )
-            text = overview.text
-            metrics = self._parse_overview_text(text)
-        except TimeoutException:
-            log.warning("Overview panel not found; attempting row-by-row extraction.")
-            metrics = self._extract_metrics_row_by_row()
+            # TradingView's strategy tester tab content
+            tester_candidates = [
+                "[data-name='backtesting']",
+                "[class*='strategyTester']",
+                "[class*='strategy-tester']",
+                "[class*='backtesting']",
+            ]
+            for css in tester_candidates:
+                els = self.driver.find_elements(By.CSS_SELECTOR, css)
+                for el in els:
+                    text = el.text
+                    if "Net Profit" in text:
+                        return self._parse_overview_text(text)
+        except Exception:
+            pass
 
-        return metrics
+        return self._extract_metrics_row_by_row()
 
     def _parse_overview_text(self, text: str) -> BacktestMetrics:
         """Parse raw text dumped from the overview panel."""
@@ -551,23 +584,35 @@ class TradingViewConnector:
         return m
 
     def _extract_metrics_row_by_row(self) -> BacktestMetrics:
-        """Fallback: find specific elements by class/aria patterns."""
+        """Fallback: find metric values by locating their label text then reading siblings."""
         m = BacktestMetrics()
 
-        def _get(xpath: str) -> Optional[float]:
-            try:
-                el = self.driver.find_element(By.XPATH, xpath)
-                return _parse_number(el.text)
-            except NoSuchElementException:
-                return None
+        def _get_by_label(label: str) -> Optional[float]:
+            # Find the element with the label text, then grab the closest numeric sibling
+            xpaths = [
+                f"//*[normalize-space()='{label}']/following-sibling::*[1]",
+                f"//*[normalize-space()='{label}']/following::*[self::span or self::div][normalize-space()][1]",
+                f"//*[normalize-space()='{label}']/../following-sibling::*[1]",
+                f"//*[normalize-space()='{label}']/..//*[contains(@class,'value') or contains(@class,'Value')][1]",
+            ]
+            for xpath in xpaths:
+                try:
+                    el = self.driver.find_element(By.XPATH, xpath)
+                    val = _parse_number(el.text)
+                    if val is not None:
+                        return val
+                except NoSuchElementException:
+                    continue
+            return None
 
-        # These selectors target TradingView's strategy tester DOM
-        base = "//div[contains(@class,'report-overview-item')]"
-        m.net_profit = _get(f"{base}[.//span[text()='Net Profit']]//span[2]")
-        m.profit_factor = _get(f"{base}[.//span[text()='Profit Factor']]//span[2]")
-        m.percent_profitable = _get(f"{base}[.//span[text()='Percent Profitable']]//span[2]")
-        m.max_drawdown = _get(f"{base}[.//span[contains(text(),'Max Drawdown')]]//span[2]")
-        m.sharpe_ratio = _get(f"{base}[.//span[text()='Sharpe Ratio']]//span[2]")
+        m.net_profit        = _get_by_label("Net Profit")
+        m.profit_factor     = _get_by_label("Profit Factor")
+        m.percent_profitable= _get_by_label("Percent Profitable")
+        m.max_drawdown      = _get_by_label("Max Drawdown")
+        m.sharpe_ratio      = _get_by_label("Sharpe Ratio")
+        m.sortino_ratio     = _get_by_label("Sortino Ratio")
+        m.total_trades      = int(_get_by_label("Total Closed Trades") or 0) or None
+        m.avg_trade         = _get_by_label("Avg Trade")
 
         return m
 
