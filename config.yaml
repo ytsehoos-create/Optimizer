@@ -1,0 +1,61 @@
+# TradingView PineScript Strategy Optimizer Configuration
+
+tradingview:
+  url: "https://www.tradingview.com"
+  # Credentials can also be set via env vars: TV_USERNAME, TV_PASSWORD
+  username: ""
+  password: ""
+  # Chart URL containing your strategy (copy from TradingView address bar)
+  chart_url: ""
+  headless: false          # Run browser in headless mode
+  browser: "chrome"        # chrome or firefox
+  page_load_timeout: 30    # seconds
+  backtest_wait: 8         # seconds to wait for backtest to recalculate
+  implicit_wait: 10        # seconds for element waits
+
+optimization:
+  algorithm: "grid"        # grid | random | genetic | bayesian
+  metric: "net_profit"     # Primary metric to maximize
+  # Available metrics: net_profit, profit_factor, percent_profitable,
+  #                    sharpe_ratio, sortino_ratio, max_drawdown,
+  #                    total_trades, calmar_ratio, composite
+  maximize: true           # true = maximize metric, false = minimize
+
+  # Composite scoring weights (used when metric = "composite")
+  composite_weights:
+    net_profit: 0.30
+    profit_factor: 0.25
+    percent_profitable: 0.20
+    sharpe_ratio: 0.15
+    max_drawdown: -0.10    # negative = lower drawdown is better
+
+  random_search:
+    n_trials: 100
+    seed: 42
+
+  genetic:
+    population_size: 30
+    generations: 20
+    crossover_prob: 0.7
+    mutation_prob: 0.2
+    tournament_size: 3
+    seed: 42
+    elite_size: 2          # top N individuals preserved each generation
+
+  bayesian:
+    n_calls: 50
+    n_random_starts: 10
+    seed: 42
+
+reporting:
+  output_dir: "reports"
+  formats:
+    - html
+    - csv
+  top_n: 20               # Number of top results to highlight
+  generate_heatmaps: true
+  generate_3d_plots: false
+
+logging:
+  level: "INFO"           # DEBUG | INFO | WARNING | ERROR
+  log_file: "optimizer.log"
