@@ -501,7 +501,7 @@ class App(ctk.CTk):
         ctk.CTkButton(tb, text="🔍 Detect from TradingView",
                       fg_color="#238636", hover_color="#2ea043",
                       command=self._detect_from_tv).pack(side="right", padx=(8, 0))
-        ctk.CTkButton(tb, text="Load Strategy File (.py)", fg_color="#21262d",
+        ctk.CTkButton(tb, text="Load Strategy File (.pine / .py)", fg_color="#21262d",
                       border_color="#30363d", border_width=1,
                       command=self._load_strategy_file).pack(side="right")
 
@@ -699,12 +699,51 @@ class App(ctk.CTk):
 
     def _load_strategy_file(self):
         path = filedialog.askopenfilename(
-            title="Open Strategy Parameter File",
-            filetypes=[("Python files", "*.py"), ("All files", "*.*")],
+            title="Open Strategy File",
+            filetypes=[
+                ("PineScript / Text files", "*.pine *.txt"),
+                ("Python parameter files",  "*.py"),
+                ("All files",               "*.*"),
+            ],
             initialdir=os.path.join(os.path.dirname(__file__), "examples"),
         )
         if not path:
             return
+
+        ext = os.path.splitext(path)[1].lower()
+        if ext in (".pine", ".txt"):
+            self._load_pine_file(path)
+        else:
+            self._load_python_file(path)
+
+    def _load_pine_file(self, path: str):
+        """Parse a .pine / .txt PineScript file and show DetectDialog for review."""
+        try:
+            from optimizer.pine_parser import PineScriptParser
+            detected = PineScriptParser().parse_file(path)
+        except Exception as exc:
+            messagebox.showerror("Parse Error", str(exc), parent=self)
+            return
+
+        if not detected:
+            messagebox.showinfo(
+                "No Inputs Found",
+                "No optimizable input.*() calls were found in this file.\n\n"
+                "Make sure the file contains Pine v5 input.int(), input.float(),\n"
+                "input.bool(), or input.string() declarations.",
+                parent=self,
+            )
+            return
+
+        dlg = DetectDialog(self, detected)
+        self.wait_window(dlg)
+        if dlg.accepted:
+            self.parameters.extend(dlg.accepted)
+            self._refresh_param_tree()
+            self._status(f"Loaded {len(dlg.accepted)} inputs from {os.path.basename(path)}")
+
+    def _load_python_file(self, path: str):
+        """Load a Python ParameterSpace definition file (existing behaviour)."""
         try:
             spec = importlib.util.spec_from_file_location("_strat", path)
             mod  = importlib.util.module_from_spec(spec)

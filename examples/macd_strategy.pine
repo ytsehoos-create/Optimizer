@@ -1,0 +1,41 @@
+//@version=5
+// MACD + ATR Strategy
+// Load this file in the optimizer UI to auto-detect all inputs.
+strategy("MACD ATR Strategy", overlay=true,
+         default_qty_type=strategy.percent_of_equity, default_qty_value=100)
+
+// ── Inputs ─────────────────────────────────────────────────────────────────
+fast_length   = input.int(12,  "Fast Length",    minval=2,  maxval=100, step=1)
+slow_length   = input.int(26,  "Slow Length",    minval=5,  maxval=200, step=1)
+signal_length = input.int(9,   "Signal Length",  minval=1,  maxval=50,  step=1)
+atr_period    = input.int(14,  "ATR Period",     minval=5,  maxval=50,  step=1)
+atr_mult      = input.float(1.5, "ATR Multiplier", minval=0.5, maxval=5.0, step=0.1)
+ma_type       = input.string("EMA", "Trend Filter MA", options=["EMA", "SMA", "WMA"])
+trend_length  = input.int(200, "Trend MA Length", minval=50, maxval=400, step=10)
+use_filter    = input.bool(true, "Use Trend Filter")
+
+// ── Calculations ────────────────────────────────────────────────────────────
+[macdLine, signalLine, _] = ta.macd(close, fast_length, slow_length, signal_length)
+atr = ta.atr(atr_period)
+
+trend_ma = ma_type == "EMA" ? ta.ema(close, trend_length) :
+           ma_type == "SMA" ? ta.sma(close, trend_length) :
+           ta.wma(close, trend_length)
+
+trend_ok = not use_filter or close > trend_ma
+
+// ── Entries ─────────────────────────────────────────────────────────────────
+longCond  = ta.crossover(macdLine, signalLine) and trend_ok
+shortCond = ta.crossunder(macdLine, signalLine) and not trend_ok
+
+if longCond
+    strategy.entry("Long", strategy.long)
+    strategy.exit("Long Exit", "Long",
+                  loss   = atr * atr_mult * 10,
+                  profit = atr * atr_mult * 20)
+
+if shortCond
+    strategy.entry("Short", strategy.short)
+    strategy.exit("Short Exit", "Short",
+                  loss   = atr * atr_mult * 10,
+                  profit = atr * atr_mult * 20)

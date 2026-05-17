@@ -1,0 +1,31 @@
+//@version=5
+// RSI + Bollinger Bands Strategy
+strategy("RSI BB Strategy", overlay=true,
+         default_qty_type=strategy.percent_of_equity, default_qty_value=100)
+
+// ── Inputs ─────────────────────────────────────────────────────────────────
+rsi_length  = input.int(14,  "RSI Length",      minval=2,  maxval=50,  step=1)
+rsi_ob      = input.int(70,  "RSI Overbought",  minval=60, maxval=90,  step=5)
+rsi_os      = input.int(30,  "RSI Oversold",    minval=10, maxval=40,  step=5)
+bb_length   = input.int(20,  "BB Length",       minval=5,  maxval=100, step=5)
+bb_mult     = input.float(2.0, "BB Multiplier", minval=1.0, maxval=4.0, step=0.25)
+trend_len   = input.int(200, "Trend MA Length", minval=50, maxval=400, step=50)
+use_filter  = input.bool(true, "Use Trend Filter")
+
+// ── Calculations ────────────────────────────────────────────────────────────
+rsi              = ta.rsi(close, rsi_length)
+[bb_mid, bb_up, bb_dn] = ta.bb(close, bb_length, bb_mult)
+above_trend      = close > ta.sma(close, trend_len)
+
+longCond  = rsi < rsi_os and close <= bb_dn and (not use_filter or above_trend)
+shortCond = rsi > rsi_ob and close >= bb_up and (not use_filter or not above_trend)
+
+if longCond
+    strategy.entry("Long", strategy.long)
+if shortCond
+    strategy.entry("Short", strategy.short)
+
+if strategy.position_size > 0 and rsi > 50
+    strategy.close("Long")
+if strategy.position_size < 0 and rsi < 50
+    strategy.close("Short")
