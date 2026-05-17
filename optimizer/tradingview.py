@@ -162,22 +162,36 @@ class TradingViewConnector:
 
         if manual:
             # ── Manual login mode ────────────────────────────────────────
-            # Open the signin page and wait up to 3 minutes for the user
-            # to log in themselves, then take over.
-            log.info("Manual login mode — waiting for you to sign in to TradingView…")
+            log.info("Manual login mode — waiting for you to sign in…")
             self.driver.get("https://www.tradingview.com/accounts/signin/")
             print("\n" + "="*60)
             print("  ACTION REQUIRED")
-            print("  Please log in to TradingView in the Chrome window.")
-            print("  You have 3 minutes.")
-            print("="*60 + "\n")
-            # Wait until we leave the signin page (up to 180s)
-            for _ in range(180):
+            print("  Log in to TradingView in the Chrome window.")
+            print("  Chrome will stay open for 90 seconds.")
+            print("="*60)
+
+            deadline = time.time() + 90
+            while time.time() < deadline:
+                remaining = int(deadline - time.time())
+                if remaining % 15 == 0:
+                    print(f"  Waiting for login… {remaining}s remaining")
                 time.sleep(1)
-                if "accounts/signin" not in self.driver.current_url:
-                    break
+                # Early-exit once we see the logged-in user menu
+                try:
+                    els = self.driver.find_elements(
+                        By.CSS_SELECTOR,
+                        "[data-name='header-user-menu-button'], "
+                        "[class*='userMenuButton'], "
+                        "[class*='tv-header__user']",
+                    )
+                    if any(e.is_displayed() for e in els):
+                        print("  Login detected — continuing!")
+                        break
+                except Exception:
+                    pass
             else:
-                raise RuntimeError("Timed out waiting for manual login (3 minutes).")
+                raise RuntimeError("Timed out waiting for manual login (90 seconds).")
+
         else:
             # ── Automated login ──────────────────────────────────────────
             if not username or not password:
