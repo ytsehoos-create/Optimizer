@@ -38,10 +38,11 @@ class StrategyOptimizer:
         opt.report(results)
     """
 
-    def __init__(self, space: ParameterSpace, config: dict):
+    def __init__(self, space: ParameterSpace, config: dict, on_result=None):
         self.space = space
         self.config = config
         self._connector: Optional[TradingViewConnector] = None
+        self._on_result = on_result  # callable(OptimizationResult) for live UI updates
 
     # ------------------------------------------------------------------
     # Public API
@@ -91,15 +92,18 @@ class StrategyOptimizer:
             self._connector.set_inputs(params)
             metrics = self._connector.read_metrics()
             score = compute_score(metrics, metric, maximize, weights)
-            return OptimizationResult(params=params, metrics=metrics, score=score)
+            result = OptimizationResult(params=params, metrics=metrics, score=score)
         except Exception as exc:
             log.error("Evaluation error for params %s: %s", params, exc)
-            return OptimizationResult(
+            result = OptimizationResult(
                 params=params,
                 metrics=BacktestMetrics(),
                 score=float("-inf"),
                 error=str(exc),
             )
+        if self._on_result:
+            self._on_result(result)
+        return result
 
     def _build_algorithm(self, name: str):
         opt_cfg = self.config.get("optimization", {})
