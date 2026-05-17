@@ -149,54 +149,138 @@ class TradingViewConnector:
     # ------------------------------------------------------------------
 
     def _login(self):
-        username = self.config.get("username") or os.getenv("TV_USERNAME", "")
-        password = self.config.get("password") or os.getenv("TV_PASSWORD", "")
+        username  = self.config.get("username")  or os.getenv("TV_USERNAME", "")
+        password  = self.config.get("password")  or os.getenv("TV_PASSWORD", "")
         chart_url = self.config.get("chart_url") or os.getenv("TV_CHART_URL", "")
 
         if not username or not password:
             raise RuntimeError(
                 "TradingView credentials not set. "
-                "Set TV_USERNAME and TV_PASSWORD environment variables or edit config.yaml."
+                "Enter your username and password in the Settings sidebar."
             )
         if not chart_url:
             raise RuntimeError(
-                "TV_CHART_URL not set. Point it at the chart containing your strategy."
+                "Chart URL not set. Paste your TradingView chart URL in the Settings sidebar."
             )
 
-        log.info("Navigating to TradingView…")
-        self.driver.get("https://www.tradingview.com")
-        time.sleep(2)
-
-        # Click sign-in if not already logged in
-        try:
-            sign_in = self.driver.find_element(By.XPATH, _SEL["sign_in_btn"])
-            sign_in.click()
-            time.sleep(1)
-        except NoSuchElementException:
-            log.debug("Already on a login page or sign-in button not found.")
-
-        # Choose email login
-        try:
-            email_tab = self._wait_for(By.XPATH, _SEL["email_tab"])
-            email_tab.click()
-            time.sleep(0.5)
-        except TimeoutException:
-            pass
-
-        self._fill_input(By.CSS_SELECTOR, _SEL["username_input"], username)
-        self._fill_input(By.CSS_SELECTOR, _SEL["password_input"], password)
-
-        submit = self._wait_for(By.XPATH, _SEL["submit_btn"])
-        submit.click()
+        # ── Step 1: navigate directly to the signin page ────────────────
+        # Avoids the fragile header-button click entirely.
+        log.info("Navigating to TradingView sign-in page…")
+        self.driver.get("https://www.tradingview.com/accounts/signin/")
         time.sleep(3)
 
-        log.info("Loading chart: %s", chart_url)
+        # ── Step 2: pick the Email option ────────────────────────────────
+        self._click_email_option()
+
+        # ── Step 3: fill credentials ─────────────────────────────────────
+        if not self._fill_credential("username", username):
+            raise RuntimeError(
+                "Could not find the username/email input on TradingView's login page.\n"
+                "TradingView may have updated their site — please open a GitHub issue."
+            )
+        if not self._fill_credential("password", password):
+            raise RuntimeError("Could not find the password input on TradingView's login page.")
+
+        # ── Step 4: submit ───────────────────────────────────────────────
+        self._submit_login()
+        time.sleep(4)
+
+        # ── Step 5: detect failure ───────────────────────────────────────
+        if "accounts/signin" in self.driver.current_url:
+            # Still on the sign-in page — wrong credentials or captcha
+            page_text = self.driver.find_element(By.TAG_NAME, "body").text.lower()
+            if "captcha" in page_text or "robot" in page_text:
+                raise RuntimeError(
+                    "TradingView is showing a CAPTCHA. Run with headless=False, "
+                    "complete the CAPTCHA manually, then retry."
+                )
+            raise RuntimeError(
+                "Login failed. Check your TradingView username and password."
+            )
+
+        # ── Step 6: load chart ───────────────────────────────────────────
+        log.info("Login successful. Loading chart: %s", chart_url)
         self.driver.get(chart_url)
         time.sleep(5)
 
         self._open_strategy_tester()
         self._logged_in = True
         log.info("Login and chart load complete.")
+
+    def _click_email_option(self):
+        """Click whichever 'continue with email' button TradingView is showing."""
+        candidates = [
+            # v2024+ modal button
+            (By.XPATH, "//button[.//span[normalize-space()='Email']]"),
+            (By.XPATH, "//button[normalize-space()='Email']"),
+            # Link-style
+            (By.XPATH, "//a[contains(normalize-space(),'Email')]"),
+            # Span fallback
+            (By.XPATH, "//span[normalize-space()='Email']"),
+            # 'Continue with email'
+            (By.XPATH, "//*[contains(normalize-space(),'Continue with email') or "
+                        "contains(normalize-space(),'Sign in with Email')]"),
+        ]
+        for by, sel in candidates:
+            try:
+                el = WebDriverWait(self.driver, 6).until(
+                    EC.element_to_be_clickable((by, sel))
+                )
+                el.click()
+                time.sleep(1)
+                log.debug("Clicked email option via: %s", sel)
+                return
+            except (TimeoutException, NoSuchElementException):
+                continue
+        log.debug("No 'Email' option found — may already be on the email form.")
+
+    def _fill_credential(self, field: str, value: str) -> bool:
+        """Fill a login field; tries multiple selector strategies. Returns True on success."""
+        selectors = [
+            (By.CSS_SELECTOR, f"input[name='{field}']"),
+            (By.CSS_SELECTOR, f"input[type='{'email' if field == 'username' else 'password'}']"),
+            (By.XPATH, f"//input[@name='{field}' or @autocomplete='{field}' "
+                        f"or @placeholder[contains(translate(., 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',"
+                        f"'abcdefghijklmnopqrstuvwxyz'), '{field}')]]"),
+        ]
+        for by, sel in selectors:
+            try:
+                el = WebDriverWait(self.driver, 8).until(
+                    EC.element_to_be_clickable((by, sel))
+                )
+                el.click()
+                el.send_keys(Keys.CONTROL + "a")
+                el.send_keys(value)
+                time.sleep(0.3)
+                log.debug("Filled %s field via: %s", field, sel)
+                return True
+            except (TimeoutException, NoSuchElementException):
+                continue
+        return False
+
+    def _submit_login(self):
+        """Click the submit / Sign in button."""
+        candidates = [
+            (By.XPATH, "//button[@type='submit']"),
+            (By.XPATH, "//button[normalize-space()='Sign in']"),
+            (By.XPATH, "//button[contains(normalize-space(),'Sign in')]"),
+            (By.CSS_SELECTOR, "button[type='submit']"),
+        ]
+        for by, sel in candidates:
+            try:
+                el = WebDriverWait(self.driver, 6).until(
+                    EC.element_to_be_clickable((by, sel))
+                )
+                el.click()
+                log.debug("Submitted login via: %s", sel)
+                return
+            except (TimeoutException, NoSuchElementException):
+                continue
+        log.warning("Could not find submit button — trying Enter key.")
+        try:
+            self.driver.find_element(By.TAG_NAME, "body").send_keys(Keys.RETURN)
+        except Exception:
+            pass
 
     # ------------------------------------------------------------------
     # Strategy Tester panel
