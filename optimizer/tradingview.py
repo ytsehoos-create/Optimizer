@@ -426,36 +426,68 @@ class TradingViewConnector:
         time.sleep(wait_time)
 
     def _open_settings_dialog(self):
-        """Open the strategy-specific Settings dialog; raises if it cannot be opened."""
+        """
+        Open the strategy-specific Settings dialog.
+
+        Primary method: hover over each item in the chart legend to reveal its
+        gear icon, click it, then verify the Inputs tab appeared.
+        Falls back to a broad button search if legend items are not found.
+        Raises RuntimeError + saves screenshot if nothing works.
+        """
+        print("  Opening strategy settings dialog…")
+
+        # --- Method 1: hover over chart-legend entries to reveal gear icon ---
+        legend_css_list = [
+            "[data-name='legend-series-item']",
+            "[data-name='legend-source-item']",
+            "[class*='pane-legend-line']",
+            "[class*='legendLine']",
+            "[class*='legend-line']",
+            "[class*='LegendItem']",
+            "[class*='legendItem']",
+        ]
+        for legend_css in legend_css_list:
+            items = self.driver.find_elements(By.CSS_SELECTOR, legend_css)
+            for item in items:
+                if not item.is_displayed():
+                    continue
+                try:
+                    ActionChains(self.driver).move_to_element(item).pause(0.5).perform()
+                    # Gear buttons are revealed on hover inside the legend item
+                    gear_btns = item.find_elements(
+                        By.CSS_SELECTOR,
+                        "button[aria-label*='Settings'], button[data-tooltip*='Settings'], "
+                        "button[aria-label*='Format'], button[title*='Settings'], "
+                        "button[aria-label*='Properties']"
+                    )
+                    for btn in gear_btns:
+                        if btn.is_displayed():
+                            self.driver.execute_script("arguments[0].click();", btn)
+                            time.sleep(1.5)
+                            if self._is_settings_dialog_open():
+                                print("  Settings dialog opened via legend hover.")
+                                return
+                except Exception:
+                    continue
+
+        # --- Method 2: direct button search (data-name / aria / tooltip) ---
         selectors = [
-            # data-name attributes — most stable across TradingView deployments
             (By.CSS_SELECTOR, "[data-name='strategy-tester-properties-button']"),
             (By.CSS_SELECTOR, "[data-action='open-strategy-dialog']"),
-            # Legend/data-window gear next to the strategy name
-            (By.XPATH, "//div[contains(@class,'legend') or contains(@class,'Legend')]"
-                       "//button[@aria-label='Settings' or @data-tooltip='Settings' or @aria-label='Format']"),
-            # Gear specifically NOT inside the top header bar
             (By.XPATH, "//button[@data-tooltip='Settings' and not(ancestor::header)]"),
             (By.XPATH, "//button[@data-tooltip='Strategy settings']"),
-            (By.XPATH, "//button[@aria-label='Settings' and not(ancestor::header)]"),
-            (By.XPATH, "//button[@aria-label='Format' and not(ancestor::header)]"),
-            # Strategy controls bar
-            (By.XPATH, "//div[contains(@class,'strategy-controls') or contains(@class,'strategyGroup')]//button"),
-            # Any visible gear-class button
-            (By.XPATH, "//button[contains(@class,'gear') or contains(@class,'Gear')]"),
-            # Original selectors from _SEL as final fallback
             (By.XPATH, _SEL["strategy_settings_gear"]),
             (By.XPATH, _SEL["strategy_gear_alt"]),
         ]
         for by, sel in selectors:
             try:
-                el = WebDriverWait(self.driver, 4).until(EC.element_to_be_clickable((by, sel)))
+                el = WebDriverWait(self.driver, 3).until(EC.element_to_be_clickable((by, sel)))
                 if not el.is_displayed():
                     continue
                 self.driver.execute_script("arguments[0].click();", el)
                 time.sleep(1.5)
                 if self._is_settings_dialog_open():
-                    log.debug("Settings dialog opened via: %s", sel)
+                    print(f"  Settings dialog opened via selector: {sel}")
                     return
             except (TimeoutException, Exception):
                 continue
@@ -463,36 +495,32 @@ class TradingViewConnector:
         self.take_screenshot("settings_dialog_debug.png")
         raise RuntimeError(
             "Could not open the strategy Settings dialog.\n"
-            "Screenshot saved as settings_dialog_debug.png — check that a PineScript "
-            "strategy is loaded on the chart URL you provided."
+            "Screenshot saved as settings_dialog_debug.png\n"
+            "Make sure a PineScript strategy is loaded on your chart."
         )
 
     def _is_settings_dialog_open(self) -> bool:
-        """Return True if a settings/properties modal is currently visible."""
-        for css in [
-            "[role='dialog']",
-            ".tv-dialog",
-            "[data-name='pine-script-properties-dialog']",
-            "[data-name*='dialog']",
-            "[class*='Dialog'][class*='open']",
-            "[class*='dialog--open']",
-            "[class*='modal'][class*='open']",
-        ]:
-            try:
-                if any(e.is_displayed() for e in self.driver.find_elements(By.CSS_SELECTOR, css)):
-                    return True
-            except Exception:
-                pass
-        # Broader check: is any overlay/modal visible at all?
+        """
+        Return True only when the strategy settings dialog is visible.
+        Checks specifically for the 'Inputs' tab button which only appears
+        inside the settings dialog — avoids false positives from permanent DOM.
+        """
         try:
-            overlays = self.driver.find_elements(
-                By.XPATH, "//*[contains(@class,'Dialog') or contains(@class,'dialog') or contains(@class,'modal')]"
+            tabs = self.driver.find_elements(
+                By.XPATH,
+                "//button[normalize-space()='Inputs'] | "
+                "//*[@role='tab' and normalize-space()='Inputs'] | "
+                "//li[normalize-space()='Inputs']"
             )
-            if any(o.is_displayed() for o in overlays):
-                return True
+            return any(t.is_displayed() for t in tabs)
         except Exception:
             pass
-        return False
+        # Secondary check: a visible dialog with a close button
+        try:
+            dlg = self.driver.find_elements(By.CSS_SELECTOR, "[role='dialog']")
+            return any(d.is_displayed() for d in dlg)
+        except Exception:
+            return False
 
     def _navigate_to_inputs_tab(self):
         selectors = [
