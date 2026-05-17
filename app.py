@@ -158,6 +158,202 @@ class ParamDialog(ctk.CTkToplevel):
         self.destroy()
 
 
+# ── Detect Strategy Inputs Dialog ─────────────────────────────────────────
+
+class DetectDialog(ctk.CTkToplevel):
+    """
+    Shows inputs auto-detected from TradingView's Settings → Inputs dialog.
+    The user can adjust ranges and choose which parameters to add to the table.
+    """
+
+    _TYPE_OPTIONS = ["Int", "Float", "Categorical"]
+
+    def __init__(self, parent, detected: List[Dict]):
+        super().__init__(parent)
+        self.title("Detected Strategy Inputs")
+        self.geometry("980x560")
+        self.minsize(820, 400)
+        self.grab_set()
+        self.lift()
+        self.focus_force()
+
+        self.accepted: List[Dict] = []   # filled on "Add Selected"
+        self._rows: List[Dict]    = []   # one dict of widgets per input
+
+        self._build(detected)
+
+    def _build(self, detected: List[Dict]):
+        self.grid_rowconfigure(1, weight=1)
+        self.grid_columnconfigure(0, weight=1)
+
+        # ── Header ──
+        hdr = ctk.CTkFrame(self, fg_color="transparent")
+        hdr.grid(row=0, column=0, sticky="ew", padx=16, pady=(14, 4))
+        n = len(detected)
+        ctk.CTkLabel(
+            hdr,
+            text=f"  {n} input{'s' if n != 1 else ''} detected from your strategy",
+            font=ctk.CTkFont(size=14, weight="bold"),
+        ).pack(side="left")
+        ctk.CTkLabel(
+            hdr,
+            text="Adjust the test range for each parameter, then click Add Selected.",
+            font=ctk.CTkFont(size=11),
+            text_color="#8b949e",
+        ).pack(side="left", padx=12)
+
+        # ── Column header row ──
+        col_hdr = ctk.CTkFrame(self, fg_color="#21262d", corner_radius=0)
+        col_hdr.grid(row=1, column=0, sticky="ew", padx=16)
+        for text, width, anchor in [
+            ("",            30,  "center"),   # checkbox column
+            ("TV Label",   200, "w"),
+            ("Name",       170, "w"),
+            ("Type",       110, "center"),
+            ("Start",       80, "center"),
+            ("Stop",        80, "center"),
+            ("Step / Options", 210, "w"),
+        ]:
+            ctk.CTkLabel(col_hdr, text=text, width=width, anchor=anchor,
+                         font=ctk.CTkFont(size=11, weight="bold"),
+                         text_color="#58a6ff").pack(side="left", padx=4, pady=6)
+
+        # ── Scrollable rows ──
+        scroll = ctk.CTkScrollableFrame(self, fg_color="#161b22")
+        scroll.grid(row=2, column=0, sticky="nsew", padx=16, pady=4)
+        self.grid_rowconfigure(2, weight=1)
+
+        for d in detected:
+            self._add_row(scroll, d)
+
+        # ── Footer buttons ──
+        foot = ctk.CTkFrame(self, fg_color="transparent")
+        foot.grid(row=3, column=0, sticky="ew", padx=16, pady=(4, 14))
+
+        ctk.CTkButton(foot, text="Select All",   width=110, fg_color="gray30",
+                      command=lambda: self._set_all(True)).pack(side="left", padx=(0, 6))
+        ctk.CTkButton(foot, text="Deselect All", width=110, fg_color="gray30",
+                      command=lambda: self._set_all(False)).pack(side="left")
+
+        ctk.CTkButton(foot, text="Cancel",       width=100, fg_color="gray30",
+                      command=self.destroy).pack(side="right", padx=(6, 0))
+        ctk.CTkButton(foot, text="Add Selected", width=130,
+                      command=self._add_selected).pack(side="right")
+
+    def _add_row(self, parent, d: Dict):
+        ptype = d["type"]
+        is_bool = ptype == "Bool"
+
+        row = ctk.CTkFrame(parent, fg_color="transparent")
+        row.pack(fill="x", pady=2)
+
+        # checkbox — booleans unchecked by default (rarely want to optimize)
+        chk_var = ctk.BooleanVar(value=not is_bool)
+        ctk.CTkCheckBox(row, text="", variable=chk_var, width=30).pack(side="left", padx=4)
+
+        # TV label (read-only)
+        ctk.CTkLabel(row, text=d["label"], width=200, anchor="w",
+                     font=ctk.CTkFont(size=12)).pack(side="left", padx=4)
+
+        # Editable internal name
+        name_var = ctk.StringVar(value=d["name"])
+        ctk.CTkEntry(row, textvariable=name_var, width=170).pack(side="left", padx=4)
+
+        # Type selector
+        display_type = "Categorical" if is_bool else ptype
+        type_var = ctk.StringVar(value=display_type)
+        ctk.CTkOptionMenu(row, values=self._TYPE_OPTIONS, variable=type_var,
+                          width=110).pack(side="left", padx=4)
+
+        # Range widgets (vary by type)
+        widgets: Dict[str, Any] = {
+            "check": chk_var, "name": name_var, "type": type_var,
+            "label": d["label"], "raw": d,
+        }
+
+        if ptype in ("Int", "Float"):
+            start_var = ctk.StringVar(value=str(d.get("start", "")))
+            stop_var  = ctk.StringVar(value=str(d.get("stop",  "")))
+            step_var  = ctk.StringVar(value=str(d.get("step",  "")))
+            ctk.CTkEntry(row, textvariable=start_var, width=78,
+                         placeholder_text="start").pack(side="left", padx=2)
+            ctk.CTkEntry(row, textvariable=stop_var,  width=78,
+                         placeholder_text="stop").pack(side="left", padx=2)
+            ctk.CTkEntry(row, textvariable=step_var,  width=78,
+                         placeholder_text="step").pack(side="left", padx=2)
+            # Hint: current value in TV
+            ctk.CTkLabel(row, text=f"  current: {d.get('current', '?')}",
+                         font=ctk.CTkFont(size=10), text_color="#8b949e").pack(side="left")
+            widgets.update(start=start_var, stop=stop_var, step=step_var)
+
+        else:  # Categorical / Bool
+            opts = d.get("options", [])
+            opts_var = ctk.StringVar(value=", ".join(str(o) for o in opts))
+            ctk.CTkEntry(row, textvariable=opts_var, width=210,
+                         placeholder_text="options…").pack(side="left", padx=4)
+            ctk.CTkLabel(row, text=f"  current: {d.get('current', '?')}",
+                         font=ctk.CTkFont(size=10), text_color="#8b949e").pack(side="left")
+            widgets["options"] = opts_var
+
+        self._rows.append(widgets)
+
+    def _set_all(self, value: bool):
+        for r in self._rows:
+            r["check"].set(value)
+
+    def _add_selected(self):
+        errors = []
+        result = []
+
+        for i, r in enumerate(self._rows):
+            if not r["check"].get():
+                continue
+
+            name  = r["name"].get().strip()
+            label = r["label"]
+            ptype = r["type"].get()
+
+            if not name:
+                errors.append(f"Row {i+1} ({label}): name is empty.")
+                continue
+            if " " in name:
+                errors.append(f"Row {i+1} ({label}): name cannot contain spaces.")
+                continue
+
+            try:
+                if ptype == "Int":
+                    p = {"type": "Int", "name": name, "label": label,
+                         "start": int(r["start"].get()),
+                         "stop":  int(r["stop"].get()),
+                         "step":  int(r["step"].get())}
+                    if p["step"] <= 0:
+                        raise ValueError("Step must be > 0")
+                elif ptype == "Float":
+                    p = {"type": "Float", "name": name, "label": label,
+                         "start": float(r["start"].get()),
+                         "stop":  float(r["stop"].get()),
+                         "step":  float(r["step"].get())}
+                    if p["step"] <= 0:
+                        raise ValueError("Step must be > 0")
+                else:  # Categorical
+                    opts = [o.strip() for o in r["options"].get().split(",") if o.strip()]
+                    if not opts:
+                        raise ValueError("At least one option required.")
+                    p = {"type": "Categorical", "name": name,
+                         "label": label, "options": opts}
+                result.append(p)
+            except ValueError as e:
+                errors.append(f"{label}: {e}")
+
+        if errors:
+            messagebox.showerror("Validation Errors",
+                                 "\n".join(errors), parent=self)
+            return
+
+        self.accepted = result
+        self.destroy()
+
+
 # ── Main App ───────────────────────────────────────────────────────────────
 
 class App(ctk.CTk):
@@ -248,16 +444,16 @@ class App(ctk.CTk):
         ctk.CTkCheckBox(sb, text="Maximize metric",
                         variable=self._maximize_var).pack(padx=16, pady=(8, 0), anchor="w")
 
-        labeled_entry(sb, "Random trials", (self._trials_var := ctk.StringVar(value="100")),
-                      placeholder="100")
-        labeled_entry(sb, "Backtest wait (seconds)", (self._wait_var := ctk.StringVar(value="8")),
-                      placeholder="8")
+        self._trials_var = ctk.StringVar(value="100")
+        labeled_entry(sb, "Random trials", self._trials_var, placeholder="100")
+        self._wait_var = ctk.StringVar(value="8")
+        labeled_entry(sb, "Backtest wait (seconds)", self._wait_var, placeholder="8")
 
         section("Genetic Algorithm")
-        labeled_entry(sb, "Population size", (self._pop_var := ctk.StringVar(value="30")),
-                      placeholder="30")
-        labeled_entry(sb, "Generations", (self._gen_var := ctk.StringVar(value="20")),
-                      placeholder="20")
+        self._pop_var = ctk.StringVar(value="30")
+        labeled_entry(sb, "Population size", self._pop_var, placeholder="30")
+        self._gen_var = ctk.StringVar(value="20")
+        labeled_entry(sb, "Generations", self._gen_var, placeholder="20")
 
         btns = ctk.CTkFrame(sb, fg_color="transparent")
         btns.pack(padx=16, pady=16, fill="x")
@@ -302,6 +498,9 @@ class App(ctk.CTk):
                       command=lambda: self._move_param(-1)).pack(side="left", padx=2)
         ctk.CTkButton(tb, text="↓", width=38, fg_color="gray30",
                       command=lambda: self._move_param(1)).pack(side="left", padx=2)
+        ctk.CTkButton(tb, text="🔍 Detect from TradingView",
+                      fg_color="#238636", hover_color="#2ea043",
+                      command=self._detect_from_tv).pack(side="right", padx=(8, 0))
         ctk.CTkButton(tb, text="Load Strategy File (.py)", fg_color="#21262d",
                       border_color="#30363d", border_width=1,
                       command=self._load_strategy_file).pack(side="right")
@@ -530,6 +729,97 @@ class App(ctk.CTk):
             self._status("Loaded: " + os.path.basename(path))
         except Exception as exc:
             messagebox.showerror("Load Error", str(exc), parent=self)
+
+    def _detect_from_tv(self):
+        """Launch a brief browser session, read the strategy inputs dialog, show DetectDialog."""
+        url  = self._url_var.get().strip()
+        user = self._user_var.get().strip()
+        pwd  = self._pass_var.get()
+
+        if not url:
+            messagebox.showwarning("No Chart URL",
+                                   "Enter your TradingView chart URL in the sidebar first.",
+                                   parent=self)
+            return
+        if not user or not pwd:
+            messagebox.showwarning("No Credentials",
+                                   "Enter your TradingView username and password in the sidebar first.",
+                                   parent=self)
+            return
+
+        # Show a progress overlay while the browser runs
+        overlay = ctk.CTkToplevel(self)
+        overlay.title("")
+        overlay.geometry("340x120")
+        overlay.resizable(False, False)
+        overlay.grab_set()
+        overlay.lift()
+        ctk.CTkLabel(overlay, text="Connecting to TradingView…",
+                     font=ctk.CTkFont(size=13, weight="bold")).pack(pady=(28, 6))
+        ctk.CTkLabel(overlay, text="Reading strategy inputs — this takes ~15 seconds",
+                     font=ctk.CTkFont(size=11), text_color="#8b949e").pack()
+        bar = ctk.CTkProgressBar(overlay, mode="indeterminate")
+        bar.pack(padx=30, pady=10, fill="x")
+        bar.start()
+        overlay.update()
+
+        result_q: queue.Queue = queue.Queue()
+
+        def run():
+            try:
+                from optimizer.tradingview import TradingViewConnector
+                cfg = self._build_config()
+                # Always show browser window during detection — easier to diagnose
+                cfg["tradingview"]["headless"] = False
+                connector = TradingViewConnector(cfg["tradingview"])
+                connector.start()
+                try:
+                    detected = connector.detect_inputs()
+                finally:
+                    connector.stop()
+                result_q.put(("ok", detected))
+            except Exception as exc:
+                import traceback
+                result_q.put(("error", traceback.format_exc()))
+
+        threading.Thread(target=run, daemon=True).start()
+
+        def poll():
+            try:
+                kind, payload = result_q.get_nowait()
+            except queue.Empty:
+                self.after(400, poll)
+                return
+
+            bar.stop()
+            overlay.destroy()
+
+            if kind == "error":
+                messagebox.showerror("Detection Failed", payload[:1200], parent=self)
+                return
+
+            detected: List[Dict] = payload
+            if not detected:
+                messagebox.showinfo(
+                    "Nothing Detected",
+                    "No numeric or dropdown inputs were found.\n\n"
+                    "Make sure:\n"
+                    "• Your strategy is added to the chart\n"
+                    "• The Settings dialog opens correctly\n"
+                    "• Inputs use input.int(), input.float(), or input.string()\n\n"
+                    "You can always add parameters manually.",
+                    parent=self,
+                )
+                return
+
+            dlg = DetectDialog(self, detected)
+            self.wait_window(dlg)
+            if dlg.accepted:
+                self.parameters.extend(dlg.accepted)
+                self._refresh_param_tree()
+                self._status(f"Added {len(dlg.accepted)} detected inputs.")
+
+        self.after(400, poll)
 
     # ── Run / Stop ────────────────────────────────────────────────────────
 

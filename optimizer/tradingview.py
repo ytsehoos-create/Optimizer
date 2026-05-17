@@ -5,7 +5,7 @@ import logging
 import os
 import re
 import time
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 from selenium import webdriver
 from selenium.common.exceptions import (
@@ -53,6 +53,16 @@ _SEL = {
     "net_profit_pct": "//div[contains(@class,'performance-item') and .//span[text()='Net Profit']]//span[contains(@class,'positiveValue') or contains(@class,'negativeValue') or contains(@class,'neutralValue')]",
     "overview_table": "//div[contains(@class,'report-overview-wrapper') or contains(@class,'performanceReport')]",
 }
+
+
+def _label_to_name(label: str) -> str:
+    """Convert a human-readable TV label into a valid Python identifier."""
+    name = label.lower()
+    name = re.sub(r"[%$#@!]", "pct", name)
+    name = re.sub(r"[^a-z0-9_\s]", "", name)
+    name = re.sub(r"\s+", "_", name.strip())
+    name = re.sub(r"_+", "_", name).strip("_")
+    return name or "param"
 
 
 def _parse_number(text: str) -> Optional[float]:
@@ -391,6 +401,215 @@ class TradingViewConnector:
         m.sharpe_ratio = _get(f"{base}[.//span[text()='Sharpe Ratio']]//span[2]")
 
         return m
+
+    # ------------------------------------------------------------------
+    # Auto-detect strategy inputs
+    # ------------------------------------------------------------------
+
+    def detect_inputs(self) -> List[Dict]:
+        """
+        Open the strategy Settings → Inputs dialog, read every editable parameter,
+        and return a list of dicts ready to populate the optimizer UI.
+
+        Each dict has keys:
+          type        "Int" | "Float" | "Categorical" | "Bool"
+          label       exact TV label text
+          name        auto-generated Python identifier
+          current     current value as string
+          start/stop/step   (Int and Float only)
+          options     (Categorical only)
+        """
+        self._open_settings_dialog()
+        self._navigate_to_inputs_tab()
+        time.sleep(1.5)  # let React finish rendering
+
+        try:
+            detected = self._scrape_inputs_dialog()
+        finally:
+            self._dismiss_dialog()
+
+        log.info("Detected %d inputs from strategy.", len(detected))
+        return detected
+
+    def _scrape_inputs_dialog(self) -> List[Dict]:
+        detected: List[Dict] = []
+        seen: set = set()
+
+        # ── Number inputs (input.int / input.float) ─────────────────────
+        for inp in self.driver.find_elements(By.CSS_SELECTOR, "input[type='number']"):
+            if not inp.is_displayed():
+                continue
+            label = self._label_for_element(inp)
+            if not label or label in seen:
+                continue
+            seen.add(label)
+
+            raw_val  = inp.get_attribute("value") or "0"
+            raw_min  = inp.get_attribute("min")
+            raw_max  = inp.get_attribute("max")
+            raw_step = inp.get_attribute("step") or "1"
+
+            try:
+                step_f   = float(raw_step)
+                is_float = (step_f != round(step_f)) or ("." in raw_step and raw_step != "1.0")
+            except ValueError:
+                step_f, is_float = 1.0, False
+
+            if is_float:
+                try:
+                    cur = float(raw_val)
+                    mn  = float(raw_min) if raw_min not in (None, "", "null") else round(max(0.01, cur * 0.1), 4)
+                    mx  = float(raw_max) if raw_max not in (None, "", "null") else round(cur * 4.0, 4)
+                    detected.append({"type": "Float", "label": label, "name": _label_to_name(label),
+                                     "current": raw_val,
+                                     "start": round(mn, 4), "stop": round(mx, 4),
+                                     "step": round(step_f, 4)})
+                except (ValueError, TypeError):
+                    detected.append({"type": "Float", "label": label, "name": _label_to_name(label),
+                                     "current": raw_val, "start": 0.1, "stop": 10.0, "step": 0.1})
+            else:
+                try:
+                    cur  = int(float(raw_val))
+                    mn   = int(float(raw_min)) if raw_min not in (None, "", "null") else max(1, cur // 4)
+                    mx   = int(float(raw_max)) if raw_max not in (None, "", "null") else max(cur * 4, cur + 20)
+                    step = max(1, int(step_f))
+                    detected.append({"type": "Int", "label": label, "name": _label_to_name(label),
+                                     "current": str(cur),
+                                     "start": mn, "stop": mx, "step": step})
+                except (ValueError, TypeError):
+                    detected.append({"type": "Int", "label": label, "name": _label_to_name(label),
+                                     "current": raw_val, "start": 1, "stop": 100, "step": 1})
+
+        # ── Checkbox inputs (input.bool) ─────────────────────────────────
+        for inp in self.driver.find_elements(By.CSS_SELECTOR, "input[type='checkbox']"):
+            if not inp.is_displayed():
+                continue
+            label = self._label_for_element(inp)
+            if not label or label in seen:
+                continue
+            seen.add(label)
+            checked = inp.get_attribute("checked") or inp.get_attribute("aria-checked") or "false"
+            detected.append({"type": "Bool", "label": label, "name": _label_to_name(label),
+                             "current": "true" if checked in ("true", "1") else "false",
+                             "options": ["true", "false"]})
+
+        # ── Dropdown inputs (input.string with options) ───────────────────
+        # TradingView uses custom dropdown components; also check native <select>
+        for sel_css in ["select",
+                        "[data-role='listbox']",
+                        "[class*='dropdown'][class*='control']",
+                        "[class*='select-control']"]:
+            for el in self.driver.find_elements(By.CSS_SELECTOR, sel_css):
+                if not el.is_displayed():
+                    continue
+                label = self._label_for_element(el)
+                if not label or label in seen:
+                    continue
+                opts = self._read_dropdown_options(el)
+                if not opts:
+                    continue
+                seen.add(label)
+                detected.append({"type": "Categorical", "label": label,
+                                 "name": _label_to_name(label),
+                                 "current": opts[0], "options": opts})
+
+        return detected
+
+    def _label_for_element(self, element) -> Optional[str]:
+        """Find the human-readable label associated with a form element."""
+        # 1. aria-label / title / placeholder on the element
+        for attr in ("aria-label", "title"):
+            v = element.get_attribute(attr)
+            if v and 2 <= len(v.strip()) <= 80:
+                return v.strip()
+
+        # 2. <label for="id">
+        el_id = element.get_attribute("id")
+        if el_id:
+            try:
+                lbl = self.driver.find_element(By.CSS_SELECTOR, f"label[for='{el_id}']")
+                txt = lbl.text.strip()
+                if txt:
+                    return txt
+            except NoSuchElementException:
+                pass
+
+        # 3. Walk up 1-5 ancestor levels; find short non-numeric text sibling
+        for depth in range(1, 6):
+            try:
+                ancestor = element.find_element(By.XPATH, f"./ancestor::*[{depth}]")
+            except Exception:
+                break
+            for tag in ("label", "span", "div", "td"):
+                try:
+                    for c in ancestor.find_elements(By.TAG_NAME, tag):
+                        if not c.is_displayed():
+                            continue
+                        txt = c.text.strip()
+                        cur_val = element.get_attribute("value") or ""
+                        if (2 <= len(txt) <= 60
+                                and txt != cur_val
+                                and not txt.replace(".", "").replace("-", "").isdigit()):
+                            return txt
+                except StaleElementReferenceException:
+                    break
+                except Exception:
+                    continue
+            # Stop climbing past a table row or list item boundary
+            try:
+                if ancestor.tag_name in ("tr", "li"):
+                    break
+            except Exception:
+                break
+
+        return None
+
+    def _read_dropdown_options(self, element) -> List[str]:
+        """Extract option strings from a native <select> or TradingView custom dropdown."""
+        if element.tag_name == "select":
+            return [o.text.strip()
+                    for o in element.find_elements(By.TAG_NAME, "option")
+                    if o.text.strip()]
+        # Custom dropdown: click to open, scrape items, close
+        options: List[str] = []
+        try:
+            element.click()
+            time.sleep(0.4)
+            for xpath in [
+                "//div[contains(@class,'option') and not(contains(@class,'disabled'))]",
+                "//li[contains(@class,'item') and not(contains(@class,'disabled'))]",
+            ]:
+                items = self.driver.find_elements(By.XPATH, xpath)
+                for item in items[:60]:
+                    txt = item.text.strip()
+                    if txt:
+                        options.append(txt)
+                if options:
+                    break
+            self.driver.find_element(By.TAG_NAME, "body").send_keys(Keys.ESCAPE)
+            time.sleep(0.3)
+        except Exception:
+            pass
+        return list(dict.fromkeys(options))
+
+    def _dismiss_dialog(self):
+        """Close the Settings dialog without applying any changes."""
+        for xpath in ["//button[normalize-space()='Cancel']",
+                      "//button[normalize-space()='Close']",
+                      "//button[@aria-label='Close']",
+                      "//button[@data-name='close']"]:
+            try:
+                btn = self.driver.find_element(By.XPATH, xpath)
+                if btn.is_displayed():
+                    btn.click()
+                    time.sleep(0.5)
+                    return
+            except NoSuchElementException:
+                continue
+        try:
+            self.driver.find_element(By.TAG_NAME, "body").send_keys(Keys.ESCAPE)
+        except Exception:
+            pass
 
     # ------------------------------------------------------------------
     # Utilities
