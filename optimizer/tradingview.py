@@ -210,51 +210,73 @@ class TradingViewConnector:
     def _click_email_option(self):
         """Click whichever 'continue with email' button TradingView is showing."""
         candidates = [
-            # v2024+ modal button
             (By.XPATH, "//button[.//span[normalize-space()='Email']]"),
             (By.XPATH, "//button[normalize-space()='Email']"),
-            # Link-style
+            (By.XPATH, "//*[contains(normalize-space(),'Continue with email')]"),
+            (By.XPATH, "//*[contains(normalize-space(),'Sign in with email')]"),
+            (By.XPATH, "//*[contains(normalize-space(),'Sign in with Email')]"),
             (By.XPATH, "//a[contains(normalize-space(),'Email')]"),
-            # Span fallback
             (By.XPATH, "//span[normalize-space()='Email']"),
-            # 'Continue with email'
-            (By.XPATH, "//*[contains(normalize-space(),'Continue with email') or "
-                        "contains(normalize-space(),'Sign in with Email')]"),
+            (By.XPATH, "//*[contains(@class,'email') and (self::button or self::a)]"),
         ]
         for by, sel in candidates:
             try:
-                el = WebDriverWait(self.driver, 6).until(
+                el = WebDriverWait(self.driver, 5).until(
                     EC.element_to_be_clickable((by, sel))
                 )
-                el.click()
-                time.sleep(1)
+                # Use JS click — more reliable on React/SPA pages
+                self.driver.execute_script("arguments[0].click();", el)
+                time.sleep(1.5)
                 log.debug("Clicked email option via: %s", sel)
                 return
             except (TimeoutException, NoSuchElementException):
                 continue
-        log.debug("No 'Email' option found — may already be on the email form.")
+        log.debug("No 'Email' option found — assuming already on the email form.")
 
     def _fill_credential(self, field: str, value: str) -> bool:
-        """Fill a login field; tries multiple selector strategies. Returns True on success."""
+        """
+        Fill a login input field using JavaScript (most reliable for React forms).
+        Falls back to send_keys if JS set doesn't trigger React's state update.
+        """
         selectors = [
             (By.CSS_SELECTOR, f"input[name='{field}']"),
-            (By.CSS_SELECTOR, f"input[type='{'email' if field == 'username' else 'password'}']"),
-            (By.XPATH, f"//input[@name='{field}' or @autocomplete='{field}' "
-                        f"or @placeholder[contains(translate(., 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',"
-                        f"'abcdefghijklmnopqrstuvwxyz'), '{field}')]]"),
+            (By.CSS_SELECTOR, f"input[autocomplete='{field}']"),
+            (By.CSS_SELECTOR, "input[type='email']" if field == "username" else "input[type='password']"),
+            (By.XPATH,        f"//input[@name='{field}']"),
+            (By.XPATH,        "//input[@type='email']" if field == "username" else "//input[@type='password']"),
         ]
         for by, sel in selectors:
             try:
                 el = WebDriverWait(self.driver, 8).until(
-                    EC.element_to_be_clickable((by, sel))
+                    EC.presence_of_element_located((by, sel))
                 )
-                el.click()
-                el.send_keys(Keys.CONTROL + "a")
-                el.send_keys(value)
+                if not el.is_displayed():
+                    continue
+
+                # Scroll into view
+                self.driver.execute_script("arguments[0].scrollIntoView(true);", el)
+                time.sleep(0.2)
+
+                # Clear and fill via JS to trigger React's synthetic events
+                self.driver.execute_script("""
+                    var el = arguments[0], val = arguments[1];
+                    var nativeInputValueSetter = Object.getOwnPropertyDescriptor(
+                        window.HTMLInputElement.prototype, 'value').set;
+                    nativeInputValueSetter.call(el, val);
+                    el.dispatchEvent(new Event('input',  {bubbles: true}));
+                    el.dispatchEvent(new Event('change', {bubbles: true}));
+                """, el, value)
                 time.sleep(0.3)
-                log.debug("Filled %s field via: %s", field, sel)
-                return True
-            except (TimeoutException, NoSuchElementException):
+
+                # Also send_keys as a fallback to make sure value is registered
+                el.click()
+                el.send_keys(Keys.END)   # move to end without clearing
+                # Verify value was set
+                if el.get_attribute("value"):
+                    log.debug("Filled '%s' field via JS + click (%s)", field, sel)
+                    return True
+
+            except (TimeoutException, NoSuchElementException, Exception):
                 continue
         return False
 
