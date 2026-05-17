@@ -172,14 +172,25 @@ class TradingViewConnector:
         # ── Step 2: pick the Email option ────────────────────────────────
         self._click_email_option()
 
-        # ── Step 3: fill credentials ─────────────────────────────────────
-        if not self._fill_credential("username", username):
+        # ── Step 3: fill credentials (handles 1-step and 2-step flows) ──
+        time.sleep(2)  # let form animate in after email button click
+
+        # Try to fill username / email
+        if not self._fill_credential_field(["username", "email"], username):
+            self.take_screenshot("login_debug.png")
             raise RuntimeError(
-                "Could not find the username/email input on TradingView's login page.\n"
-                "TradingView may have updated their site — please open a GitHub issue."
+                "Could not find the username/email input.\n"
+                "A screenshot was saved as login_debug.png next to app.py — "
+                "check what the browser is showing."
             )
-        if not self._fill_credential("password", password):
-            raise RuntimeError("Could not find the password input on TradingView's login page.")
+
+        # Some flows show only the email field first, then a Continue button
+        self._click_continue_if_present()
+
+        # Now fill password
+        if not self._fill_credential_field(["password"], password):
+            self.take_screenshot("login_debug.png")
+            raise RuntimeError("Could not find the password input.")
 
         # ── Step 4: submit ───────────────────────────────────────────────
         self._submit_login()
@@ -233,52 +244,78 @@ class TradingViewConnector:
                 continue
         log.debug("No 'Email' option found — assuming already on the email form.")
 
-    def _fill_credential(self, field: str, value: str) -> bool:
+    def _fill_credential_field(self, field_names: list, value: str) -> bool:
         """
-        Fill a login input field using JavaScript (most reliable for React forms).
-        Falls back to send_keys if JS set doesn't trigger React's state update.
+        Find a visible input whose name/type/autocomplete matches any of field_names
+        and fill it using JS (triggers React state) + send_keys (ensures browser value).
         """
-        selectors = [
-            (By.CSS_SELECTOR, f"input[name='{field}']"),
-            (By.CSS_SELECTOR, f"input[autocomplete='{field}']"),
-            (By.CSS_SELECTOR, "input[type='email']" if field == "username" else "input[type='password']"),
-            (By.XPATH,        f"//input[@name='{field}']"),
-            (By.XPATH,        "//input[@type='email']" if field == "username" else "//input[@type='password']"),
-        ]
+        selectors = []
+        for f in field_names:
+            selectors += [
+                (By.CSS_SELECTOR, f"input[name='{f}']"),
+                (By.CSS_SELECTOR, f"input[autocomplete='{f}']"),
+                (By.CSS_SELECTOR, f"input[type='{f}']"),
+                (By.XPATH,        f"//input[@name='{f}' or @autocomplete='{f}' or @type='{f}']"),
+            ]
+
         for by, sel in selectors:
             try:
-                el = WebDriverWait(self.driver, 8).until(
-                    EC.presence_of_element_located((by, sel))
-                )
-                if not el.is_displayed():
-                    continue
-
-                # Scroll into view
-                self.driver.execute_script("arguments[0].scrollIntoView(true);", el)
-                time.sleep(0.2)
-
-                # Clear and fill via JS to trigger React's synthetic events
-                self.driver.execute_script("""
-                    var el = arguments[0], val = arguments[1];
-                    var nativeInputValueSetter = Object.getOwnPropertyDescriptor(
-                        window.HTMLInputElement.prototype, 'value').set;
-                    nativeInputValueSetter.call(el, val);
-                    el.dispatchEvent(new Event('input',  {bubbles: true}));
-                    el.dispatchEvent(new Event('change', {bubbles: true}));
-                """, el, value)
-                time.sleep(0.3)
-
-                # Also send_keys as a fallback to make sure value is registered
-                el.click()
-                el.send_keys(Keys.END)   # move to end without clearing
-                # Verify value was set
-                if el.get_attribute("value"):
-                    log.debug("Filled '%s' field via JS + click (%s)", field, sel)
-                    return True
-
-            except (TimeoutException, NoSuchElementException, Exception):
+                els = self.driver.find_elements(by, sel)
+                for el in els:
+                    if not el.is_displayed():
+                        continue
+                    self.driver.execute_script("arguments[0].scrollIntoView(true);", el)
+                    time.sleep(0.15)
+                    # JS native value setter — works with React controlled inputs
+                    self.driver.execute_script("""
+                        var el = arguments[0], val = arguments[1];
+                        var setter = Object.getOwnPropertyDescriptor(
+                            window.HTMLInputElement.prototype, 'value').set;
+                        setter.call(el, val);
+                        el.dispatchEvent(new Event('input',  {bubbles: true}));
+                        el.dispatchEvent(new Event('change', {bubbles: true}));
+                        el.dispatchEvent(new Event('blur',   {bubbles: true}));
+                    """, el, value)
+                    time.sleep(0.2)
+                    # send_keys as belt-and-braces — click first so focus is right
+                    el.click()
+                    el.send_keys(Keys.CONTROL + "a")
+                    el.send_keys(value)
+                    time.sleep(0.2)
+                    if el.get_attribute("value"):
+                        log.debug("Filled field %s via %s", field_names, sel)
+                        return True
+            except Exception:
                 continue
         return False
+
+    def _click_continue_if_present(self):
+        """Click a Continue / Next button if TradingView uses a two-step email flow."""
+        candidates = [
+            (By.XPATH, "//button[normalize-space()='Continue']"),
+            (By.XPATH, "//button[normalize-space()='Next']"),
+            (By.XPATH, "//button[contains(normalize-space(),'Continue')]"),
+            (By.CSS_SELECTOR, "button[type='submit']"),
+        ]
+        # Only click if the password field is NOT already visible
+        try:
+            pwd = self.driver.find_elements(By.CSS_SELECTOR, "input[type='password']")
+            if any(p.is_displayed() for p in pwd):
+                return  # already on the password step
+        except Exception:
+            pass
+
+        for by, sel in candidates:
+            try:
+                el = WebDriverWait(self.driver, 4).until(
+                    EC.element_to_be_clickable((by, sel))
+                )
+                self.driver.execute_script("arguments[0].click();", el)
+                time.sleep(1.5)
+                log.debug("Clicked Continue/Next button.")
+                return
+            except (TimeoutException, NoSuchElementException):
+                continue
 
     def _submit_login(self):
         """Click the submit / Sign in button."""
