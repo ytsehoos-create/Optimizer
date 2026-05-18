@@ -540,8 +540,6 @@ class TradingViewConnector:
             "Screenshot saved as settings_dialog_debug.png\n"
             "Make sure a PineScript strategy is loaded on your chart."
         )
-            "Make sure a PineScript strategy is loaded on your chart."
-        )
 
     def _is_settings_dialog_open(self) -> bool:
         """
