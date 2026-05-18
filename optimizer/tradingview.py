@@ -462,12 +462,12 @@ class TradingViewConnector:
         """
         Open the strategy-specific Settings/Inputs dialog.
 
-        Uses multiple methods in order of reliability:
-        A. Click the strategy-name button in Strategy Report panel (opens dropdown)
-        B. JS mouseover events on legend items (triggers CSS hover state)
-        C. Physical hover + page-wide button search (gear is absolutely positioned)
-        D. JS absolute-coordinate sweep (bypasses Selenium offset-from-center issue)
-        E. Find gear buttons by aria-label/data-tooltip anywhere on page
+        Methods (in order):
+        1. Right-click each chart-legend item → look for "Settings…" in context menu
+        2. Physical hover each legend item → look for SMALL buttons (≤35px) near item's y
+        3. JS absolute-coordinate hover at exact viewport positions → same small-button check
+        4. CSS injection to force-reveal hidden legend buttons → click small ones
+        5. Find gear buttons page-wide by aria-label/data-tooltip keywords
         """
         print("  Opening strategy settings dialog…")
         self._close_any_dialog()
@@ -480,27 +480,40 @@ class TradingViewConnector:
         strategy_name = self._get_active_strategy_name()
         print(f"  Active strategy name: {strategy_name!r}")
 
-        def _page_legend_buttons() -> list:
-            """All currently visible buttons in the left legend / top area of chart."""
+        # CSS selectors for chart legend items (not the Strategy Report panel)
+        _legend_css = [
+            "[data-name='legend-series-item']", "[data-name='legend-source-item']",
+            "[class*='pane-legend-line']", "[class*='legendLine']",
+            "[class*='legend-line']", "[class*='LegendItem']",
+            "[class*='legendItem']", "[class*='legend-source']",
+        ]
+
+        def _small_buttons_near_y(target_y: float) -> list:
+            """Visible small buttons (≤35px) near target_y, in chart-legend x range.
+            Gear/eye/close icons are tiny; the big toolbar buttons we don't want are large."""
             return self.driver.execute_script("""
+                var ey = arguments[0];
                 return Array.from(document.querySelectorAll('button, [role="button"]'))
                     .filter(function(b) {
                         var r = b.getBoundingClientRect();
-                        return r.width > 0 && r.height > 0 && r.left < 520 && r.top > 30 && r.top < 540;
+                        return r.width > 0 && r.height > 0 &&
+                               r.width <= 35 && r.height <= 35 &&
+                               r.left > 55 && r.left < 450 &&
+                               Math.abs(r.top + r.height/2 - ey) < 50;
                     });
-            """)
+            """, target_y)
 
-        def _try_all_legend_buttons(tag="") -> bool:
-            """Click each visible legend-area button until the Inputs dialog opens."""
-            btns = _page_legend_buttons()
-            print(f"  [{tag}] {len(btns)} legend-area buttons found.")
+        def _try_small_buttons_at(target_y: float, tag: str) -> bool:
+            btns = _small_buttons_near_y(target_y)
+            if btns:
+                print(f"  [{tag}] {len(btns)} small buttons near y={target_y:.0f}")
             for btn in btns:
                 try:
                     lbl = (btn.get_attribute("aria-label") or
                            btn.get_attribute("data-tooltip") or
                            btn.get_attribute("data-name") or
                            btn.text or "?")[:40].strip()
-                    print(f"    clicking btn: {lbl!r}")
+                    print(f"    clicking: {lbl!r}")
                     self.driver.execute_script("arguments[0].click();", btn)
                     time.sleep(1.5)
                     if self._is_settings_dialog_open():
@@ -511,114 +524,54 @@ class TradingViewConnector:
                     pass
             return False
 
-        # ── Method A: strategy-name button in the Strategy Report panel ──────
-        print("  Method A: click strategy name in Strategy Report panel…")
-        try:
-            strat_btn = self.driver.execute_script("""
-                var allEls = Array.from(document.querySelectorAll('*'));
-                var srEl = allEls.find(function(el) {
-                    return el.childElementCount < 3 &&
-                           el.textContent.trim() === 'Strategy Report';
-                });
-                if (!srEl) return null;
-                var panel = srEl;
-                for (var i = 0; i < 10; i++) {
-                    if (!panel.parentElement) break;
-                    panel = panel.parentElement;
-                    var btns = Array.from(panel.querySelectorAll('button'));
-                    for (var b of btns) {
-                        var text = b.textContent.trim();
-                        if (text.length > 1 && text.length < 45 &&
-                            !text.includes('P&L') && !text.includes('profit') &&
-                            !text.includes('Commission') && !/\\d{4}/.test(text) &&
-                            !text.includes('trade') && !text.includes('Trade') &&
-                            !text.includes('Metrics') && !text.includes('Properties') &&
-                            !text.includes('Overview') && !text.includes('List')) {
-                            return b;
-                        }
-                    }
-                }
-                return null;
-            """)
-            if strat_btn:
-                btn_text = (strat_btn.get_attribute("textContent") or "?")[:40].strip()
-                print(f"  Clicking strategy panel button: {btn_text!r}")
-                self.driver.execute_script("arguments[0].click();", strat_btn)
-                time.sleep(1.0)
-                # Check if clicking opened the Inputs dialog directly
-                if self._is_settings_dialog_open():
-                    print("  Strategy Inputs dialog opened via panel button!")
-                    return
-                # Or if a dropdown appeared with Settings/Properties option
+        def _try_context_menu(element) -> bool:
+            """Right-click element and look for Settings/Format in context menu."""
+            try:
+                ActionChains(self.driver).context_click(element).pause(0.6).perform()
                 for xpath in [
-                    "//span[normalize-space()='Settings']",
-                    "//div[normalize-space()='Settings']",
-                    "//li[normalize-space()='Settings']",
+                    "//*[normalize-space()='Settings...']",
+                    "//*[normalize-space()='Settings']",
+                    "//*[normalize-space()='Format...']",
+                    "//*[normalize-space()='Format']",
+                    "//*[normalize-space()='Edit inputs...']",
                     "//*[normalize-space()='Properties']",
-                    "//*[normalize-space()='Format…']",
-                    "//*[normalize-space()='Edit inputs…']",
                 ]:
                     try:
                         item = self.driver.find_element(By.XPATH, xpath)
                         if item.is_displayed():
+                            print(f"  Context menu: clicking {item.text!r}")
                             item.click()
                             time.sleep(1.5)
                             if self._is_settings_dialog_open():
-                                print("  Strategy Inputs dialog opened via panel dropdown!")
-                                return
+                                return True
                             self._close_any_dialog()
-                            break
+                            return False
                     except Exception:
                         pass
-                self._close_any_dialog()
-        except Exception as e:
-            print(f"  Method A error: {e}")
+                # Nothing useful in menu — dismiss it
+                self.driver.find_element(By.TAG_NAME, "body").send_keys(Keys.ESCAPE)
+                time.sleep(0.2)
+            except Exception:
+                pass
+            return False
 
-        # ── Method B: JS mouseover events on known legend CSS patterns ────────
-        print("  Method B: JS mouseover on legend items…")
-        self.driver.execute_script("""
-            var sels = [
-                "[data-name='legend-series-item']",
-                "[data-name='legend-source-item']",
-                "[class*='pane-legend-line']",
-                "[class*='legendLine']",
-                "[class*='legend-source']",
-                "[class*='LegendItem']",
-                "[class*='legendItem']",
-            ];
-            sels.forEach(function(s) {
-                document.querySelectorAll(s).forEach(function(el) {
-                    ['mouseover','mouseenter','mousemove'].forEach(function(t) {
-                        el.dispatchEvent(new MouseEvent(t, {bubbles:true, cancelable:true}));
-                    });
-                });
-            });
-        """)
-        time.sleep(0.7)
-        if _try_all_legend_buttons("Method B"):
-            return
-
-        # ── Method C: physical hover over legend elements ─────────────────────
-        print("  Method C: physical hover over legend elements…")
-        for css in [
-            "[data-name='legend-series-item']", "[data-name='legend-source-item']",
-            "[class*='pane-legend-line']", "[class*='legendLine']",
-            "[class*='legend-line']", "[class*='LegendItem']",
-            "[class*='legendItem']", "[class*='legend-source']",
-        ]:
+        # ── Method 1: right-click each legend item for context menu ──────────
+        print("  Method 1: right-click legend items for Settings context menu…")
+        for css in _legend_css:
             for item in self.driver.find_elements(By.CSS_SELECTOR, css):
                 if not item.is_displayed():
                     continue
                 try:
-                    ActionChains(self.driver).move_to_element(item).pause(1.0).perform()
-                    if _try_all_legend_buttons(f"hover {css[:25]}"):
-                        return
+                    if item.rect.get("x", 999) > 400:
+                        continue  # skip items outside chart legend area
                 except Exception:
                     pass
+                if _try_context_menu(item):
+                    print("  Strategy Inputs dialog opened via right-click!")
+                    return
 
-        # ── Method D: strategy name hover + ancestors ─────────────────────────
+        # Also right-click elements matching the strategy name
         if strategy_name:
-            print(f"  Method D: hover elements matching {strategy_name!r}…")
             for xpath in [
                 f"//*[normalize-space(text())='{strategy_name}']",
                 f"//*[contains(normalize-space(text()),'{strategy_name}')]",
@@ -627,48 +580,131 @@ class TradingViewConnector:
                     if not el.is_displayed():
                         continue
                     try:
-                        ActionChains(self.driver).move_to_element(el).pause(1.0).perform()
-                        if _try_all_legend_buttons("name hover"):
+                        r = el.rect
+                        if r.get("x", 999) > 400 or r.get("y", 999) > 450:
+                            continue
+                    except Exception:
+                        pass
+                    if _try_context_menu(el):
+                        print("  Strategy Inputs dialog opened via right-click on name!")
+                        return
+
+        # ── Method 2: physical hover, look for SMALL buttons at item's y ─────
+        # Toolbar buttons (Cross, Trendline, etc.) are labeled and large.
+        # Gear/eye/close icons are ≤28px. Filter by size to avoid toolbar buttons.
+        print("  Method 2: physical hover over legend items → small buttons…")
+        for css in _legend_css:
+            for item in self.driver.find_elements(By.CSS_SELECTOR, css):
+                if not item.is_displayed():
+                    continue
+                try:
+                    r = item.rect
+                    el_x, el_y = r.get("x", 999), r.get("y", 999)
+                    if el_x > 400 or el_y > 450:
+                        continue
+                    css_name = css.split("*=")[1].strip("']") if "*=" in css else css
+                    print(f"  hovering {css_name} at y={el_y:.0f}…")
+                    ActionChains(self.driver).move_to_element(item).pause(1.2).perform()
+                    if _try_small_buttons_at(el_y + r.get("height", 0) / 2, "hover"):
+                        return
+                except Exception:
+                    pass
+
+        # Strategy name element hover (no ancestor climbing — that caused 43 toolbar buttons)
+        if strategy_name:
+            print(f"  Method 2b: hover strategy name element…")
+            for xpath in [
+                f"//*[normalize-space(text())='{strategy_name}']",
+                f"//*[contains(normalize-space(text()),'{strategy_name}')]",
+            ]:
+                for el in self.driver.find_elements(By.XPATH, xpath):
+                    if not el.is_displayed():
+                        continue
+                    try:
+                        r = el.rect
+                        el_x, el_y = r.get("x", 999), r.get("y", 999)
+                        if el_x > 400 or el_y > 450:
+                            continue
+                        ActionChains(self.driver).move_to_element(el).pause(1.2).perform()
+                        if _try_small_buttons_at(el_y + r.get("height", 0) / 2, "name"):
                             return
-                        for depth in range(1, 6):
-                            try:
-                                anc = el.find_element(By.XPATH, f"./ancestor::*[{depth}]")
-                                ActionChains(self.driver).move_to_element(anc).pause(0.7).perform()
-                                if _try_all_legend_buttons(f"anc[{depth}]"):
-                                    return
-                            except Exception:
-                                break
                     except Exception:
                         pass
 
-        # ── Method E: JS absolute-coordinate sweep (fixes offset-from-center bug) ──
-        # move_to_element_with_offset is relative to element CENTER, not top-left.
-        # Use JS clientX/clientY events at absolute viewport coordinates instead.
-        print("  Method E: JS absolute-coordinate sweep across legend column…")
-        self.driver.execute_script("""
-            function hoverAt(x, y) {
-                var el = document.elementFromPoint(x, y);
-                if (el) {
-                    ['mouseover','mouseenter','mousemove'].forEach(function(t) {
-                        el.dispatchEvent(new MouseEvent(t, {
-                            bubbles: true, cancelable: true, clientX: x, clientY: y
-                        }));
-                    });
-                }
-            }
-            for (var y = 50; y < 520; y += 15) {
-                hoverAt(60, y);
-                hoverAt(100, y);
-                hoverAt(160, y);
-                hoverAt(220, y);
-            }
-        """)
-        time.sleep(0.6)
-        if _try_all_legend_buttons("Method E JS sweep"):
-            return
+        # ── Method 3: Selenium absolute-coordinate hover (correct calculation) ─
+        # move_to_element_with_offset offsets from element CENTER not top-left.
+        # To hit absolute viewport coord (tx, ty): offset = (tx - cx, ty - cy)
+        # where (cx, cy) is the center of the reference element.
+        print("  Method 3: Selenium absolute-coord hover across legend column…")
+        try:
+            body = self.driver.find_element(By.TAG_NAME, "body")
+            bw = self.driver.execute_script("return document.documentElement.clientWidth")
+            bh = self.driver.execute_script("return document.documentElement.clientHeight")
+            cx, cy = bw // 2, bh // 2
+            for abs_y in range(100, 450, 20):
+                for abs_x in [80, 130, 190]:
+                    ActionChains(self.driver).move_to_element_with_offset(
+                        body, abs_x - cx, abs_y - cy
+                    ).pause(0.3).perform()
+                if _try_small_buttons_at(abs_y, f"sweep y={abs_y}"):
+                    return
+        except Exception as e:
+            print(f"  Method 3 error: {e}")
 
-        # ── Method F: find gear buttons by aria-label / data-tooltip anywhere ──
-        print("  Method F: find gear/settings buttons page-wide by label…")
+        # ── Method 4: CSS injection to force-reveal hidden legend buttons ──────
+        # TradingView hides gear/eye/close buttons via opacity or visibility on
+        # non-hover. Injecting CSS to reveal them lets us find and click them.
+        print("  Method 4: CSS injection to reveal hidden legend buttons…")
+        try:
+            self.driver.execute_script("""
+                var s = document.createElement('style');
+                s.id = 'opt-reveal';
+                s.textContent = [
+                    "[data-name*='legend'] button",
+                    "[class*='legend'] button",
+                    "[class*='pane-legend'] button",
+                    "[class*='legendItem'] button",
+                    "[class*='legendLine'] button",
+                ].join(',') + '{opacity:1!important;pointer-events:auto!important;}';
+                document.head.appendChild(s);
+            """)
+            time.sleep(0.4)
+            # Look for small legend-area buttons now visible
+            revealed = self.driver.execute_script("""
+                return Array.from(document.querySelectorAll('button, [role="button"]'))
+                    .filter(function(b) {
+                        var r = b.getBoundingClientRect();
+                        return r.width > 0 && r.height > 0 &&
+                               r.width <= 35 && r.height <= 35 &&
+                               r.left > 55 && r.left < 450 &&
+                               r.top > 100 && r.top < 450;
+                    });
+            """)
+            print(f"  After CSS injection: {len(revealed)} small legend buttons.")
+            for btn in revealed:
+                try:
+                    lbl = (btn.get_attribute("aria-label") or
+                           btn.get_attribute("data-tooltip") or
+                           btn.text or "?")[:40]
+                    print(f"    clicking revealed: {lbl!r}")
+                    self.driver.execute_script("arguments[0].click();", btn)
+                    time.sleep(1.5)
+                    if self._is_settings_dialog_open():
+                        print(f"  Strategy Inputs dialog opened via revealed btn: {lbl!r}!")
+                        return
+                    self._close_any_dialog()
+                except Exception:
+                    pass
+        finally:
+            try:
+                self.driver.execute_script(
+                    "var e=document.getElementById('opt-reveal'); if(e) e.remove();"
+                )
+            except Exception:
+                pass
+
+        # ── Method 5: find gear buttons page-wide by aria-label/data-tooltip ──
+        print("  Method 5: find gear/settings buttons page-wide by label…")
         gear_btns = self.driver.execute_script("""
             return Array.from(document.querySelectorAll('button, [role="button"]'))
                 .filter(function(b) {
