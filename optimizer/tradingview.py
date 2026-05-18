@@ -137,16 +137,37 @@ class TradingViewConnector:
             opts.add_argument("--disable-dev-shm-usage")
             opts.add_argument("--window-size=1920,1080")
             opts.add_argument("--disable-blink-features=AutomationControlled")
-            opts.add_experimental_option("excludeSwitches", ["enable-automation"])
-            opts.add_experimental_option("useAutomationExtension", False)
-            service = ChromeService(ChromeDriverManager().install())
-            driver = webdriver.Chrome(service=service, options=opts)
+            # experimental options only supported on older Chrome builds
+            try:
+                opts.add_experimental_option("excludeSwitches", ["enable-automation"])
+                opts.add_experimental_option("useAutomationExtension", False)
+            except Exception:
+                pass
+
+            # Try 1: Selenium's built-in driver manager (Selenium ≥ 4.6, no extra package)
+            try:
+                driver = webdriver.Chrome(options=opts)
+            except Exception:
+                # Try 2: webdriver-manager
+                try:
+                    service = ChromeService(ChromeDriverManager().install())
+                    driver = webdriver.Chrome(service=service, options=opts)
+                except Exception as e:
+                    raise RuntimeError(
+                        f"Could not start Chrome: {e}\n\n"
+                        "Try: pip3 install --upgrade selenium webdriver-manager"
+                    ) from e
+
         elif browser == "firefox":
             opts = FirefoxOptions()
             if headless:
                 opts.add_argument("--headless")
-            service = ChromeService(GeckoDriverManager().install())
-            driver = webdriver.Firefox(service=service, options=opts)
+            try:
+                driver = webdriver.Firefox(options=opts)
+            except Exception:
+                from selenium.webdriver.firefox.service import Service as FirefoxService
+                service = FirefoxService(GeckoDriverManager().install())
+                driver = webdriver.Firefox(service=service, options=opts)
         else:
             raise ValueError(f"Unsupported browser: {browser}")
 
