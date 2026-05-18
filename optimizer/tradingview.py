@@ -522,27 +522,41 @@ class TradingViewConnector:
                 return False
 
         def _try_small_buttons_at(target_y: float, tag: str) -> bool:
-            btns = _small_buttons_near_y(target_y)
-            if btns:
-                print(f"  [{tag}] {len(btns)} small buttons near y={target_y:.0f}")
-            for btn in btns:
+            all_btns = _small_buttons_near_y(target_y)
+            # ONLY click buttons explicitly labeled Settings/Format/Properties.
+            # Never click Hide, Show, Remove, More — those destroy chart state.
+            settings_btns = []
+            for btn in all_btns:
+                lbl = (btn.get_attribute("aria-label") or
+                       btn.get_attribute("data-tooltip") or
+                       btn.get_attribute("data-name") or
+                       btn.text or "")[:40].strip()
+                if lbl.lower() in ("settings", "settings...", "format", "format...",
+                                   "properties", "edit inputs", "edit inputs..."):
+                    settings_btns.append((btn, lbl))
+            if settings_btns:
+                print(f"  [{tag}] {len(settings_btns)} Settings buttons near y={target_y:.0f}")
+            for btn, lbl in settings_btns:
                 try:
-                    lbl = (btn.get_attribute("aria-label") or
-                           btn.get_attribute("data-tooltip") or
-                           btn.get_attribute("data-name") or
-                           btn.text or "?")[:40].strip()
-                    print(f"    clicking: {lbl!r}")
-                    self.driver.execute_script("arguments[0].click();", btn)
-                    time.sleep(2.0)  # extra time for dialog to render
+                    print(f"    clicking Settings btn: {lbl!r}")
+                    # Use real Selenium click (more reliable than JS click for React events)
+                    try:
+                        ActionChains(self.driver).move_to_element(btn).click().perform()
+                    except Exception:
+                        self.driver.execute_script("arguments[0].click();", btn)
+                    time.sleep(2.5)
                     if self._is_settings_dialog_open():
                         if _is_strategy_dialog():
-                            print(f"  STRATEGY Inputs dialog opened! (btn: {lbl!r})")
+                            print(f"  STRATEGY Inputs dialog opened! btn={lbl!r}")
                             return True
-                        else:
-                            print(f"  Indicator dialog opened (not strategy) — closing.")
-                            self._close_any_dialog()
-                            continue
-                    self._close_any_dialog()
+                        print(f"  Indicator dialog (not strategy) — closing.")
+                        self._close_any_dialog()
+                    else:
+                        # Save debug screenshot on first failure to show what opened
+                        self.take_screenshot("settings_click_debug.png")
+                        print("  No dialog detected after clicking Settings. "
+                              "Screenshot: settings_click_debug.png")
+                        self._close_any_dialog()
                 except Exception:
                     pass
             return False
@@ -864,9 +878,13 @@ class TradingViewConnector:
             pass
 
         try:
-            # Fallback: OK + Cancel visible together (unique to settings popups;
-            # not present in chart menus, date-range pickers, or CUSTOMIZE WIDGETS)
-            ok = self.driver.find_elements(By.XPATH, "//button[normalize-space()='OK']")
+            # Fallback: OK/Ok/Apply + Cancel visible together — unique to settings popups;
+            # not present in chart menus, date-range pickers, or CUSTOMIZE WIDGETS.
+            ok = self.driver.find_elements(
+                By.XPATH,
+                "//button[normalize-space()='OK' or normalize-space()='Ok' "
+                "or normalize-space()='Apply']"
+            )
             cancel = self.driver.find_elements(By.XPATH, "//button[normalize-space()='Cancel']")
             if any(b.is_displayed() for b in ok) and any(b.is_displayed() for b in cancel):
                 return True
@@ -955,6 +973,7 @@ class TradingViewConnector:
     def _click_ok(self):
         ok_xpaths = [
             "//button[normalize-space()='OK']",
+            "//button[normalize-space()='Ok']",
             "//button[normalize-space()='Apply']",
             "//button[contains(@class,'ok') or contains(@class,'apply')]",
         ]
