@@ -401,12 +401,15 @@ class TradingViewConnector:
         log.warning("Could not find Strategy Tester tab — it may already be open.")
 
     def _ensure_overview_tab(self):
-        """Activate the Overview sub-tab inside Strategy Tester so metrics are visible."""
+        """Activate the metrics/overview sub-tab inside the Strategy Report panel."""
+        # TradingView uses 'Metrics' in current versions, 'Overview' in older ones
         selectors = [
-            (By.XPATH,        "//button[normalize-space()='Overview']"),
-            (By.XPATH,        "//*[@role='tab' and normalize-space()='Overview']"),
+            (By.XPATH, "//button[normalize-space()='Metrics']"),
+            (By.XPATH, "//button[normalize-space()='Overview']"),
+            (By.XPATH, "//*[@role='tab' and (normalize-space()='Metrics' or normalize-space()='Overview')]"),
             (By.CSS_SELECTOR, "[data-name='backtesting-overview-tab']"),
-            (By.XPATH,        "//div[contains(@class,'tabs')]//span[normalize-space()='Overview']"),
+            (By.CSS_SELECTOR, "[data-name='metrics-tab']"),
+            (By.XPATH, "//div[contains(@class,'tabs')]//span[normalize-space()='Metrics' or normalize-space()='Overview']"),
         ]
         for by, sel in selectors:
             try:
@@ -668,23 +671,32 @@ class TradingViewConnector:
         time.sleep(1)
 
         # Primary: use JavaScript to find the smallest DOM element that contains
-        # both "Net Profit" and "Profit Factor" text — immune to class-name changes.
+        # metric keywords — works with both old ('Net Profit') and new ('Wins'/'Total trades') UI.
         try:
             text = self.driver.execute_script("""
-                var keywords = ['Net Profit', 'Profit Factor'];
+                // Try old-style (Net Profit + Profit Factor) first, then new-style (Wins/Losses)
+                var keywordSets = [
+                    ['Net Profit', 'Profit Factor'],
+                    ['Net Profit', 'Percent Profitable'],
+                    ['Total trades', 'Wins', 'Losses'],
+                    ['Net Profit'],
+                ];
                 var all = Array.from(document.querySelectorAll(
                     'div, section, article, table, tbody'));
-                var hits = all.filter(function(el) {
-                    var t = el.innerText || '';
-                    return keywords.every(function(k) { return t.includes(k); });
-                });
-                // Prefer the most specific (shortest text) container
-                hits.sort(function(a, b) {
-                    return (a.innerText || '').length - (b.innerText || '').length;
-                });
-                return hits.length ? hits[0].innerText : '';
+                for (var ks = 0; ks < keywordSets.length; ks++) {
+                    var keys = keywordSets[ks];
+                    var hits = all.filter(function(el) {
+                        var t = el.innerText || '';
+                        return keys.every(function(k) { return t.includes(k); });
+                    });
+                    hits.sort(function(a, b) {
+                        return (a.innerText||'').length - (b.innerText||'').length;
+                    });
+                    if (hits.length) return hits[0].innerText;
+                }
+                return '';
             """)
-            if text and "Net Profit" in text:
+            if text and ("Net Profit" in text or "Total trades" in text or "Wins" in text):
                 return self._parse_overview_text(text)
         except Exception as e:
             log.warning("JS metrics extraction failed: %s", e)
@@ -725,17 +737,30 @@ class TradingViewConnector:
                         return lines[i + 1]
             return None
 
-        m.net_profit = _parse_number(after("Net Profit") or "")
-        m.profit_factor = _parse_number(after("Profit Factor") or "")
-        m.percent_profitable = _parse_number(after("Percent Profitable") or "")
-        m.total_trades = int(_parse_number(after("Total Closed Trades") or "") or 0) or None
-        m.max_drawdown = _parse_number(after("Max Drawdown") or "")
-        m.sharpe_ratio = _parse_number(after("Sharpe Ratio") or "")
-        m.sortino_ratio = _parse_number(after("Sortino Ratio") or "")
-        m.calmar_ratio = _parse_number(after("Calmar Ratio") or "")
-        m.avg_trade = _parse_number(after("Avg Trade") or "")
-        m.avg_win = _parse_number(after("Avg Win") or "")
-        m.avg_loss = _parse_number(after("Avg Loss") or "")
+        # Old-style labels (classic Strategy Tester)
+        m.net_profit        = _parse_number(after("Net Profit") or "")
+        m.profit_factor     = _parse_number(after("Profit Factor") or "")
+        m.percent_profitable= _parse_number(after("Percent Profitable") or "")
+        m.max_drawdown      = _parse_number(after("Max Drawdown") or "")
+        m.sharpe_ratio      = _parse_number(after("Sharpe Ratio") or "")
+        m.sortino_ratio     = _parse_number(after("Sortino Ratio") or "")
+        m.calmar_ratio      = _parse_number(after("Calmar Ratio") or "")
+        m.avg_trade         = _parse_number(after("Avg Trade") or "")
+        m.avg_win           = _parse_number(after("Avg Win") or after("Avg Winning Trade") or "")
+        m.avg_loss          = _parse_number(after("Avg Loss") or after("Avg Losing Trade") or "")
+
+        trades_text = after("Total Closed Trades") or after("Total trades") or ""
+        m.total_trades = int(_parse_number(trades_text) or 0) or None
+
+        # New-style Strategy Report labels (TradingView 2025+)
+        # "Wins  40 trades  54.79%" → percent_profitable from win rate
+        if m.percent_profitable is None:
+            wins_text  = after("Wins") or ""
+            total_text = after("Total trades") or after("Total Closed Trades") or ""
+            wins_n  = _parse_number(wins_text)
+            total_n = _parse_number(total_text)
+            if wins_n and total_n and total_n > 0:
+                m.percent_profitable = round(100.0 * wins_n / total_n, 2)
 
         if m.avg_win and m.avg_loss and m.avg_loss != 0:
             m.win_loss_ratio = abs(m.avg_win / m.avg_loss)
