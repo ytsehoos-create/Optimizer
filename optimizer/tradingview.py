@@ -462,49 +462,47 @@ class TradingViewConnector:
         """
         Open the strategy-specific Settings/Inputs dialog.
 
-        Strategy: find the strategy name from the Strategy Report panel, locate
-        that text in the chart legend, hover over it to reveal action buttons,
-        then try each button until the Inputs tab appears in the page.
-        Falls back to a broader legend scan, then raises with a screenshot.
+        Hover over each legend item and search the ENTIRE PAGE for newly visible
+        buttons in the legend area (the gear icon is positioned absolutely outside
+        the legend item's DOM, so we can't use element.find_elements()).
+        Also sweeps at coordinate offsets along the legend column as a fallback.
         """
         print("  Opening strategy settings dialog…")
-        self._close_any_dialog()  # dismiss any stray open dialog first
-
+        self._close_any_dialog()
         try:
             self.driver.find_element(By.TAG_NAME, "body").click()
             time.sleep(0.3)
         except Exception:
             pass
 
-        # --- Discover the strategy name shown in the Strategy Report panel ---
         strategy_name = self._get_active_strategy_name()
         print(f"  Active strategy name: {strategy_name!r}")
 
-        # --- Method 1: hover over the matching legend entry ---
-        # Build a list of candidate text matches in the legend
-        name_xpaths = []
-        if strategy_name:
-            name_xpaths.append(f"//*[normalize-space(text())='{strategy_name}']")
-            name_xpaths.append(f"//*[contains(normalize-space(text()),'{strategy_name}')]")
-        # Also try all known legend item selectors
-        legend_css_list = [
-            "[data-name='legend-series-item']", "[data-name='legend-source-item']",
-            "[class*='pane-legend-line']", "[class*='legendLine']",
-            "[class*='legend-line']",  "[class*='LegendItem']", "[class*='legendItem']",
-            "[class*='legend-source']",
-        ]
+        def _legend_buttons_visible() -> list:
+            """Return all currently visible buttons in the chart legend area (left side)."""
+            return self.driver.execute_script("""
+                return Array.from(document.querySelectorAll('button, [role="button"]'))
+                    .filter(function(b) {
+                        var r = b.getBoundingClientRect();
+                        return r.width > 0 && r.height > 0 && r.left < 420 && r.top > 40 && r.top < 460;
+                    });
+            """)
 
-        def _try_hover_and_click(element) -> bool:
-            """Hover element, try every visible button inside, return True if dialog opened."""
+        def _try_after_hover(element) -> bool:
+            """Hover element, then click every visible legend-area button page-wide."""
             try:
-                ActionChains(self.driver).move_to_element(element).pause(0.8).perform()
-                for btn in element.find_elements(By.CSS_SELECTOR, "button"):
-                    if not btn.is_displayed():
-                        continue
+                ActionChains(self.driver).move_to_element(element).pause(0.9).perform()
+                btns = _legend_buttons_visible()
+                print(f"  After hover: {len(btns)} legend-area buttons visible.")
+                for btn in btns:
                     try:
+                        lbl = (btn.get_attribute("aria-label") or
+                               btn.get_attribute("data-name") or
+                               btn.text or "?")[:30]
                         self.driver.execute_script("arguments[0].click();", btn)
                         time.sleep(1.5)
                         if self._is_settings_dialog_open():
+                            print(f"  Strategy Inputs dialog opened! (btn: {lbl!r})")
                             return True
                         self._close_any_dialog()
                     except Exception:
@@ -513,29 +511,66 @@ class TradingViewConnector:
                 pass
             return False
 
-        # Try by strategy name first
-        for xpath in name_xpaths:
-            for el in self.driver.find_elements(By.XPATH, xpath):
-                if not el.is_displayed():
-                    continue
-                # Climb up to the legend row (parent/grandparent)
-                for depth in range(1, 5):
+        # --- Method 1: hover elements matching the strategy name ---
+        if strategy_name:
+            for xpath in [
+                f"//*[normalize-space(text())='{strategy_name}']",
+                f"//*[contains(normalize-space(text()),'{strategy_name}')]",
+            ]:
+                for el in self.driver.find_elements(By.XPATH, xpath):
+                    if not el.is_displayed():
+                        continue
                     try:
-                        ancestor = el.find_element(By.XPATH, f"./ancestor::*[{depth}]")
-                        if _try_hover_and_click(ancestor):
-                            print("  Strategy settings dialog opened via legend (name match).")
-                            return
+                        if el.rect.get("x", 999) > 400:
+                            continue  # skip elements outside the legend column
                     except Exception:
-                        break
+                        pass
+                    if _try_after_hover(el):
+                        return
+                    # Also try each ancestor of the matching text node
+                    for depth in range(1, 5):
+                        try:
+                            anc = el.find_element(By.XPATH, f"./ancestor::*[{depth}]")
+                            if _try_after_hover(anc):
+                                return
+                        except Exception:
+                            break
 
-        # Try all legend CSS selectors
-        for css in legend_css_list:
+        # --- Method 2: hover known legend-item CSS selectors ---
+        for css in [
+            "[data-name='legend-series-item']", "[data-name='legend-source-item']",
+            "[class*='pane-legend-line']", "[class*='legendLine']",
+            "[class*='legend-line']", "[class*='LegendItem']", "[class*='legendItem']",
+            "[class*='legend-source']",
+        ]:
             for item in self.driver.find_elements(By.CSS_SELECTOR, css):
-                if not item.is_displayed():
-                    continue
-                if _try_hover_and_click(item):
-                    print("  Strategy settings dialog opened via legend (CSS match).")
+                if item.is_displayed() and _try_after_hover(item):
                     return
+
+        # --- Method 3: coordinate sweep — move mouse along the legend column ---
+        print("  Trying coordinate sweep across legend column…")
+        try:
+            # Use the chart canvas as reference; sweep y from 50→420 in 15-px steps
+            ref = self.driver.find_element(
+                By.CSS_SELECTOR,
+                "canvas, [class*='chart-widget'], [class*='chartWidget'], "
+                "[class*='pane-container'], [class*='chart-container']"
+            )
+            for y_off in range(50, 420, 15):
+                ActionChains(self.driver).move_to_element_with_offset(
+                    ref, 80, y_off).pause(0.4).perform()
+                for btn in _legend_buttons_visible():
+                    try:
+                        self.driver.execute_script("arguments[0].click();", btn)
+                        time.sleep(1.5)
+                        if self._is_settings_dialog_open():
+                            print(f"  Strategy Inputs dialog opened via sweep y={y_off}.")
+                            return
+                        self._close_any_dialog()
+                    except Exception:
+                        pass
+        except Exception as e:
+            print(f"  Coordinate sweep failed: {e}")
 
         self.take_screenshot("settings_dialog_debug.png")
         raise RuntimeError(
@@ -546,26 +581,39 @@ class TradingViewConnector:
         )
 
     def _get_active_strategy_name(self) -> Optional[str]:
-        """Read the strategy name shown in the Strategy Report / Strategy Tester panel."""
-        selectors = [
-            # TradingView 2025 Strategy Report panel header
-            (By.CSS_SELECTOR, "[class*='strategyName']"),
-            (By.CSS_SELECTOR, "[class*='strategy-name']"),
-            (By.XPATH, "//div[contains(@class,'report') or contains(@class,'Report')]"
-                       "//*[contains(@class,'name') or contains(@class,'title')]"),
-            # The dropdown showing the strategy name at the top of Strategy Report
-            (By.XPATH, "//button[contains(@class,'strategySelect') or contains(@class,'strategy-select')]"),
-            (By.XPATH, "//*[@class and contains(@class,'strategyTitle')]"),
-        ]
-        for by, sel in selectors:
-            try:
-                els = self.driver.find_elements(by, sel)
-                for el in els:
-                    txt = el.text.strip()
-                    if txt and 2 < len(txt) < 60:
-                        return txt
-            except Exception:
-                continue
+        """Read the strategy name from the Strategy Report panel header."""
+        try:
+            # Use JS to find the 'Strategy Report' text node, then locate the nearest
+            # button with a short strategy-like name (not 'P&L', dates, etc.)
+            name = self.driver.execute_script("""
+                var allEls = Array.from(document.querySelectorAll('*'));
+                var srEl = allEls.find(function(el) {
+                    return el.childElementCount < 3 &&
+                           el.textContent.trim() === 'Strategy Report';
+                });
+                if (!srEl) return null;
+                var panel = srEl;
+                for (var i = 0; i < 8; i++) {
+                    if (!panel.parentElement) break;
+                    panel = panel.parentElement;
+                    var btns = Array.from(panel.querySelectorAll('button'));
+                    for (var b of btns) {
+                        var text = b.textContent.trim();
+                        if (text.length > 1 && text.length < 45 &&
+                            !text.includes('P&L') && !text.includes('profit') &&
+                            !text.includes('Commission') && !/\\d{4}/.test(text) &&
+                            !text.includes('trade') && !text.includes('Trade')) {
+                            return text;
+                        }
+                    }
+                }
+                return null;
+            """)
+            if name:
+                return name.strip()
+        except Exception:
+            pass
+        return None
         return None
 
     def _close_any_dialog(self):
