@@ -66,16 +66,25 @@ def _label_to_name(label: str) -> str:
 
 
 def _parse_number(text: str) -> Optional[float]:
-    """Convert TradingView display text like '  1,234.56 %' to float."""
+    """Extract the first numeric value from TradingView display text.
+
+    Handles formats like '1,234.56 USD', '−23.45%', '-1,234', '1.23K', etc.
+    Uses the first number found so currency/percentage suffixes are ignored.
+    """
     if not text:
         return None
-    text = text.strip().replace(",", "").replace(" ", "")
-    # Remove trailing % or $ prefix/suffix
-    text = re.sub(r"[%$]", "", text)
-    try:
-        return float(text)
-    except ValueError:
-        return None
+    # Normalise unicode minus sign → ASCII hyphen
+    text = text.replace("−", "-").replace("–", "-")
+    # Strip commas used as thousands separators
+    text = text.replace(",", "")
+    # Find the first valid number (including optional leading minus)
+    m = re.search(r"-?\d+\.?\d*", text)
+    if m:
+        try:
+            return float(m.group())
+        except ValueError:
+            pass
+    return None
 
 
 class TradingViewConnector:
@@ -621,69 +630,50 @@ class TradingViewConnector:
 
     def read_metrics(self) -> BacktestMetrics:
         """Extract performance metrics from the Strategy Tester overview panel."""
-        # Make sure the Overview sub-tab is visible
+        # Activate the Overview sub-tab
         self._ensure_overview_tab()
         time.sleep(1)
 
-        # Try many different selectors for TradingView's ever-changing DOM
-        panel_candidates = [
-            (By.CSS_SELECTOR, "[data-name='performance-overview-table']"),
-            (By.CSS_SELECTOR, "[class*='report-overview']"),
-            (By.CSS_SELECTOR, "[class*='performanceReport']"),
-            (By.CSS_SELECTOR, "[class*='backtestReport']"),
-            (By.CSS_SELECTOR, "[class*='strategy-report']"),
-            # Find a container that has "Net Profit" text inside it
-            (By.XPATH, "//div[.//span[normalize-space()='Net Profit'] or .//div[normalize-space()='Net Profit']]"),
-            (By.XPATH, "//div[contains(@class,'overview') or contains(@class,'Overview')]"),
-            (By.XPATH, "//div[contains(@class,'report') or contains(@class,'Report')][.//span[contains(text(),'Profit')]]"),
-        ]
-
-        for by, sel in panel_candidates:
-            try:
-                el = WebDriverWait(self.driver, 6).until(EC.presence_of_element_located((by, sel)))
-                text = el.text
-                if "Net Profit" in text or "Profit Factor" in text:
-                    return self._parse_overview_text(text)
-            except (TimeoutException, Exception):
-                continue
-
-        # Last resort: dump text from the entire strategy tester bottom panel
-        log.warning("Overview panel not found; attempting row-by-row extraction.")
+        # Primary: use JavaScript to find the smallest DOM element that contains
+        # both "Net Profit" and "Profit Factor" text — immune to class-name changes.
         try:
-            # TradingView's strategy tester tab content
-            tester_candidates = [
-                "[data-name='backtesting']",
-                "[class*='strategyTester']",
-                "[class*='strategy-tester']",
-                "[class*='backtesting']",
-            ]
-            for css in tester_candidates:
-                els = self.driver.find_elements(By.CSS_SELECTOR, css)
-                for el in els:
-                    text = el.text
-                    if "Net Profit" in text:
-                        return self._parse_overview_text(text)
-        except Exception:
-            pass
+            text = self.driver.execute_script("""
+                var keywords = ['Net Profit', 'Profit Factor'];
+                var all = Array.from(document.querySelectorAll(
+                    'div, section, article, table, tbody'));
+                var hits = all.filter(function(el) {
+                    var t = el.innerText || '';
+                    return keywords.every(function(k) { return t.includes(k); });
+                });
+                // Prefer the most specific (shortest text) container
+                hits.sort(function(a, b) {
+                    return (a.innerText || '').length - (b.innerText || '').length;
+                });
+                return hits.length ? hits[0].innerText : '';
+            """)
+            if text and "Net Profit" in text:
+                return self._parse_overview_text(text)
+        except Exception as e:
+            log.warning("JS metrics extraction failed: %s", e)
 
-        # Absolute last resort: scan every element that mentions Net Profit
+        # Fallback A: XPath — find element whose visible text contains metric labels
         try:
             els = self.driver.find_elements(
                 By.XPATH,
-                "//*[.//span[normalize-space()='Net Profit'] or .//div[normalize-space()='Net Profit']]"
+                "//*[contains(., 'Net Profit') and contains(., 'Profit Factor')]"
             )
-            # prefer smaller containers (more specific)
             for el in sorted(els, key=lambda e: len(e.text or "")):
                 text = el.text or ""
-                if "Net Profit" in text:
+                if "Net Profit" in text and "Profit Factor" in text:
                     m = self._parse_overview_text(text)
                     if m.net_profit is not None or m.profit_factor is not None:
                         return m
         except Exception:
             pass
 
+        # Fallback B: row-by-row label search
+        log.warning("Overview panel text not found; trying row-by-row extraction.")
         self.take_screenshot("metrics_debug.png")
-        log.warning("Metrics extraction failed. Screenshot: metrics_debug.png")
         return self._extract_metrics_row_by_row()
 
     def _parse_overview_text(self, text: str) -> BacktestMetrics:
