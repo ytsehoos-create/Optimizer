@@ -503,6 +503,24 @@ class TradingViewConnector:
                     });
             """, target_y)
 
+        def _is_strategy_dialog() -> bool:
+            """True only when the strategy settings dialog is open (has Properties tab)."""
+            try:
+                prop = self.driver.find_elements(
+                    By.XPATH,
+                    "//button[normalize-space()='Properties'] | "
+                    "//*[@role='tab' and normalize-space()='Properties']"
+                )
+                inp = self.driver.find_elements(
+                    By.XPATH,
+                    "//button[normalize-space()='Inputs'] | "
+                    "//*[@role='tab' and normalize-space()='Inputs']"
+                )
+                return (any(e.is_displayed() for e in prop) and
+                        any(e.is_displayed() for e in inp))
+            except Exception:
+                return False
+
         def _try_small_buttons_at(target_y: float, tag: str) -> bool:
             btns = _small_buttons_near_y(target_y)
             if btns:
@@ -515,10 +533,15 @@ class TradingViewConnector:
                            btn.text or "?")[:40].strip()
                     print(f"    clicking: {lbl!r}")
                     self.driver.execute_script("arguments[0].click();", btn)
-                    time.sleep(1.5)
+                    time.sleep(2.0)  # extra time for dialog to render
                     if self._is_settings_dialog_open():
-                        print(f"  Strategy Inputs dialog opened! (btn: {lbl!r})")
-                        return True
+                        if _is_strategy_dialog():
+                            print(f"  STRATEGY Inputs dialog opened! (btn: {lbl!r})")
+                            return True
+                        else:
+                            print(f"  Indicator dialog opened (not strategy) — closing.")
+                            self._close_any_dialog()
+                            continue
                     self._close_any_dialog()
                 except Exception:
                     pass
@@ -541,10 +564,11 @@ class TradingViewConnector:
                         if item.is_displayed():
                             print(f"  Context menu: clicking {item.text!r}")
                             item.click()
-                            time.sleep(1.5)
+                            time.sleep(2.0)
                             if self._is_settings_dialog_open():
-                                return True
-                            self._close_any_dialog()
+                                if _is_strategy_dialog():
+                                    return True
+                                self._close_any_dialog()
                             return False
                     except Exception:
                         pass
@@ -742,8 +766,6 @@ class TradingViewConnector:
     def _get_active_strategy_name(self) -> Optional[str]:
         """Read the strategy name from the Strategy Report panel header."""
         try:
-            # Use JS to find the 'Strategy Report' text node, then locate the nearest
-            # button with a short strategy-like name (not 'P&L', dates, etc.)
             name = self.driver.execute_script("""
                 var allEls = Array.from(document.querySelectorAll('*'));
                 var srEl = allEls.find(function(el) {
@@ -757,11 +779,17 @@ class TradingViewConnector:
                     panel = panel.parentElement;
                     var btns = Array.from(panel.querySelectorAll('button'));
                     for (var b of btns) {
-                        var text = b.textContent.trim();
+                        // Strip trailing chevron/dropdown characters before comparing
+                        var raw = b.textContent.trim();
+                        var text = raw.replace(/[▼▾›⌄\s]+$/, '').trim();
                         if (text.length > 1 && text.length < 45 &&
-                            !text.includes('P&L') && !text.includes('profit') &&
-                            !text.includes('Commission') && !/\\d{4}/.test(text) &&
-                            !text.includes('trade') && !text.includes('Trade')) {
+                            text !== 'Strategy Report' &&
+                            !text.includes('P&L') && !text.includes('Profit') &&
+                            !text.includes('Commission') && !/\d{4}/.test(text) &&
+                            !text.includes('trade') && !text.includes('Trade') &&
+                            !text.includes('Metric') && !text.includes('Propert') &&
+                            !text.includes('Overview') && !text.includes('List') &&
+                            !text.includes('Report')) {
                             return text;
                         }
                     }
@@ -798,21 +826,54 @@ class TradingViewConnector:
 
     def _is_settings_dialog_open(self) -> bool:
         """
-        Return True ONLY when the strategy Inputs dialog is visible.
-        Looks for the 'Inputs' tab — present only in the strategy settings dialog,
-        never in the general chart Settings dialog.
+        Return True when a strategy or indicator Settings dialog is visible.
+
+        Detection order (most → least specific):
+        1. 'Inputs' + 'Properties' tabs both visible → strategy settings dialog
+        2. 'Inputs' or 'Parameters' tab visible → any indicator/strategy settings dialog
+        3. OK + Cancel buttons visible together → any settings popup
         """
         try:
+            # Strategy-specific: both 'Inputs' AND 'Properties' tabs visible
+            for inp_xp in ["//button[normalize-space()='Inputs']",
+                           "//*[@role='tab' and normalize-space()='Inputs']",
+                           "//li[normalize-space()='Inputs']"]:
+                for prop_xp in ["//button[normalize-space()='Properties']",
+                                "//*[@role='tab' and normalize-space()='Properties']"]:
+                    inp = self.driver.find_elements(By.XPATH, inp_xp)
+                    prop = self.driver.find_elements(By.XPATH, prop_xp)
+                    if any(e.is_displayed() for e in inp) and any(e.is_displayed() for e in prop):
+                        return True
+        except Exception:
+            pass
+
+        try:
+            # Any settings dialog: 'Inputs' or 'Parameters' tab alone
             tabs = self.driver.find_elements(
                 By.XPATH,
                 "//button[normalize-space()='Inputs'] | "
                 "//*[@role='tab' and normalize-space()='Inputs'] | "
                 "//li[normalize-space()='Inputs'] | "
-                "//span[normalize-space()='Inputs' and ancestor::*[@role='dialog']]"
+                "//span[normalize-space()='Inputs' and ancestor::*[@role='dialog']] | "
+                "//button[normalize-space()='Parameters'] | "
+                "//*[@role='tab' and normalize-space()='Parameters']"
             )
-            return any(t.is_displayed() for t in tabs)
+            if any(t.is_displayed() for t in tabs):
+                return True
         except Exception:
-            return False
+            pass
+
+        try:
+            # Fallback: OK + Cancel visible together (unique to settings popups;
+            # not present in chart menus, date-range pickers, or CUSTOMIZE WIDGETS)
+            ok = self.driver.find_elements(By.XPATH, "//button[normalize-space()='OK']")
+            cancel = self.driver.find_elements(By.XPATH, "//button[normalize-space()='Cancel']")
+            if any(b.is_displayed() for b in ok) and any(b.is_displayed() for b in cancel):
+                return True
+        except Exception:
+            pass
+
+        return False
 
     def _navigate_to_inputs_tab(self):
         selectors = [
