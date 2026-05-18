@@ -460,131 +460,151 @@ class TradingViewConnector:
 
     def _open_settings_dialog(self):
         """
-        Open the strategy-specific Settings dialog.
-        Tries legend hover, JS button enumeration, and static selectors.
-        Saves settings_dialog_debug.png and raises RuntimeError if all fail.
+        Open the strategy-specific Settings/Inputs dialog.
+
+        Strategy: find the strategy name from the Strategy Report panel, locate
+        that text in the chart legend, hover over it to reveal action buttons,
+        then try each button until the Inputs tab appears in the page.
+        Falls back to a broader legend scan, then raises with a screenshot.
         """
         print("  Opening strategy settings dialog…")
+        self._close_any_dialog()  # dismiss any stray open dialog first
 
-        # Click the page body first to ensure the window has focus
         try:
             self.driver.find_element(By.TAG_NAME, "body").click()
             time.sleep(0.3)
         except Exception:
             pass
 
-        # --- Method 1: hover over chart-legend entries to reveal gear icon ---
+        # --- Discover the strategy name shown in the Strategy Report panel ---
+        strategy_name = self._get_active_strategy_name()
+        print(f"  Active strategy name: {strategy_name!r}")
+
+        # --- Method 1: hover over the matching legend entry ---
+        # Build a list of candidate text matches in the legend
+        name_xpaths = []
+        if strategy_name:
+            name_xpaths.append(f"//*[normalize-space(text())='{strategy_name}']")
+            name_xpaths.append(f"//*[contains(normalize-space(text()),'{strategy_name}')]")
+        # Also try all known legend item selectors
         legend_css_list = [
-            "[data-name='legend-series-item']",
-            "[data-name='legend-source-item']",
-            "[class*='pane-legend-line']",
-            "[class*='legendLine']",
-            "[class*='legend-line']",
-            "[class*='LegendItem']",
-            "[class*='legendItem']",
+            "[data-name='legend-series-item']", "[data-name='legend-source-item']",
+            "[class*='pane-legend-line']", "[class*='legendLine']",
+            "[class*='legend-line']",  "[class*='LegendItem']", "[class*='legendItem']",
+            "[class*='legend-source']",
         ]
-        for legend_css in legend_css_list:
-            items = self.driver.find_elements(By.CSS_SELECTOR, legend_css)
-            for item in items:
+
+        def _try_hover_and_click(element) -> bool:
+            """Hover element, try every visible button inside, return True if dialog opened."""
+            try:
+                ActionChains(self.driver).move_to_element(element).pause(0.8).perform()
+                for btn in element.find_elements(By.CSS_SELECTOR, "button"):
+                    if not btn.is_displayed():
+                        continue
+                    try:
+                        self.driver.execute_script("arguments[0].click();", btn)
+                        time.sleep(1.5)
+                        if self._is_settings_dialog_open():
+                            return True
+                        self._close_any_dialog()
+                    except Exception:
+                        pass
+            except Exception:
+                pass
+            return False
+
+        # Try by strategy name first
+        for xpath in name_xpaths:
+            for el in self.driver.find_elements(By.XPATH, xpath):
+                if not el.is_displayed():
+                    continue
+                # Climb up to the legend row (parent/grandparent)
+                for depth in range(1, 5):
+                    try:
+                        ancestor = el.find_element(By.XPATH, f"./ancestor::*[{depth}]")
+                        if _try_hover_and_click(ancestor):
+                            print("  Strategy settings dialog opened via legend (name match).")
+                            return
+                    except Exception:
+                        break
+
+        # Try all legend CSS selectors
+        for css in legend_css_list:
+            for item in self.driver.find_elements(By.CSS_SELECTOR, css):
                 if not item.is_displayed():
                     continue
-                try:
-                    ActionChains(self.driver).move_to_element(item).pause(0.6).perform()
-                    for btn in item.find_elements(By.CSS_SELECTOR, "button"):
-                        attrs = " ".join(filter(None, [
-                            btn.get_attribute("aria-label") or "",
-                            btn.get_attribute("data-tooltip") or "",
-                            btn.get_attribute("title") or "",
-                        ])).lower()
-                        if any(k in attrs for k in ("settings", "format", "properties", "inputs")):
-                            if btn.is_displayed():
-                                self.driver.execute_script("arguments[0].click();", btn)
-                                time.sleep(1.5)
-                                if self._is_settings_dialog_open():
-                                    print("  Settings dialog opened via legend hover.")
-                                    return
-                except Exception:
-                    continue
-
-        # --- Method 2: JS — enumerate all visible settings-related buttons ---
-        try:
-            btns = self.driver.execute_script("""
-                return Array.from(document.querySelectorAll('button')).filter(function(b) {
-                    var r = b.getBoundingClientRect();
-                    if (!r.width || !r.height) return false;
-                    var text = [b.getAttribute('aria-label'), b.getAttribute('data-tooltip'),
-                                b.getAttribute('title'), b.getAttribute('data-name')]
-                               .filter(Boolean).join(' ').toLowerCase();
-                    return text.includes('settings') || text.includes('format') ||
-                           text.includes('properties') || text.includes('inputs');
-                });
-            """)
-            labels = [
-                (b.get_attribute("aria-label") or b.get_attribute("data-tooltip")
-                 or b.get_attribute("data-name") or "?")
-                for b in btns
-            ]
-            print(f"  JS found {len(btns)} settings-related button(s): {labels}")
-            for btn in btns:
-                try:
-                    info = (btn.get_attribute("aria-label") or btn.get_attribute("data-tooltip")
-                            or btn.get_attribute("data-name") or "?")
-                    self.driver.execute_script("arguments[0].click();", btn)
-                    time.sleep(1.5)
-                    if self._is_settings_dialog_open():
-                        print(f"  Settings dialog opened via JS button: {info}")
-                        return
-                except Exception:
-                    continue
-        except Exception as e:
-            print(f"  JS button search error: {e}")
-
-        # --- Method 3: static selectors ---
-        for by, sel in [
-            (By.CSS_SELECTOR, "[data-name='strategy-tester-properties-button']"),
-            (By.CSS_SELECTOR, "[data-action='open-strategy-dialog']"),
-            (By.XPATH, "//button[@data-tooltip='Settings' and not(ancestor::header)]"),
-            (By.XPATH, _SEL["strategy_settings_gear"]),
-            (By.XPATH, _SEL["strategy_gear_alt"]),
-        ]:
-            try:
-                el = WebDriverWait(self.driver, 3).until(EC.element_to_be_clickable((by, sel)))
-                if el.is_displayed():
-                    self.driver.execute_script("arguments[0].click();", el)
-                    time.sleep(1.5)
-                    if self._is_settings_dialog_open():
-                        print(f"  Settings dialog opened via: {sel}")
-                        return
-            except (TimeoutException, Exception):
-                continue
+                if _try_hover_and_click(item):
+                    print("  Strategy settings dialog opened via legend (CSS match).")
+                    return
 
         self.take_screenshot("settings_dialog_debug.png")
         raise RuntimeError(
             "Could not open the strategy Settings dialog.\n"
             "Screenshot saved as settings_dialog_debug.png\n"
-            "Make sure a PineScript strategy is loaded on your chart."
+            "Hover over the strategy name in the chart legend, click the ⚙ gear icon,\n"
+            "then click 'Inputs'. That is the dialog the optimizer needs to control."
         )
+
+    def _get_active_strategy_name(self) -> Optional[str]:
+        """Read the strategy name shown in the Strategy Report / Strategy Tester panel."""
+        selectors = [
+            # TradingView 2025 Strategy Report panel header
+            (By.CSS_SELECTOR, "[class*='strategyName']"),
+            (By.CSS_SELECTOR, "[class*='strategy-name']"),
+            (By.XPATH, "//div[contains(@class,'report') or contains(@class,'Report')]"
+                       "//*[contains(@class,'name') or contains(@class,'title')]"),
+            # The dropdown showing the strategy name at the top of Strategy Report
+            (By.XPATH, "//button[contains(@class,'strategySelect') or contains(@class,'strategy-select')]"),
+            (By.XPATH, "//*[@class and contains(@class,'strategyTitle')]"),
+        ]
+        for by, sel in selectors:
+            try:
+                els = self.driver.find_elements(by, sel)
+                for el in els:
+                    txt = el.text.strip()
+                    if txt and 2 < len(txt) < 60:
+                        return txt
+            except Exception:
+                continue
+        return None
+
+    def _close_any_dialog(self):
+        """Dismiss any currently open dialog/modal."""
+        for xpath in [
+            "//button[normalize-space()='Cancel']",
+            "//button[normalize-space()='Close']",
+            "//button[@aria-label='Close']",
+            "//button[@data-name='close']",
+        ]:
+            try:
+                btn = self.driver.find_element(By.XPATH, xpath)
+                if btn.is_displayed():
+                    btn.click()
+                    time.sleep(0.4)
+                    return
+            except Exception:
+                pass
+        try:
+            self.driver.find_element(By.TAG_NAME, "body").send_keys(Keys.ESCAPE)
+            time.sleep(0.3)
+        except Exception:
+            pass
 
     def _is_settings_dialog_open(self) -> bool:
         """
-        Return True only when the strategy settings dialog is visible.
-        Checks specifically for the 'Inputs' tab button which only appears
-        inside the settings dialog — avoids false positives from permanent DOM.
+        Return True ONLY when the strategy Inputs dialog is visible.
+        Looks for the 'Inputs' tab — present only in the strategy settings dialog,
+        never in the general chart Settings dialog.
         """
         try:
             tabs = self.driver.find_elements(
                 By.XPATH,
                 "//button[normalize-space()='Inputs'] | "
                 "//*[@role='tab' and normalize-space()='Inputs'] | "
-                "//li[normalize-space()='Inputs']"
+                "//li[normalize-space()='Inputs'] | "
+                "//span[normalize-space()='Inputs' and ancestor::*[@role='dialog']]"
             )
             return any(t.is_displayed() for t in tabs)
-        except Exception:
-            pass
-        # Secondary check: a visible dialog with a close button
-        try:
-            dlg = self.driver.find_elements(By.CSS_SELECTOR, "[role='dialog']")
-            return any(d.is_displayed() for d in dlg)
         except Exception:
             return False
 
