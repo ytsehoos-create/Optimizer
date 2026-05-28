@@ -9,11 +9,14 @@ from tkinter import ttk, messagebox, filedialog
 import threading
 import queue
 import json
+import logging
 import os
 import importlib.util
 import webbrowser
 from datetime import datetime
 from typing import Optional, List, Dict, Any
+
+log = logging.getLogger(__name__)
 
 ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("blue")
@@ -354,6 +357,15 @@ class DetectDialog(ctk.CTkToplevel):
         self.destroy()
 
 
+def _safe(fn, *args, **kwargs):
+    """Call *fn* and return its result; return None on any exception."""
+    try:
+        return fn(*args, **kwargs)
+    except Exception as exc:
+        log.debug("Edgeful call %s failed: %s", fn.__name__, exc)
+        return None
+
+
 # ── Main App ───────────────────────────────────────────────────────────────
 
 class App(ctk.CTk):
@@ -377,6 +389,7 @@ class App(ctk.CTk):
 
         self._build_ui()
         self._load_config()
+        self._load_env_keys()
         self._poll_queue()
 
     # ── UI construction ────────────────────────────────────────────────────
@@ -462,6 +475,17 @@ class App(ctk.CTk):
         self._gen_var = ctk.StringVar(value="20")
         labeled_entry(sb, "Generations", self._gen_var, placeholder="20")
 
+        section("Edgeful Market Data")
+        self._edgeful_key_var    = ctk.StringVar()
+        self._edgeful_symbol_var = ctk.StringVar(value="ES")
+        labeled_entry(sb, "API Key", self._edgeful_key_var,
+                      show="●", placeholder="ef_live_…")
+        labeled_entry(sb, "Symbol", self._edgeful_symbol_var,
+                      placeholder="ES, NQ, SPY…")
+        ctk.CTkButton(sb, text="Fetch Market Data",
+                      fg_color="#1f6feb", hover_color="#388bfd",
+                      command=self._fetch_edgeful_data).pack(padx=16, pady=(8, 0), fill="x")
+
         btns = ctk.CTkFrame(sb, fg_color="transparent")
         btns.pack(padx=16, pady=16, fill="x")
         ctk.CTkButton(btns, text="Save Config", command=self._save_config).pack(
@@ -481,9 +505,11 @@ class App(ctk.CTk):
         tabs.pack(fill="both", expand=True, padx=8, pady=8)
         tabs.add("Parameters")
         tabs.add("Run & Results")
+        tabs.add("Market Data")
 
         self._build_params_tab(tabs.tab("Parameters"))
         self._build_run_tab(tabs.tab("Run & Results"))
+        self._build_market_data_tab(tabs.tab("Market Data"))
 
     # ── Parameters tab ───────────────────────────────────────────────────
 
@@ -624,6 +650,252 @@ class App(ctk.CTk):
         self._result_tree = tree
         self._sort_asc = True
         self._sort_by  = "rank"
+
+    # ── Market Data tab (Edgeful) ─────────────────────────────────────────
+
+    def _build_market_data_tab(self, parent):
+        parent.grid_rowconfigure(1, weight=1)
+        parent.grid_columnconfigure(0, weight=1)
+
+        # Header row
+        hdr = ctk.CTkFrame(parent, fg_color="transparent")
+        hdr.grid(row=0, column=0, sticky="ew", pady=(0, 8))
+        ctk.CTkLabel(
+            hdr, text="Edgeful Market Data",
+            font=ctk.CTkFont(size=15, weight="bold"),
+        ).pack(side="left")
+        ctk.CTkLabel(
+            hdr, text="  powered by edgeful.com",
+            font=ctk.CTkFont(size=11), text_color="#58a6ff",
+        ).pack(side="left")
+        self._edgeful_refresh_btn = ctk.CTkButton(
+            hdr, text="Refresh", width=90, fg_color="gray30",
+            command=self._fetch_edgeful_data,
+        )
+        self._edgeful_refresh_btn.pack(side="right")
+
+        # Scrollable results area
+        scroll = ctk.CTkScrollableFrame(parent, fg_color="#0d1117")
+        scroll.grid(row=1, column=0, sticky="nsew")
+        scroll.grid_columnconfigure(0, weight=1)
+        self._edgeful_scroll = scroll
+
+        # Placeholder message
+        self._edgeful_placeholder = ctk.CTkLabel(
+            scroll,
+            text=(
+                "Enter your Edgeful API key in the sidebar and click\n"
+                "\"Fetch Market Data\" to load live setups and probability reports."
+            ),
+            font=ctk.CTkFont(size=13),
+            text_color="#8b949e",
+            justify="center",
+        )
+        self._edgeful_placeholder.pack(pady=60)
+
+    def _fetch_edgeful_data(self):
+        api_key = self._edgeful_key_var.get().strip()
+        symbol  = self._edgeful_symbol_var.get().strip().upper() or "ES"
+
+        if not api_key:
+            messagebox.showwarning(
+                "No API Key",
+                "Enter your Edgeful API key in the sidebar first.",
+                parent=self,
+            )
+            return
+
+        # Show spinner overlay
+        overlay = ctk.CTkToplevel(self)
+        overlay.title("")
+        overlay.geometry("320x110")
+        overlay.resizable(False, False)
+        overlay.grab_set()
+        overlay.lift()
+        ctk.CTkLabel(
+            overlay, text=f"Fetching Edgeful data for {symbol}…",
+            font=ctk.CTkFont(size=13, weight="bold"),
+        ).pack(pady=(24, 6))
+        spinner = ctk.CTkProgressBar(overlay, mode="indeterminate")
+        spinner.pack(padx=30, pady=6, fill="x")
+        spinner.start()
+        overlay.update()
+
+        result_q: queue.Queue = queue.Queue()
+
+        def run():
+            try:
+                from optimizer.edgeful import EdgefulClient
+                client = EdgefulClient(api_key=api_key)
+                data = {
+                    "account":     _safe(client.get_account_info),
+                    "live_setups": _safe(client.get_live_setups),
+                    "reports":     _safe(client.list_reports),
+                    "context":     _safe(client.get_market_context, symbol),
+                }
+                result_q.put(("ok", data))
+            except Exception:
+                import traceback
+                result_q.put(("error", traceback.format_exc()))
+
+        threading.Thread(target=run, daemon=True).start()
+
+        def poll():
+            try:
+                kind, payload = result_q.get_nowait()
+            except queue.Empty:
+                self.after(300, poll)
+                return
+
+            spinner.stop()
+            overlay.destroy()
+
+            if kind == "error":
+                messagebox.showerror("Edgeful Error", payload[:1400], parent=self)
+                return
+
+            self._render_edgeful_data(payload, symbol)
+            self._status(f"Edgeful data loaded for {symbol}")
+
+        self.after(300, poll)
+
+    def _render_edgeful_data(self, data: Dict, symbol: str):
+        """Clear the Market Data scroll area and populate it with fetched data."""
+        for w in self._edgeful_scroll.winfo_children():
+            w.destroy()
+
+        def section_label(text: str):
+            ctk.CTkLabel(
+                self._edgeful_scroll, text=text,
+                font=ctk.CTkFont(size=13, weight="bold"),
+                text_color="#58a6ff", anchor="w",
+            ).pack(fill="x", padx=12, pady=(14, 2))
+
+        def kv_row(parent, key: str, value: Any):
+            row = ctk.CTkFrame(parent, fg_color="#161b22", corner_radius=6)
+            row.pack(fill="x", padx=12, pady=2)
+            ctk.CTkLabel(row, text=str(key), width=220, anchor="w",
+                         font=ctk.CTkFont(size=12), text_color="#8b949e",
+                         ).pack(side="left", padx=(10, 4), pady=6)
+            ctk.CTkLabel(row, text=str(value) if value is not None else "—",
+                         anchor="w", font=ctk.CTkFont(size=12, weight="bold"),
+                         ).pack(side="left", padx=(4, 10), pady=6)
+
+        # ── Account info ──────────────────────────────────────────────────
+        account = data.get("account")
+        if isinstance(account, dict):
+            section_label("Account")
+            for k, v in account.items():
+                kv_row(self._edgeful_scroll, k, v)
+
+        # ── Market context for the chosen symbol ──────────────────────────
+        context = data.get("context") or {}
+        if context:
+            section_label(f"Market Context — {symbol}")
+
+            for sub_key, sub_label in [
+                ("gap_fill",        "Gap Fill"),
+                ("orb",             "Opening Range Breakout"),
+                ("initial_balance", "Initial Balance"),
+                ("prev_day_levels", "Previous Day Levels"),
+            ]:
+                sub = context.get(sub_key)
+                if not isinstance(sub, dict):
+                    continue
+                ctk.CTkLabel(
+                    self._edgeful_scroll, text=f"  {sub_label}",
+                    font=ctk.CTkFont(size=12, weight="bold"),
+                    text_color="#e6edf3", anchor="w",
+                ).pack(fill="x", padx=20, pady=(8, 2))
+                for k, v in sub.items():
+                    kv_row(self._edgeful_scroll, f"    {k}", v)
+
+        # ── Live setups ───────────────────────────────────────────────────
+        live_setups = data.get("live_setups") or []
+        if isinstance(live_setups, list) and live_setups:
+            section_label(f"Live Setups ({len(live_setups)})")
+            for setup in live_setups[:20]:
+                if not isinstance(setup, dict):
+                    continue
+                card = ctk.CTkFrame(self._edgeful_scroll, fg_color="#161b22",
+                                    corner_radius=8, border_width=1,
+                                    border_color="#30363d")
+                card.pack(fill="x", padx=12, pady=4)
+
+                # Title row
+                title_row = ctk.CTkFrame(card, fg_color="transparent")
+                title_row.pack(fill="x", padx=10, pady=(8, 2))
+                sym   = setup.get("symbol", "—")
+                rname = setup.get("report_name", setup.get("setup_type", "—"))
+                prob  = setup.get("probability")
+                prob_txt = f"{prob:.0f}%" if prob is not None else "—"
+                prob_color = (
+                    "#2ea043" if (prob or 0) >= 70 else
+                    "#d29922" if (prob or 0) >= 55 else
+                    "#f85149"
+                )
+                ctk.CTkLabel(title_row, text=f"{sym}  ·  {rname}",
+                             font=ctk.CTkFont(size=13, weight="bold"),
+                             anchor="w").pack(side="left")
+                ctk.CTkLabel(title_row, text=prob_txt,
+                             font=ctk.CTkFont(size=13, weight="bold"),
+                             text_color=prob_color).pack(side="right")
+
+                # Detail rows
+                for k in ("direction", "entry_zone", "target", "stop", "timestamp"):
+                    v = setup.get(k)
+                    if v is not None:
+                        kv_row(card, k, v)
+
+        elif live_setups == []:
+            section_label("Live Setups")
+            ctk.CTkLabel(
+                self._edgeful_scroll,
+                text="No active live setups at this time.",
+                font=ctk.CTkFont(size=12), text_color="#8b949e",
+            ).pack(padx=12, pady=4)
+
+        # ── Reports list ──────────────────────────────────────────────────
+        reports = data.get("reports") or []
+        if isinstance(reports, list) and reports:
+            section_label(f"Available Reports ({len(reports)})")
+            _apply_tree_style("EFRep")
+            rep_frame = ctk.CTkFrame(self._edgeful_scroll, fg_color="#161b22")
+            rep_frame.pack(fill="x", padx=12, pady=4)
+            rep_frame.grid_columnconfigure(0, weight=1)
+            rep_tree = ttk.Treeview(
+                rep_frame,
+                columns=("id", "name", "asset_class", "symbol"),
+                show="headings", style="EFRep.Treeview",
+                height=min(len(reports), 12),
+            )
+            for col, hdr, w in [
+                ("id",         "ID",          120),
+                ("name",       "Report Name", 300),
+                ("asset_class","Asset Class",  110),
+                ("symbol",     "Symbol",        90),
+            ]:
+                rep_tree.heading(col, text=hdr)
+                rep_tree.column(col, width=w, anchor="w")
+            for r in reports:
+                if isinstance(r, dict):
+                    rep_tree.insert(
+                        "", "end",
+                        values=(
+                            r.get("id", ""),
+                            r.get("name", ""),
+                            r.get("asset_class", ""),
+                            r.get("symbol", ""),
+                        ),
+                    )
+            rep_tree.pack(fill="x", padx=0)
+
+        if not any([account, context, live_setups, reports]):
+            ctk.CTkLabel(
+                self._edgeful_scroll,
+                text="No data returned from the Edgeful API.\nCheck your API key and try again.",
+                font=ctk.CTkFont(size=13), text_color="#f85149",
+            ).pack(pady=40)
 
     # ── Status bar ───────────────────────────────────────────────────────
 
@@ -1098,6 +1370,12 @@ class App(ctk.CTk):
         except ValueError:
             pass
 
+        ef = cfg.setdefault("edgeful", {})
+        if self._edgeful_key_var.get().strip():
+            ef["api_key"] = self._edgeful_key_var.get().strip()
+        if self._edgeful_symbol_var.get().strip():
+            ef["default_symbol"] = self._edgeful_symbol_var.get().strip().upper()
+
         opt = cfg.setdefault("optimization", {})
         opt["algorithm"] = self._algo_var.get()
         opt["metric"]    = self._metric_var.get()
@@ -1162,19 +1440,20 @@ class App(ctk.CTk):
 
     def _save_config(self):
         data = {
-            "chart_url":    self._url_var.get(),
-            "username":     self._user_var.get(),
-            "headless":      self._headless_var.get(),
-            "manual_login":  self._manual_login_var.get(),
-            "algorithm":     self._algo_var.get(),
-            "metric":       self._metric_var.get(),
-            "maximize":     self._maximize_var.get(),
-            "trials":       self._trials_var.get(),
-            "backtest_wait": self._wait_var.get(),
-            "pop_size":     self._pop_var.get(),
-            "generations":  self._gen_var.get(),
-            "parameters":   self.parameters,
-            # password intentionally omitted — set via .env
+            "chart_url":       self._url_var.get(),
+            "username":        self._user_var.get(),
+            "headless":        self._headless_var.get(),
+            "manual_login":    self._manual_login_var.get(),
+            "algorithm":       self._algo_var.get(),
+            "metric":          self._metric_var.get(),
+            "maximize":        self._maximize_var.get(),
+            "trials":          self._trials_var.get(),
+            "backtest_wait":   self._wait_var.get(),
+            "pop_size":        self._pop_var.get(),
+            "generations":     self._gen_var.get(),
+            "parameters":      self.parameters,
+            "edgeful_symbol":  self._edgeful_symbol_var.get(),
+            # API keys intentionally omitted — set via .env
         }
         with open(CONFIG_FILE, "w") as f:
             json.dump(data, f, indent=2)
@@ -1218,7 +1497,18 @@ class App(ctk.CTk):
         self._pop_var.set(str(d.get("pop_size", "30")))
         self._gen_var.set(str(d.get("generations", "20")))
         self.parameters = d.get("parameters", [])
+        if d.get("edgeful_symbol"):
+            self._edgeful_symbol_var.set(d["edgeful_symbol"])
         self._refresh_param_tree()
+
+    def _load_env_keys(self):
+        """Pre-populate API key fields from environment variables."""
+        import os
+        from dotenv import load_dotenv
+        load_dotenv()
+        ef_key = os.getenv("EDGEFUL_API_KEY", "")
+        if ef_key and not self._edgeful_key_var.get():
+            self._edgeful_key_var.set(ef_key)
 
     def _status(self, msg: str):
         self._status_var.set(msg)

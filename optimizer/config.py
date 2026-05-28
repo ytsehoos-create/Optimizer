@@ -26,6 +26,10 @@ def load_config(path: str = "config.yaml") -> Dict[str, Any]:
     if os.getenv("TV_CHART_URL"):
         tv["chart_url"] = os.getenv("TV_CHART_URL")
 
+    ef = cfg.setdefault("edgeful", {})
+    if os.getenv("EDGEFUL_API_KEY"):
+        ef["api_key"] = os.getenv("EDGEFUL_API_KEY")
+
     return cfg
 
 

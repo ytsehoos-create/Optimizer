@@ -56,6 +56,18 @@ reporting:
   generate_heatmaps: true
   generate_3d_plots: false
 
+edgeful:
+  # API key — can also be set via the EDGEFUL_API_KEY environment variable
+  api_key: ""
+  # Base URL for the Edgeful REST API
+  base_url: "https://api.edgeful.com"
+  # Default symbol to fetch market context for (e.g. "ES", "NQ", "SPY")
+  default_symbol: "ES"
+  # Minimum probability threshold for live setups (0–100)
+  min_live_probability: 60
+  # Request timeout in seconds
+  timeout: 15
+
 logging:
   level: "INFO"           # DEBUG | INFO | WARNING | ERROR
   log_file: "optimizer.log"
