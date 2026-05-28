@@ -1,0 +1,470 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NQ today · gap fill + initial balance · NY 11/28/25 - 05/28/26</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  body { font-family: 'Poppins', sans-serif; background: #09090B; color: #C7C7C7; }
+  .card { background: #09090B; border: 1px solid #2A2A2A; border-radius: 12px; }
+  .stat-num { font-weight: 500; font-feature-settings: "tnum"; }
+  table { font-feature-settings: "tnum"; }
+  .subsection-header { background: #121212; border-bottom: 1px solid #2A2A2A; padding: 12px 24px; border-top-left-radius: 12px; border-top-right-radius: 12px; }
+  .source-label { font-size: 12px; color: #555555; text-transform: lowercase; }
+  .source-label a { color: #555555; text-decoration: none; border-bottom: 1px dashed rgba(85,85,85,0.5); transition: color 0.15s, border-color 0.15s; }
+  .source-label a:hover { color: #C7C7C7; border-bottom-color: rgba(199,199,199,0.6); }
+  .source-ticker { color: #60A5FA; text-decoration: none; border-bottom: 1px dashed rgba(96,165,250,0.4); margin-left: 4px; transition: color 0.15s, border-color 0.15s; }
+  .source-ticker:hover { color: #93C5FD; border-bottom-color: rgba(147,197,253,0.7); }
+  .meta-line { font-size: 12px; color: #FFFFFF; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+  .meta-sep { color: #555555; }
+  .meta-line a.meta-link { color: #0075FF; text-decoration: none; transition: color 0.15s; }
+  .meta-line a.meta-link:hover { color: #60A5FA; }
+  .row-bullish { background: rgba(34,197,94,0.06); }
+  .row-bullish:hover { background: rgba(34,197,94,0.12); }
+  .row-bearish { background: rgba(211,45,31,0.06); }
+  .row-bearish:hover { background: rgba(211,45,31,0.12); }
+  tr:hover { background: rgba(255,255,255,0.03); }
+  th { cursor: pointer; user-select: none; color: #C7C7C7; }
+  th:hover { color: #FFFFFF; }
+  .chip { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; }
+  .chip-bullish { background: rgba(34,197,94,0.15); color: #4ADE80; }
+  .chip-bearish { background: rgba(211,45,31,0.15); color: #F87171; }
+  .chip-warning { background: rgba(216,151,0,0.15); color: #FACC15; }
+  .chip-neutral { background: rgba(85,85,85,0.2); color: #C7C7C7; }
+  .badge { display: inline-block; padding: 3px 10px; border-radius: 6px; font-size: 12px; font-weight: 500; letter-spacing: 0.5px; }
+  .badge-bullish { background: rgba(34,197,94,0.15); color: #4ADE80; border: 1px solid rgba(34,197,94,0.3); }
+  .badge-bearish { background: rgba(211,45,31,0.15); color: #F87171; border: 1px solid rgba(211,45,31,0.3); }
+  .badge-neutral { background: rgba(0,117,255,0.15); color: #60A5FA; border: 1px solid rgba(0,117,255,0.3); }
+  .filter-btn { padding: 6px 12px; border-radius: 8px; border: 1px solid #2A2A2A; background: #121212; color: #C7C7C7; transition: all 0.15s; font-size: 13px; cursor: pointer; }
+  .filter-btn:hover { border-color: #404040; color: #FFFFFF; }
+  .filter-btn.active { background: #0075FF; color: #FFFFFF; border-color: #0075FF; font-weight: 500; }
+  .section-divider { border-top: 1px solid #2A2A2A; margin: 3rem 0 2rem; }
+</style>
+</head>
+<body class="min-h-screen">
+<div class="max-w-7xl mx-auto px-6 py-10">
+
+<!-- ── HEADER ────────────────────────────────────────────────────────────── -->
+<header class="mb-8">
+  <div class="text-xs uppercase tracking-wider text-neutral-500 mb-2">market overview · wednesday, may 28 2026</div>
+  <h1 class="text-3xl font-medium text-white mb-2 lowercase">NQ today</h1>
+  <p class="meta-line">
+    <span>NQ gap fill + initial balance breakout</span>
+    <span class="meta-sep">|</span>
+    <span>11/28/25 - 05/28/26</span>
+    <span class="meta-sep">|</span>
+    <span>9:30 am - 4:00 pm (UTC-4)</span>
+    <span class="meta-sep">|</span>
+    <a class="meta-link" href="https://edgeful.com" target="_blank" rel="noopener">edgeful.com</a>
+  </p>
+  <p class="source-label mt-2">from: <a href="https://edgeful.com/reports/futures/NQ/gap-fill/standard" target="_blank" rel="noopener">gap fill standard</a>, <a href="https://edgeful.com/reports/futures/NQ/initial-balance-breakout/standard" target="_blank" rel="noopener">initial balance breakout standard</a>, <a href="https://edgeful.com/reports/futures/NQ/initial-balance-breakout/by-rejection" target="_blank" rel="noopener">initial balance breakout by rejection</a> · 123 sessions</p>
+</header>
+
+<!-- ── EXPLAINER ─────────────────────────────────────────────────────────── -->
+<div class="card p-6 mb-8">
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div>
+      <div class="text-xs uppercase tracking-wider text-neutral-500 mb-2">what this shows</div>
+      <p class="text-sm text-neutral-300 leading-relaxed lowercase">gap fill probability and initial balance breakout statistics for NQ futures over the past 6 months of NY regular session trading, sourced from edgeful.com probability reports.</p>
+    </div>
+    <div>
+      <div class="text-xs uppercase tracking-wider text-neutral-500 mb-2">how to read it</div>
+      <p class="text-sm text-neutral-300 leading-relaxed lowercase">green values signal a strong historical edge (≥65%). each "from:" label links directly to that report on the live edgeful platform so you can drill down with your own date range and filters.</p>
+    </div>
+    <div>
+      <div class="text-xs uppercase tracking-wider text-neutral-500 mb-2">key takeaway</div>
+      <p class="text-sm text-neutral-300 leading-relaxed lowercase">NQ gaps have been filling at a 90%+ clip this period regardless of direction. IB single-break structure dominates at 84%, and the rejection side predicts the breakout direction 78% of the time.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════ -->
+<!-- ZONE 1: GAP FILL                                                      -->
+<!-- ══════════════════════════════════════════════════════════════════════ -->
+<section class="mb-12">
+  <div class="flex items-center gap-3 mb-3">
+    <span class="badge badge-bullish">zone 1</span>
+    <h2 class="text-2xl font-medium text-white lowercase">gap fill</h2>
+  </div>
+  <p class="text-sm text-neutral-400 mb-6 lowercase max-w-3xl">how often does NQ return to the prior session's closing price after gapping at the open? this zone covers both gap-up and gap-down sessions over the past 6 months of NY regular session trading.</p>
+
+  <!-- subsection 1: KPI strip ─────────────────────────────────────────── -->
+  <div class="card mb-6">
+    <div class="subsection-header">
+      <div class="flex items-baseline justify-between">
+        <h3 class="text-lg font-medium text-white lowercase">gap fill summary</h3>
+        <span class="source-label">from: <a href="https://edgeful.com/reports/futures/NQ/gap-fill/standard" target="_blank" rel="noopener">gap fill standard</a></span>
+      </div>
+      <p class="meta-line mt-1">
+        <span>NQ gap fill</span>
+        <span class="meta-sep">|</span>
+        <span>11/28/25 - 05/28/26</span>
+        <span class="meta-sep">|</span>
+        <span>9:30 am - 4:00 pm (UTC-4)</span>
+        <span class="meta-sep">|</span>
+        <a class="meta-link" href="https://edgeful.com" target="_blank" rel="noopener">edgeful.com</a>
+      </p>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 p-6">
+      <div class="card p-6">
+        <div class="text-xs uppercase tracking-wider text-neutral-500 mb-2">overall fill rate</div>
+        <div class="stat-num text-4xl" style="color: #22C55E;">90%</div>
+        <div class="text-sm text-neutral-400 mt-1 lowercase">all gap sessions</div>
+      </div>
+      <div class="card p-6">
+        <div class="text-xs uppercase tracking-wider text-neutral-500 mb-2">gap up fill rate</div>
+        <div class="stat-num text-4xl" style="color: #22C55E;">91%</div>
+        <div class="text-sm text-neutral-400 mt-1 lowercase">open above prior close</div>
+      </div>
+      <div class="card p-6">
+        <div class="text-xs uppercase tracking-wider text-neutral-500 mb-2">gap down fill rate</div>
+        <div class="stat-num text-4xl" style="color: #22C55E;">90%</div>
+        <div class="text-sm text-neutral-400 mt-1 lowercase">open below prior close</div>
+      </div>
+      <div class="card p-6">
+        <div class="text-xs uppercase tracking-wider text-neutral-500 mb-2">total sessions</div>
+        <div class="stat-num text-4xl text-white">123</div>
+        <div class="text-sm text-neutral-400 mt-1 lowercase">NY session, 6 months</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- subsection 2: gap-up + gap-down doughnuts ──────────────────────── -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+
+    <!-- gap up -->
+    <div class="card">
+      <div class="subsection-header">
+        <div class="flex items-baseline justify-between">
+          <h3 class="text-lg font-medium text-white lowercase">gap up outcomes</h3>
+          <span class="source-label">from: <a href="https://edgeful.com/reports/futures/NQ/gap-fill/standard" target="_blank" rel="noopener">gap fill standard</a></span>
+        </div>
+        <p class="meta-line mt-1">
+          <span>NQ gap fill</span>
+          <span class="meta-sep">|</span>
+          <span>11/28/25 - 05/28/26</span>
+          <span class="meta-sep">|</span>
+          <span>9:30 am - 4:00 pm (UTC-4)</span>
+          <span class="meta-sep">|</span>
+          <a class="meta-link" href="https://edgeful.com" target="_blank" rel="noopener">edgeful.com</a>
+        </p>
+      </div>
+      <div class="p-6">
+        <p class="text-sm text-neutral-400 mb-4 lowercase">91% of gap-up sessions returned to the prior close during NY hours. direction had almost no impact on fill rate.</p>
+        <div class="h-64"><canvas id="gapUpChart"></canvas></div>
+        <p class="text-xs text-neutral-500 mt-3 lowercase">sample: 123 total sessions · NY 9:30 am - 4:00 pm (UTC-4)</p>
+      </div>
+    </div>
+
+    <!-- gap down -->
+    <div class="card">
+      <div class="subsection-header">
+        <div class="flex items-baseline justify-between">
+          <h3 class="text-lg font-medium text-white lowercase">gap down outcomes</h3>
+          <span class="source-label">from: <a href="https://edgeful.com/reports/futures/NQ/gap-fill/standard" target="_blank" rel="noopener">gap fill standard</a></span>
+        </div>
+        <p class="meta-line mt-1">
+          <span>NQ gap fill</span>
+          <span class="meta-sep">|</span>
+          <span>11/28/25 - 05/28/26</span>
+          <span class="meta-sep">|</span>
+          <span>9:30 am - 4:00 pm (UTC-4)</span>
+          <span class="meta-sep">|</span>
+          <a class="meta-link" href="https://edgeful.com" target="_blank" rel="noopener">edgeful.com</a>
+        </p>
+      </div>
+      <div class="p-6">
+        <p class="text-sm text-neutral-400 mb-4 lowercase">90% of gap-down sessions returned to the prior close during NY hours. fill rate is symmetric with gap-up sessions.</p>
+        <div class="h-64"><canvas id="gapDownChart"></canvas></div>
+        <p class="text-xs text-neutral-500 mt-3 lowercase">sample: 123 total sessions · NY 9:30 am - 4:00 pm (UTC-4)</p>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════════════ -->
+<!-- ZONE 2: INITIAL BALANCE BREAKOUT                                      -->
+<!-- ══════════════════════════════════════════════════════════════════════ -->
+<div class="section-divider"></div>
+<section class="mb-12">
+  <div class="flex items-center gap-3 mb-3">
+    <span class="badge badge-bullish">zone 2</span>
+    <h2 class="text-2xl font-medium text-white lowercase">initial balance breakout</h2>
+  </div>
+  <p class="text-sm text-neutral-400 mb-6 lowercase max-w-3xl">how does NQ resolve the first-hour range? single-break structure dominates the daily session, and when one side of the IB forms by rejection first, the subsequent breakout direction becomes highly predictable.</p>
+
+  <!-- subsection: IB KPI strip + explainer ───────────────────────────── -->
+  <div class="card mb-6">
+    <div class="subsection-header">
+      <div class="flex items-baseline justify-between">
+        <h3 class="text-lg font-medium text-white lowercase">IB edge summary</h3>
+        <span class="source-label">from: <a href="https://edgeful.com/reports/futures/NQ/initial-balance-breakout/standard" target="_blank" rel="noopener">initial balance breakout standard</a>, <a href="https://edgeful.com/reports/futures/NQ/initial-balance-breakout/by-rejection" target="_blank" rel="noopener">by rejection</a></span>
+      </div>
+      <p class="meta-line mt-1">
+        <span>NQ initial balance breakout</span>
+        <span class="meta-sep">|</span>
+        <span>11/28/25 - 05/28/26</span>
+        <span class="meta-sep">|</span>
+        <span>9:30 am - 4:00 pm (UTC-4)</span>
+        <span class="meta-sep">|</span>
+        <a class="meta-link" href="https://edgeful.com" target="_blank" rel="noopener">edgeful.com</a>
+      </p>
+    </div>
+    <div class="p-6">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        <div class="card p-6">
+          <div class="text-xs uppercase tracking-wider text-neutral-500 mb-2">single break probability</div>
+          <div class="stat-num text-4xl" style="color: #22C55E;">84%</div>
+          <div class="text-sm text-neutral-400 mt-1 lowercase">price breaks one IB side and holds through close</div>
+        </div>
+        <div class="card p-6">
+          <div class="text-xs uppercase tracking-wider text-neutral-500 mb-2">IB by rejection accuracy</div>
+          <div class="stat-num text-4xl" style="color: #22C55E;">78%</div>
+          <div class="text-sm text-neutral-400 mt-1 lowercase">rejection side predicts breakout direction</div>
+        </div>
+      </div>
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div>
+          <div class="text-xs uppercase tracking-wider text-neutral-500 mb-2">single break</div>
+          <p class="text-sm text-neutral-300 leading-relaxed lowercase">on 84% of NQ days the price breaks above the IB high or below the IB low and does not cross back. fading the single break has a low hit rate; the edge is with the extension.</p>
+        </div>
+        <div>
+          <div class="text-xs uppercase tracking-wider text-neutral-500 mb-2">IB by rejection</div>
+          <p class="text-sm text-neutral-300 leading-relaxed lowercase">when the IB high forms first by rejecting a move up early in the session, price breaks the IB low 78% of the time. the rejection side acts as a tell for direction before the range is complete.</p>
+        </div>
+        <div>
+          <div class="text-xs uppercase tracking-wider text-neutral-500 mb-2">enrichment available</div>
+          <p class="text-sm text-neutral-300 leading-relaxed lowercase">paste data from <a href="https://edgeful.com/reports/futures/NQ/initial-balance-breakout/by-extension" target="_blank" rel="noopener" class="text-neutral-400 hover:text-white" style="border-bottom: 1px dashed rgba(199,199,199,0.3);">by extension</a>, <a href="https://edgeful.com/reports/futures/NQ/initial-balance-breakout/by-close" target="_blank" rel="noopener" class="text-neutral-400 hover:text-white" style="border-bottom: 1px dashed rgba(199,199,199,0.3);">by close</a>, or <a href="https://edgeful.com/reports/futures/NQ/initial-balance-breakout/by-weekday" target="_blank" rel="noopener" class="text-neutral-400 hover:text-white" style="border-bottom: 1px dashed rgba(199,199,199,0.3);">by weekday</a> to add extension probability and day-of-week charts to this zone.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- subsection: IB bar chart ───────────────────────────────────────── -->
+  <div class="card mb-6">
+    <div class="subsection-header">
+      <div class="flex items-baseline justify-between">
+        <h3 class="text-lg font-medium text-white lowercase">NQ IB edge at a glance</h3>
+        <span class="source-label">from: <a href="https://edgeful.com/reports/futures/NQ/initial-balance-breakout/standard" target="_blank" rel="noopener">initial balance breakout standard</a></span>
+      </div>
+      <p class="meta-line mt-1">
+        <span>NQ initial balance breakout</span>
+        <span class="meta-sep">|</span>
+        <span>11/28/25 - 05/28/26</span>
+        <span class="meta-sep">|</span>
+        <span>9:30 am - 4:00 pm (UTC-4)</span>
+        <span class="meta-sep">|</span>
+        <a class="meta-link" href="https://edgeful.com" target="_blank" rel="noopener">edgeful.com</a>
+      </p>
+    </div>
+    <div class="p-6">
+      <p class="text-sm text-neutral-400 mb-4 lowercase">both IB metrics clear the 65% threshold that edgeful uses to classify a setup as having a strong historical edge. single break probability leads at 84%; rejection-based direction accuracy follows at 78%.</p>
+      <div class="h-72"><canvas id="ibBarChart"></canvas></div>
+      <p class="text-xs text-neutral-500 mt-3 lowercase">sample: 123 sessions · NY session · last 6 months · dashed line marks the 65% edge threshold</p>
+    </div>
+  </div>
+
+</section>
+
+<!-- ── FOOTER ────────────────────────────────────────────────────────────── -->
+<footer class="mt-16 pt-6 border-t border-neutral-800 text-xs text-neutral-500 lowercase">
+  <p>data from <a href="https://edgeful.com" class="text-neutral-400 hover:text-white">edgeful.com</a> · 11/28/25 - 05/28/26 · 123 sessions · NY regular session</p>
+  <p class="mt-1">generated 2026-05-28 · for educational purposes only · historical performance is not a prediction of future results</p>
+</footer>
+
+</div><!-- /container -->
+
+<!-- ── CHART SCRIPTS ─────────────────────────────────────────────────────── -->
+<script>
+  // shared palette
+  const palette = {
+    bullish:       '#22C55E',
+    bearish:       '#D32D1F',
+    warning:       '#D89700',
+    primary:       '#0075FF',
+    neutral:       '#555555',
+    textSecondary: '#C7C7C7',
+    grid:          '#2A2A2A',
+    surface:       '#121212',
+    border:        '#2A2A2A',
+  };
+
+  const fill = {
+    bullish:      'rgba(34, 197, 94, 0.7)',
+    bearish:      'rgba(211, 45, 31, 0.7)',
+    warning:      'rgba(216, 151, 0, 0.7)',
+    primary:      'rgba(0, 117, 255, 0.7)',
+    neutral:      'rgba(85, 85, 85, 0.4)',
+    bullishLight: 'rgba(34, 197, 94, 0.15)',
+    bearishLight: 'rgba(211, 45, 31, 0.15)',
+  };
+
+  const baseTooltip = {
+    backgroundColor: palette.surface,
+    titleColor:  '#FFFFFF',
+    bodyColor:   palette.textSecondary,
+    borderColor: palette.border,
+    borderWidth: 1,
+    padding:     10,
+    cornerRadius: 6,
+    titleFont: { family: 'Poppins', size: 12, weight: '500' },
+    bodyFont:  { family: 'Poppins', size: 12, weight: '400' },
+  };
+
+  const baseScales = {
+    x: {
+      ticks: { color: palette.textSecondary, font: { family: 'Poppins', size: 12 } },
+      grid:  { color: palette.grid, drawBorder: false },
+    },
+    y: {
+      ticks: { color: palette.textSecondary, font: { family: 'Poppins', size: 12 } },
+      grid:  { color: palette.grid, drawBorder: false },
+      beginAtZero: true,
+    },
+  };
+
+  const baseOptions = {
+    responsive:          true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend:  { labels: { color: palette.textSecondary, font: { family: 'Poppins', size: 12 } } },
+      tooltip: baseTooltip,
+    },
+  };
+
+  // ── gap up doughnut ──────────────────────────────────────────────────── //
+  new Chart(document.getElementById('gapUpChart'), {
+    type: 'doughnut',
+    data: {
+      labels: ['filled', 'not filled'],
+      datasets: [{
+        data: [91, 9],
+        backgroundColor: [fill.bullish, fill.bearish],
+        borderColor:     [palette.bullish, palette.bearish],
+        borderWidth: 1,
+      }],
+    },
+    options: {
+      ...baseOptions,
+      cutout: '60%',
+      plugins: {
+        ...baseOptions.plugins,
+        legend: {
+          position: 'right',
+          labels: { color: palette.textSecondary, font: { family: 'Poppins', size: 12 }, padding: 12 },
+        },
+        tooltip: {
+          ...baseTooltip,
+          callbacks: {
+            label: (ctx) => `${ctx.label}: ${ctx.parsed}%`,
+          },
+        },
+      },
+    },
+  });
+
+  // ── gap down doughnut ────────────────────────────────────────────────── //
+  new Chart(document.getElementById('gapDownChart'), {
+    type: 'doughnut',
+    data: {
+      labels: ['filled', 'not filled'],
+      datasets: [{
+        data: [90, 10],
+        backgroundColor: [fill.bullish, fill.bearish],
+        borderColor:     [palette.bullish, palette.bearish],
+        borderWidth: 1,
+      }],
+    },
+    options: {
+      ...baseOptions,
+      cutout: '60%',
+      plugins: {
+        ...baseOptions.plugins,
+        legend: {
+          position: 'right',
+          labels: { color: palette.textSecondary, font: { family: 'Poppins', size: 12 }, padding: 12 },
+        },
+        tooltip: {
+          ...baseTooltip,
+          callbacks: {
+            label: (ctx) => `${ctx.label}: ${ctx.parsed}%`,
+          },
+        },
+      },
+    },
+  });
+
+  // ── IB bar chart (single series, outcome probabilities) ──────────────── //
+  // Both metrics are probabilities (hit rates), so semantic bullish color applies (both >= 65%).
+  new Chart(document.getElementById('ibBarChart'), {
+    type: 'bar',
+    data: {
+      labels: ['single break', 'by rejection'],
+      datasets: [{
+        label: 'probability',
+        data:  [84, 78],
+        backgroundColor: [fill.bullish, fill.bullish],
+        borderColor:     [palette.bullish, palette.bullish],
+        borderWidth: 1,
+        borderRadius: 6,
+      }],
+    },
+    options: {
+      ...baseOptions,
+      scales: {
+        x: baseScales.x,
+        y: {
+          ...baseScales.y,
+          max: 100,
+          ticks: {
+            ...baseScales.y.ticks,
+            callback: (v) => v + '%',
+            stepSize: 20,
+          },
+        },
+      },
+      plugins: {
+        ...baseOptions.plugins,
+        legend: { display: false },
+        tooltip: {
+          ...baseTooltip,
+          callbacks: {
+            label: (ctx) => `probability: ${ctx.parsed.y}%`,
+          },
+        },
+        // 65% threshold annotation drawn as a canvas plugin (no external dep)
+        annotation: undefined,
+      },
+    },
+    plugins: [{
+      // inline plugin: draw a dashed threshold line at 65%
+      id: 'thresholdLine',
+      afterDraw(chart) {
+        const { ctx, chartArea, scales } = chart;
+        if (!chartArea) return;
+        const y = scales.y.getPixelForValue(65);
+        ctx.save();
+        ctx.beginPath();
+        ctx.setLineDash([6, 4]);
+        ctx.strokeStyle = 'rgba(199, 199, 199, 0.35)';
+        ctx.lineWidth = 1;
+        ctx.moveTo(chartArea.left, y);
+        ctx.lineTo(chartArea.right, y);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.font = '500 12px Poppins, sans-serif';
+        ctx.fillStyle = 'rgba(199, 199, 199, 0.45)';
+        ctx.fillText('65% edge threshold', chartArea.left + 6, y - 5);
+        ctx.restore();
+      },
+    }],
+  });
+</script>
+</body>
+</html>
