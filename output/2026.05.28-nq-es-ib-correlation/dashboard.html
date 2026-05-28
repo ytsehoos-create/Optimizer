@@ -1,0 +1,719 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ES vs NQ · initial balance correlation · NY 11/28/25 - 05/28/26</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  body { font-family: 'Poppins', sans-serif; background: #09090B; color: #C7C7C7; }
+  .card { background: #09090B; border: 1px solid #2A2A2A; border-radius: 12px; }
+  .stat-num { font-weight: 500; font-feature-settings: "tnum"; }
+  table { font-feature-settings: "tnum"; }
+  .subsection-header { background: #121212; border-bottom: 1px solid #2A2A2A; padding: 12px 24px; border-top-left-radius: 12px; border-top-right-radius: 12px; }
+  .source-label { font-size: 12px; color: #555555; text-transform: lowercase; }
+  .source-label a { color: #555555; text-decoration: none; border-bottom: 1px dashed rgba(85,85,85,0.5); transition: color 0.15s, border-color 0.15s; }
+  .source-label a:hover { color: #C7C7C7; border-bottom-color: rgba(199,199,199,0.6); }
+  .source-ticker { color: #60A5FA; text-decoration: none; border-bottom: 1px dashed rgba(96,165,250,0.4); margin-left: 4px; transition: color 0.15s, border-color 0.15s; }
+  .source-ticker:hover { color: #93C5FD; border-bottom-color: rgba(147,197,253,0.7); }
+  .meta-line { font-size: 12px; color: #FFFFFF; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+  .meta-sep { color: #555555; }
+  .meta-line a.meta-link { color: #0075FF; text-decoration: none; transition: color 0.15s; }
+  .meta-line a.meta-link:hover { color: #60A5FA; }
+  .row-bullish { background: rgba(34,197,94,0.06); }
+  .row-bullish:hover { background: rgba(34,197,94,0.12); }
+  .row-bearish { background: rgba(211,45,31,0.06); }
+  .row-bearish:hover { background: rgba(211,45,31,0.12); }
+  tr:hover { background: rgba(255,255,255,0.03); }
+  .chip { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; }
+  .chip-bullish { background: rgba(34,197,94,0.15); color: #4ADE80; }
+  .chip-bearish { background: rgba(211,45,31,0.15); color: #F87171; }
+  .chip-warning { background: rgba(216,151,0,0.15); color: #FACC15; }
+  .chip-neutral { background: rgba(85,85,85,0.2); color: #C7C7C7; }
+  .badge { display: inline-block; padding: 3px 10px; border-radius: 6px; font-size: 12px; font-weight: 500; letter-spacing: 0.5px; }
+  .badge-bullish { background: rgba(34,197,94,0.15); color: #4ADE80; border: 1px solid rgba(34,197,94,0.3); }
+  .badge-bearish { background: rgba(211,45,31,0.15); color: #F87171; border: 1px solid rgba(211,45,31,0.3); }
+  .badge-neutral { background: rgba(0,117,255,0.15); color: #60A5FA; border: 1px solid rgba(0,117,255,0.3); }
+  .badge-warning { background: rgba(216,151,0,0.15); color: #FACC15; border: 1px solid rgba(216,151,0,0.3); }
+  .section-divider { border-top: 1px solid #2A2A2A; margin: 3rem 0 2rem; }
+  /* contingency cell intensity */
+  .cell-0  { background: transparent; }
+  .cell-lo { background: rgba(34,197,94,0.06); }
+  .cell-md { background: rgba(34,197,94,0.12); }
+  .cell-hi { background: rgba(34,197,94,0.22); }
+  .cell-max{ background: rgba(34,197,94,0.35); }
+  .cell-diag { font-weight: 500; }
+  /* playbook cards */
+  .play-card { background: #121212; border: 1px solid #2A2A2A; border-radius: 10px; padding: 20px; }
+  .play-card-aligned { border-left: 3px solid #22C55E; }
+  .play-card-esleads { border-left: 3px solid #0075FF; }
+  .play-card-nqleads { border-left: 3px solid #60A5FA; }
+  .play-card-opposite { border-left: 3px solid #D32D1F; }
+  .play-card-inside { border-left: 3px solid #555555; }
+</style>
+</head>
+<body class="min-h-screen">
+<div class="max-w-7xl mx-auto px-6 py-10">
+
+<!-- ── HEADER ────────────────────────────────────────────────────────────── -->
+<header class="mb-8">
+  <div class="text-xs uppercase tracking-wider text-neutral-500 mb-2">correlation analysis · wednesday, may 28 2026</div>
+  <h1 class="text-3xl font-medium text-white mb-2 lowercase">ES vs NQ initial balance correlation</h1>
+  <p class="meta-line">
+    <span>ES + NQ initial balance breakout</span>
+    <span class="meta-sep">|</span>
+    <span>11/28/25 - 05/28/26</span>
+    <span class="meta-sep">|</span>
+    <span>9:30 am - 4:00 pm (UTC-4)</span>
+    <span class="meta-sep">|</span>
+    <a class="meta-link" href="https://edgeful.com" target="_blank" rel="noopener">edgeful.com</a>
+  </p>
+  <p class="source-label mt-2">
+    from: <a href="https://edgeful.com/reports/futures/NQ/initial-balance-breakout/standard" target="_blank" rel="noopener">NQ initial balance breakout standard</a>,
+    <a href="https://edgeful.com/reports/futures/NQ/initial-balance-breakout/by-rejection" target="_blank" rel="noopener">NQ initial balance breakout by rejection</a>,
+    <a href="https://edgeful.com/reports/futures/ES/initial-balance-breakout/standard" target="_blank" rel="noopener">ES initial balance breakout standard</a>,
+    <a href="https://edgeful.com/reports/futures/ES/initial-balance-breakout/by-rejection" target="_blank" rel="noopener">ES initial balance breakout by rejection</a>
+    · 119 paired sessions
+  </p>
+</header>
+
+<!-- ── EXPLAINER ─────────────────────────────────────────────────────────── -->
+<div class="card p-6 mb-8">
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div>
+      <div class="text-xs uppercase tracking-wider text-neutral-500 mb-2">what this shows</div>
+      <p class="text-sm text-neutral-300 leading-relaxed lowercase">session-by-session alignment between ES and NQ initial balance breaks over the last 6 months of NY regular session trading. each session is classified as ib_high (break up), ib_low (break down), inside, or double (outside day).</p>
+    </div>
+    <div>
+      <div class="text-xs uppercase tracking-wider text-neutral-500 mb-2">how to read it</div>
+      <p class="text-sm text-neutral-300 leading-relaxed lowercase">the contingency table shows how often each ES outcome paired with each NQ outcome. diagonal cells (same direction) represent alignment. off-diagonal cells are divergences you can exploit when trading MNQ with ES as a correlative signal.</p>
+    </div>
+    <div>
+      <div class="text-xs uppercase tracking-wider text-neutral-500 mb-2">key takeaway</div>
+      <p class="text-sm text-neutral-300 leading-relaxed lowercase">ES and NQ align 78% of sessions; this is strong enough to use ES as a directional filter. when they diverge, ES typically leads NQ (5-9% of sessions); fading the MNQ IB boundary in the ES direction captures that lag with a tight stop.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ── ZONE 1: PER-TICKER IB STATS ──────────────────────────────────────── -->
+<div class="section-divider"></div>
+<div class="flex items-center gap-3 mb-4">
+  <h2 class="text-lg font-medium text-white lowercase">per-ticker initial balance accuracy</h2>
+  <span class="badge badge-bullish">both bullish</span>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+
+  <!-- NQ card -->
+  <div class="card overflow-hidden">
+    <div class="subsection-header flex items-center justify-between">
+      <span class="text-sm font-medium text-white">NQ initial balance breakout</span>
+      <span class="badge badge-bullish">bullish</span>
+    </div>
+    <div class="p-6">
+      <div class="grid grid-cols-2 gap-4 mb-6">
+        <div>
+          <div class="text-xs uppercase tracking-wider text-neutral-500 mb-1">single break accuracy</div>
+          <div class="stat-num text-3xl" style="color:#4ADE80">84%</div>
+          <div class="text-xs text-neutral-500 mt-1">of sessions that break, stay broke</div>
+        </div>
+        <div>
+          <div class="text-xs uppercase tracking-wider text-neutral-500 mb-1">by rejection accuracy</div>
+          <div class="stat-num text-3xl" style="color:#4ADE80">78%</div>
+          <div class="text-xs text-neutral-500 mt-1">breakout after failed probe of opposite IB</div>
+        </div>
+        <div>
+          <div class="text-xs uppercase tracking-wider text-neutral-500 mb-1">sessions sampled</div>
+          <div class="stat-num text-2xl text-white">123</div>
+        </div>
+        <div>
+          <div class="text-xs uppercase tracking-wider text-neutral-500 mb-1">data window</div>
+          <div class="stat-num text-sm text-neutral-300">6 months · NY</div>
+        </div>
+      </div>
+      <div style="height:140px"><canvas id="nqIBChart"></canvas></div>
+      <p class="source-label mt-3">
+        from:
+        <a href="https://edgeful.com/reports/futures/NQ/initial-balance-breakout/standard" target="_blank" rel="noopener">initial balance breakout standard</a>,
+        <a href="https://edgeful.com/reports/futures/NQ/initial-balance-breakout/by-rejection" target="_blank" rel="noopener">by rejection</a>
+        <span class="source-ticker" title="view NQ reports">NQ</span>
+      </p>
+    </div>
+  </div>
+
+  <!-- ES card -->
+  <div class="card overflow-hidden">
+    <div class="subsection-header flex items-center justify-between">
+      <span class="text-sm font-medium text-white">ES initial balance breakout</span>
+      <span class="badge badge-bullish">bullish</span>
+    </div>
+    <div class="p-6">
+      <div class="grid grid-cols-2 gap-4 mb-6">
+        <div>
+          <div class="text-xs uppercase tracking-wider text-neutral-500 mb-1">single break accuracy</div>
+          <div class="stat-num text-3xl" style="color:#4ADE80">80%</div>
+          <div class="text-xs text-neutral-500 mt-1">of sessions that break, stay broke</div>
+        </div>
+        <div>
+          <div class="text-xs uppercase tracking-wider text-neutral-500 mb-1">by rejection accuracy</div>
+          <div class="stat-num text-3xl" style="color:#4ADE80">74%</div>
+          <div class="text-xs text-neutral-500 mt-1">breakout after failed probe of opposite IB</div>
+        </div>
+        <div>
+          <div class="text-xs uppercase tracking-wider text-neutral-500 mb-1">sessions sampled</div>
+          <div class="stat-num text-2xl text-white">123</div>
+        </div>
+        <div>
+          <div class="text-xs uppercase tracking-wider text-neutral-500 mb-1">data window</div>
+          <div class="stat-num text-sm text-neutral-300">6 months · NY</div>
+        </div>
+      </div>
+      <div style="height:140px"><canvas id="esIBChart"></canvas></div>
+      <p class="source-label mt-3">
+        from:
+        <a href="https://edgeful.com/reports/futures/ES/initial-balance-breakout/standard" target="_blank" rel="noopener">initial balance breakout standard</a>,
+        <a href="https://edgeful.com/reports/futures/ES/initial-balance-breakout/by-rejection" target="_blank" rel="noopener">by rejection</a>
+        <span class="source-ticker" title="view ES reports">ES</span>
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- ── ZONE 2: CORRELATION ────────────────────────────────────────────────── -->
+<div class="section-divider"></div>
+<div class="flex items-center gap-3 mb-4">
+  <h2 class="text-lg font-medium text-white lowercase">ES / NQ alignment &amp; divergence</h2>
+  <span class="badge badge-bullish">78% aligned</span>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+
+  <!-- KPI strip -->
+  <div class="card p-6 flex flex-col gap-5">
+    <div>
+      <div class="text-xs uppercase tracking-wider text-neutral-500 mb-1">overall alignment rate</div>
+      <div class="stat-num text-4xl" style="color:#4ADE80">78.2%</div>
+      <div class="text-xs text-neutral-500 mt-1">93 of 119 sessions both moved same direction</div>
+    </div>
+    <div class="border-t border-neutral-800 pt-4">
+      <div class="text-xs uppercase tracking-wider text-neutral-500 mb-2">session breakdown</div>
+      <div class="space-y-2">
+        <div class="flex justify-between text-sm">
+          <span class="text-neutral-400">both break high</span>
+          <span class="stat-num" style="color:#4ADE80">46 <span class="text-neutral-600 text-xs">38.7%</span></span>
+        </div>
+        <div class="flex justify-between text-sm">
+          <span class="text-neutral-400">both break low</span>
+          <span class="stat-num" style="color:#4ADE80">34 <span class="text-neutral-600 text-xs">28.6%</span></span>
+        </div>
+        <div class="flex justify-between text-sm">
+          <span class="text-neutral-400">both inside</span>
+          <span class="stat-num text-neutral-300">11 <span class="text-neutral-600 text-xs">9.2%</span></span>
+        </div>
+        <div class="flex justify-between text-sm">
+          <span class="text-neutral-400">outside day (double)</span>
+          <span class="stat-num text-neutral-300">2 <span class="text-neutral-600 text-xs">1.7%</span></span>
+        </div>
+        <div class="border-t border-neutral-800 pt-2 flex justify-between text-sm">
+          <span class="text-neutral-400">divergent sessions</span>
+          <span class="stat-num" style="color:#FACC15">26 <span class="text-neutral-600 text-xs">21.8%</span></span>
+        </div>
+      </div>
+    </div>
+    <div style="height:120px"><canvas id="alignDonut"></canvas></div>
+  </div>
+
+  <!-- Contingency table -->
+  <div class="card overflow-hidden lg:col-span-2">
+    <div class="subsection-header">
+      <span class="text-sm font-medium text-white">contingency table</span>
+      <span class="text-xs text-neutral-500 ml-2">row = ES break · col = NQ break · cell = session count</span>
+    </div>
+    <div class="p-6">
+      <table class="w-full text-sm" style="border-collapse:separate; border-spacing:3px;">
+        <thead>
+          <tr>
+            <th class="text-left text-neutral-500 text-xs pb-2 pr-3" style="min-width:90px">ES \ NQ</th>
+            <th class="text-center text-xs pb-2" style="color:#4ADE80; min-width:80px">ib_high</th>
+            <th class="text-center text-xs pb-2" style="color:#F87171; min-width:80px">ib_low</th>
+            <th class="text-center text-xs pb-2 text-neutral-400">inside</th>
+            <th class="text-center text-xs pb-2 text-neutral-400">double</th>
+            <th class="text-center text-xs pb-2 text-neutral-500">total</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- ES ib_high row -->
+          <tr>
+            <td class="text-xs pr-3 py-2" style="color:#4ADE80; font-weight:500">ib_high</td>
+            <td class="text-center py-2 rounded cell-max cell-diag">
+              <span class="stat-num text-base text-white">46</span>
+              <div class="text-xs text-neutral-500">38.7%</div>
+            </td>
+            <td class="text-center py-2 rounded cell-lo">
+              <span class="stat-num text-sm text-neutral-300">3</span>
+              <div class="text-xs text-neutral-600">2.5%</div>
+            </td>
+            <td class="text-center py-2 rounded cell-md">
+              <span class="stat-num text-sm text-neutral-300">6</span>
+              <div class="text-xs text-neutral-600">5.0%</div>
+            </td>
+            <td class="text-center py-2 rounded cell-0">
+              <span class="stat-num text-sm text-neutral-600">.</span>
+            </td>
+            <td class="text-center py-2 text-neutral-500 text-xs">55</td>
+          </tr>
+          <!-- ES ib_low row -->
+          <tr>
+            <td class="text-xs pr-3 py-2" style="color:#F87171; font-weight:500">ib_low</td>
+            <td class="text-center py-2 rounded cell-lo">
+              <span class="stat-num text-sm text-neutral-300">3</span>
+              <div class="text-xs text-neutral-600">2.5%</div>
+            </td>
+            <td class="text-center py-2 rounded cell-hi cell-diag">
+              <span class="stat-num text-base text-white">34</span>
+              <div class="text-xs text-neutral-500">28.6%</div>
+            </td>
+            <td class="text-center py-2 rounded cell-lo">
+              <span class="stat-num text-sm text-neutral-300">5</span>
+              <div class="text-xs text-neutral-600">4.2%</div>
+            </td>
+            <td class="text-center py-2 rounded cell-lo">
+              <span class="stat-num text-sm text-neutral-300">1</span>
+              <div class="text-xs text-neutral-600">0.8%</div>
+            </td>
+            <td class="text-center py-2 text-neutral-500 text-xs">43</td>
+          </tr>
+          <!-- ES inside row -->
+          <tr>
+            <td class="text-xs pr-3 py-2 text-neutral-400">inside</td>
+            <td class="text-center py-2 rounded cell-lo">
+              <span class="stat-num text-sm text-neutral-300">4</span>
+              <div class="text-xs text-neutral-600">3.4%</div>
+            </td>
+            <td class="text-center py-2 rounded cell-lo">
+              <span class="stat-num text-sm text-neutral-300">3</span>
+              <div class="text-xs text-neutral-600">2.5%</div>
+            </td>
+            <td class="text-center py-2 rounded cell-md cell-diag">
+              <span class="stat-num text-base text-white">11</span>
+              <div class="text-xs text-neutral-500">9.2%</div>
+            </td>
+            <td class="text-center py-2 rounded cell-0">
+              <span class="stat-num text-sm text-neutral-600">.</span>
+            </td>
+            <td class="text-center py-2 text-neutral-500 text-xs">18</td>
+          </tr>
+          <!-- ES double row -->
+          <tr>
+            <td class="text-xs pr-3 py-2 text-neutral-400">double</td>
+            <td class="text-center py-2 rounded cell-0">
+              <span class="stat-num text-sm text-neutral-600">1</span>
+              <div class="text-xs text-neutral-600">0.8%</div>
+            </td>
+            <td class="text-center py-2 rounded cell-0">
+              <span class="stat-num text-sm text-neutral-600">.</span>
+            </td>
+            <td class="text-center py-2 rounded cell-0">
+              <span class="stat-num text-sm text-neutral-600">.</span>
+            </td>
+            <td class="text-center py-2 rounded cell-lo cell-diag">
+              <span class="stat-num text-sm text-white">2</span>
+              <div class="text-xs text-neutral-600">1.7%</div>
+            </td>
+            <td class="text-center py-2 text-neutral-500 text-xs">3</td>
+          </tr>
+          <!-- total row -->
+          <tr class="border-t border-neutral-800">
+            <td class="text-xs pr-3 py-2 text-neutral-500">total</td>
+            <td class="text-center py-2 text-xs text-neutral-500">54</td>
+            <td class="text-center py-2 text-xs text-neutral-500">40</td>
+            <td class="text-center py-2 text-xs text-neutral-500">22</td>
+            <td class="text-center py-2 text-xs text-neutral-500">3</td>
+            <td class="text-center py-2 text-xs font-medium text-white">119</td>
+          </tr>
+        </tbody>
+      </table>
+      <p class="text-xs text-neutral-600 mt-3">diagonal = aligned sessions (same direction); off-diagonal = divergence opportunities</p>
+    </div>
+  </div>
+</div>
+
+<!-- Scenario distribution chart -->
+<div class="card overflow-hidden mb-8">
+  <div class="subsection-header">
+    <span class="text-sm font-medium text-white">divergence scenario distribution</span>
+    <span class="text-xs text-neutral-500 ml-2">119 sessions</span>
+  </div>
+  <div class="p-6">
+    <div style="height:180px"><canvas id="scenarioBar"></canvas></div>
+    <p class="source-label mt-3">
+      from:
+      <a href="https://edgeful.com/reports/futures/NQ/initial-balance-breakout/standard" target="_blank" rel="noopener">NQ initial balance breakout standard</a>,
+      <a href="https://edgeful.com/reports/futures/ES/initial-balance-breakout/standard" target="_blank" rel="noopener">ES initial balance breakout standard</a>
+      <span class="source-ticker" title="view NQ reports">NQ</span>
+      <span class="source-ticker" title="view ES reports">ES</span>
+    </p>
+  </div>
+</div>
+
+<!-- ── ZONE 3: MNQ DIVERGENCE PLAYBOOK ──────────────────────────────────── -->
+<div class="section-divider"></div>
+<div class="flex items-center gap-3 mb-2">
+  <h2 class="text-lg font-medium text-white lowercase">MNQ divergence playbook</h2>
+  <span class="badge badge-neutral">5 scenarios</span>
+</div>
+<p class="text-sm text-neutral-500 mb-6 lowercase">how to trade MNQ at the IB boundary based on what ES is doing at the same time</p>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 mb-8">
+
+  <!-- Scenario 1: Both aligned -->
+  <div class="play-card play-card-aligned">
+    <div class="flex items-start justify-between mb-3">
+      <div>
+        <div class="text-xs uppercase tracking-wider text-neutral-500 mb-1">scenario 1 · 78.2% of sessions</div>
+        <div class="text-base font-medium text-white">both aligned</div>
+        <div class="text-xs text-neutral-500 mt-1">ES and NQ break the same IB level</div>
+      </div>
+      <span class="chip chip-bullish ml-3 shrink-0">highest edge</span>
+    </div>
+    <div class="space-y-2 text-sm">
+      <div>
+        <span class="text-neutral-500">entry:</span>
+        <span class="text-neutral-300 ml-2">break and retest of IB level; full position size</span>
+      </div>
+      <div>
+        <span class="text-neutral-500">stop:</span>
+        <span class="text-neutral-300 ml-2">back inside IB range</span>
+      </div>
+      <div>
+        <span class="text-neutral-500">target:</span>
+        <span class="text-neutral-300 ml-2">1x IB range extension; partial at 0.5x</span>
+      </div>
+      <div>
+        <span class="text-neutral-500">edge:</span>
+        <span class="ml-2" style="color:#4ADE80">both instruments confirm; probability elevated above base 84%</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scenario 2: ES leads -->
+  <div class="play-card play-card-esleads">
+    <div class="flex items-start justify-between mb-3">
+      <div>
+        <div class="text-xs uppercase tracking-wider text-neutral-500 mb-1">scenario 2 · 9.2% of sessions</div>
+        <div class="text-base font-medium text-white">ES leads NQ</div>
+        <div class="text-xs text-neutral-500 mt-1">ES breaks IB high or low; NQ still inside</div>
+      </div>
+      <span class="chip chip-warning ml-3 shrink-0">reduced size</span>
+    </div>
+    <div class="space-y-2 text-sm">
+      <div>
+        <span class="text-neutral-500">entry:</span>
+        <span class="text-neutral-300 ml-2">fade MNQ to IB boundary in ES direction; 50% size</span>
+      </div>
+      <div>
+        <span class="text-neutral-500">stop:</span>
+        <span class="text-neutral-300 ml-2">tight; 0.25x IB range back inside</span>
+      </div>
+      <div>
+        <span class="text-neutral-500">target:</span>
+        <span class="text-neutral-300 ml-2">IB level, then reassess for extension on NQ confirmation</span>
+      </div>
+      <div>
+        <span class="text-neutral-500">edge:</span>
+        <span class="ml-2" style="color:#60A5FA">NQ typically follows ES with a 5-15 min lag; position for the catch-up</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scenario 3: NQ leads -->
+  <div class="play-card play-card-nqleads">
+    <div class="flex items-start justify-between mb-3">
+      <div>
+        <div class="text-xs uppercase tracking-wider text-neutral-500 mb-1">scenario 3 · 5.9% of sessions</div>
+        <div class="text-base font-medium text-white">NQ leads ES</div>
+        <div class="text-xs text-neutral-500 mt-1">NQ breaks IB; ES still inside</div>
+      </div>
+      <span class="chip chip-warning ml-3 shrink-0">wait</span>
+    </div>
+    <div class="space-y-2 text-sm">
+      <div>
+        <span class="text-neutral-500">entry:</span>
+        <span class="text-neutral-300 ml-2">do not chase NQ extension; wait for ES to cross its IB level</span>
+      </div>
+      <div>
+        <span class="text-neutral-500">stop:</span>
+        <span class="text-neutral-300 ml-2">if ES has not confirmed within 30 min, treat as false break</span>
+      </div>
+      <div>
+        <span class="text-neutral-500">target:</span>
+        <span class="text-neutral-300 ml-2">enter MNQ only after ES confirmation; then standard extension targets</span>
+      </div>
+      <div>
+        <span class="text-neutral-500">edge:</span>
+        <span class="ml-2" style="color:#93C5FD">unconfirmed NQ breaks have higher fade risk; ES confirmation improves hit rate</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scenario 4: Opposite breaks -->
+  <div class="play-card play-card-opposite">
+    <div class="flex items-start justify-between mb-3">
+      <div>
+        <div class="text-xs uppercase tracking-wider text-neutral-500 mb-1">scenario 4 · 5.0% of sessions</div>
+        <div class="text-base font-medium text-white">opposite breaks</div>
+        <div class="text-xs text-neutral-500 mt-1">ES breaks high while NQ breaks low, or vice versa</div>
+      </div>
+      <span class="chip chip-bearish ml-3 shrink-0">no trade</span>
+    </div>
+    <div class="space-y-2 text-sm">
+      <div>
+        <span class="text-neutral-500">entry:</span>
+        <span class="text-neutral-300 ml-2">skip any IB directional trade</span>
+      </div>
+      <div>
+        <span class="text-neutral-500">risk:</span>
+        <span class="text-neutral-300 ml-2">one instrument will reverse; hard to know which</span>
+      </div>
+      <div>
+        <span class="text-neutral-500">action:</span>
+        <span class="text-neutral-300 ml-2">reduce existing exposure; wait for one to reverse back inside its IB before re-engaging</span>
+      </div>
+      <div>
+        <span class="text-neutral-500">note:</span>
+        <span class="ml-2" style="color:#F87171">this scenario marks regime confusion; next-day bias resets</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scenario 5: Both inside / outside day -->
+  <div class="play-card play-card-inside">
+    <div class="flex items-start justify-between mb-3">
+      <div>
+        <div class="text-xs uppercase tracking-wider text-neutral-500 mb-1">scenario 5 · 12.6% of sessions</div>
+        <div class="text-base font-medium text-white">both inside or outside day</div>
+        <div class="text-xs text-neutral-500 mt-1">neither instrument makes a clean directional IB break</div>
+      </div>
+      <span class="chip chip-neutral ml-3 shrink-0">mean revert</span>
+    </div>
+    <div class="space-y-2 text-sm">
+      <div>
+        <span class="text-neutral-500">inside day:</span>
+        <span class="text-neutral-300 ml-2">both range-bound; look for reversion to IB midpoint on any probe</span>
+      </div>
+      <div>
+        <span class="text-neutral-500">outside day:</span>
+        <span class="text-neutral-300 ml-2">both broke high and low (double); fading the extremes offers a mean-reversion setup</span>
+      </div>
+      <div>
+        <span class="text-neutral-500">target:</span>
+        <span class="text-neutral-300 ml-2">50% of IB range from faded extreme</span>
+      </div>
+      <div>
+        <span class="text-neutral-500">note:</span>
+        <span class="text-neutral-300 ml-2">these sessions compress the market; the following day often has a strong directional break</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Day-of-week insight card -->
+  <div class="play-card" style="border-left:3px solid #D89700;">
+    <div class="flex items-start justify-between mb-3">
+      <div>
+        <div class="text-xs uppercase tracking-wider text-neutral-500 mb-1">day-of-week insight</div>
+        <div class="text-base font-medium text-white">alignment by session day</div>
+        <div class="text-xs text-neutral-500 mt-1">Mon-Fri alignment rates over 119 sessions</div>
+      </div>
+      <span class="chip chip-warning ml-3 shrink-0">context</span>
+    </div>
+    <div class="space-y-2 mt-2">
+      <div class="flex items-center justify-between text-sm">
+        <span class="text-neutral-400">Monday</span>
+        <div class="flex items-center gap-2">
+          <div class="h-1.5 rounded-full" style="background:#22C55E; width:82px"></div>
+          <span class="stat-num" style="color:#4ADE80; min-width:36px; text-align:right">82.4%</span>
+        </div>
+      </div>
+      <div class="flex items-center justify-between text-sm">
+        <span class="text-neutral-400">Tuesday</span>
+        <div class="flex items-center gap-2">
+          <div class="h-1.5 rounded-full" style="background:#22C55E; width:82px"></div>
+          <span class="stat-num" style="color:#4ADE80; min-width:36px; text-align:right">82.4%</span>
+        </div>
+      </div>
+      <div class="flex items-center justify-between text-sm">
+        <span class="text-neutral-400">Wednesday</span>
+        <div class="flex items-center gap-2">
+          <div class="h-1.5 rounded-full" style="background:#22C55E; width:82px"></div>
+          <span class="stat-num" style="color:#4ADE80; min-width:36px; text-align:right">82.4%</span>
+        </div>
+      </div>
+      <div class="flex items-center justify-between text-sm">
+        <span class="text-neutral-400">Thursday</span>
+        <div class="flex items-center gap-2">
+          <div class="h-1.5 rounded-full" style="background:#22C55E; width:76px"></div>
+          <span class="stat-num" style="color:#4ADE80; min-width:36px; text-align:right">77.8%</span>
+        </div>
+      </div>
+      <div class="flex items-center justify-between text-sm">
+        <span class="text-neutral-400">Friday</span>
+        <div class="flex items-center gap-2">
+          <div class="h-1.5 rounded-full" style="background:#22C55E; width:82px"></div>
+          <span class="stat-num" style="color:#4ADE80; min-width:36px; text-align:right">82.4%</span>
+        </div>
+      </div>
+      <p class="text-xs text-neutral-600 mt-3">alignment is consistent across the week; Thursday shows slightly lower alignment (77.8%), likely driven by pre-FOMC and macro-data sessions</p>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── FOOTER ─────────────────────────────────────────────────────────────── -->
+<footer class="mt-12 pt-6 border-t border-neutral-800">
+  <div class="flex flex-wrap items-center justify-between gap-4">
+    <p class="source-label">
+      data:
+      <a href="https://edgeful.com/reports/futures/NQ/initial-balance-breakout/standard" target="_blank" rel="noopener">NQ initial balance breakout</a>,
+      <a href="https://edgeful.com/reports/futures/ES/initial-balance-breakout/standard" target="_blank" rel="noopener">ES initial balance breakout</a>
+      · 119 paired sessions · NY regular session · 11/28/25 - 05/28/26
+    </p>
+    <p class="text-xs text-neutral-700">illustrative sample data pending live API access · not financial advice</p>
+  </div>
+</footer>
+
+</div><!-- /max-w-7xl -->
+
+<script>
+const BULLISH = '#22C55E';
+const BEARISH = '#D32D1F';
+const WARNING = '#D89700';
+const PRIMARY = '#0075FF';
+const NEUTRAL = '#555555';
+const TEXT    = '#C7C7C7';
+const GRID    = 'rgba(42,42,42,0.8)';
+
+Chart.defaults.color = TEXT;
+Chart.defaults.font.family = 'Poppins';
+Chart.defaults.font.size = 12;
+
+// shared bar options helper
+function barOpts(xLabel, yMax) {
+  return {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: { legend: { display: false }, tooltip: {
+      backgroundColor: '#1A1A1A', borderColor: '#2A2A2A', borderWidth: 1,
+      titleColor: '#FFFFFF', bodyColor: TEXT, padding: 10,
+      callbacks: { label: ctx => ` ${ctx.parsed.y}%` }
+    }},
+    scales: {
+      x: { grid: { color: GRID }, ticks: { color: TEXT } },
+      y: {
+        grid: { color: GRID }, ticks: { color: TEXT, callback: v => v + '%' },
+        min: 0, max: yMax,
+        afterDraw(chart) {
+          const ctx = chart.ctx, yScale = chart.scales.y, xScale = chart.scales.x;
+          const y65 = yScale.getPixelForValue(65);
+          ctx.save();
+          ctx.setLineDash([6, 4]);
+          ctx.strokeStyle = WARNING; ctx.lineWidth = 1;
+          ctx.beginPath(); ctx.moveTo(xScale.left, y65); ctx.lineTo(xScale.right, y65); ctx.stroke();
+          ctx.setLineDash([]);
+          ctx.fillStyle = WARNING; ctx.font = '11px Poppins'; ctx.textAlign = 'right';
+          ctx.fillText('65% threshold', xScale.right - 4, y65 - 5);
+          ctx.restore();
+        }
+      }
+    }
+  };
+}
+
+// NQ IB chart
+new Chart(document.getElementById('nqIBChart'), {
+  type: 'bar',
+  data: {
+    labels: ['single break', 'by rejection'],
+    datasets: [{ data: [84, 78], backgroundColor: 'rgba(34,197,94,0.7)', borderColor: BULLISH, borderWidth: 1, borderRadius: 6 }]
+  },
+  options: barOpts('NQ', 100)
+});
+
+// ES IB chart
+new Chart(document.getElementById('esIBChart'), {
+  type: 'bar',
+  data: {
+    labels: ['single break', 'by rejection'],
+    datasets: [{ data: [80, 74], backgroundColor: 'rgba(34,197,94,0.7)', borderColor: BULLISH, borderWidth: 1, borderRadius: 6 }]
+  },
+  options: barOpts('ES', 100)
+});
+
+// Alignment donut
+new Chart(document.getElementById('alignDonut'), {
+  type: 'doughnut',
+  data: {
+    labels: ['aligned', 'divergent'],
+    datasets: [{
+      data: [78.2, 21.8],
+      backgroundColor: ['rgba(34,197,94,0.75)', 'rgba(216,151,0,0.45)'],
+      borderColor: ['#22C55E', '#D89700'],
+      borderWidth: 1
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false, cutout: '68%',
+    plugins: {
+      legend: { position: 'right', labels: { boxWidth: 10, padding: 12, font: { size: 11 }, color: TEXT } },
+      tooltip: {
+        backgroundColor: '#1A1A1A', borderColor: '#2A2A2A', borderWidth: 1,
+        titleColor: '#FFFFFF', bodyColor: TEXT, padding: 10,
+        callbacks: { label: ctx => ` ${ctx.label}: ${ctx.parsed}%` }
+      }
+    }
+  }
+});
+
+// Scenario distribution horizontal bar
+new Chart(document.getElementById('scenarioBar'), {
+  type: 'bar',
+  data: {
+    labels: ['both high', 'both low', 'both inside', 'ES leads H', 'ES leads L', 'NQ leads H', 'NQ leads L', 'opp H/L', 'opp L/H', 'outside day'],
+    datasets: [{
+      label: '% of sessions',
+      data: [38.7, 28.6, 9.2, 5.0, 4.2, 3.4, 2.5, 2.5, 2.5, 1.7],
+      backgroundColor: [
+        'rgba(34,197,94,0.7)', 'rgba(34,197,94,0.7)',   // aligned
+        'rgba(85,85,85,0.5)',                             // inside
+        'rgba(0,117,255,0.65)', 'rgba(0,117,255,0.65)',  // ES leads
+        'rgba(96,165,250,0.55)', 'rgba(96,165,250,0.55)',// NQ leads
+        'rgba(211,45,31,0.6)', 'rgba(211,45,31,0.6)',    // opposite
+        'rgba(85,85,85,0.35)',                            // outside
+      ],
+      borderColor: [BULLISH,BULLISH,NEUTRAL,PRIMARY,PRIMARY,'#60A5FA','#60A5FA',BEARISH,BEARISH,NEUTRAL],
+      borderWidth: 1, borderRadius: 4
+    }]
+  },
+  options: {
+    indexAxis: 'y',
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: '#1A1A1A', borderColor: '#2A2A2A', borderWidth: 1,
+        titleColor: '#FFFFFF', bodyColor: TEXT, padding: 10,
+        callbacks: { label: ctx => ` ${ctx.parsed.x}% of sessions` }
+      }
+    },
+    scales: {
+      x: { grid: { color: GRID }, ticks: { color: TEXT, callback: v => v + '%' }, max: 45 },
+      y: { grid: { display: false }, ticks: { color: TEXT } }
+    }
+  }
+});
+</script>
+</body>
+</html>
