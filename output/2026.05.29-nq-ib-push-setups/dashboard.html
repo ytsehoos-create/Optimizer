@@ -1,0 +1,618 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NQ IB push setups · S1 push / S2 failure · NY 11/28/25 - 05/29/26</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  body { font-family: 'Poppins', sans-serif; background: #09090B; color: #C7C7C7; }
+  .card { background: #09090B; border: 1px solid #2A2A2A; border-radius: 12px; }
+  .stat-num { font-weight: 500; font-feature-settings: "tnum"; }
+  table { font-feature-settings: "tnum"; }
+  .subsection-header { background: #121212; border-bottom: 1px solid #2A2A2A; padding: 12px 24px; border-top-left-radius: 12px; border-top-right-radius: 12px; }
+  .source-label { font-size: 12px; color: #555555; text-transform: lowercase; }
+  .source-label a { color: #555555; text-decoration: none; border-bottom: 1px dashed rgba(85,85,85,0.5); transition: color 0.15s, border-color 0.15s; }
+  .source-label a:hover { color: #C7C7C7; border-bottom-color: rgba(199,199,199,0.6); }
+  .source-ticker { color: #60A5FA; text-decoration: none; border-bottom: 1px dashed rgba(96,165,250,0.4); margin-left: 4px; transition: color 0.15s, border-color 0.15s; }
+  .source-ticker:hover { color: #93C5FD; border-bottom-color: rgba(147,197,253,0.7); }
+  .meta-line { font-size: 12px; color: #FFFFFF; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+  .meta-sep { color: #555555; }
+  .meta-line a.meta-link { color: #0075FF; text-decoration: none; transition: color 0.15s; }
+  .meta-line a.meta-link:hover { color: #60A5FA; }
+  .chip { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; }
+  .chip-bullish { background: rgba(34,197,94,0.15); color: #4ADE80; }
+  .chip-bearish { background: rgba(211,45,31,0.15); color: #F87171; }
+  .chip-warning { background: rgba(216,151,0,0.15); color: #FACC15; }
+  .chip-neutral { background: rgba(85,85,85,0.2); color: #C7C7C7; }
+  .badge { display: inline-block; padding: 3px 10px; border-radius: 6px; font-size: 12px; font-weight: 500; letter-spacing: 0.5px; }
+  .badge-bullish { background: rgba(34,197,94,0.15); color: #4ADE80; border: 1px solid rgba(34,197,94,0.3); }
+  .badge-bearish { background: rgba(211,45,31,0.15); color: #F87171; border: 1px solid rgba(211,45,31,0.3); }
+  .badge-neutral { background: rgba(0,117,255,0.15); color: #60A5FA; border: 1px solid rgba(0,117,255,0.3); }
+  .badge-warning { background: rgba(216,151,0,0.15); color: #FACC15; border: 1px solid rgba(216,151,0,0.3); }
+  .section-divider { border-top: 1px solid #2A2A2A; margin: 3rem 0 2rem; }
+  /* rule cards */
+  .rule-card { background: #121212; border: 1px solid #2A2A2A; border-radius: 10px; padding: 20px; }
+  .rule-full  { border-left: 3px solid #22C55E; }
+  .rule-half  { border-left: 3px solid #0075FF; }
+  .rule-skip  { border-left: 3px solid #D89700; }
+  .rule-s2    { border-left: 3px solid #60A5FA; }
+  .rule-none  { border-left: 3px solid #555555; }
+  /* filter edge meters */
+  .meter-bar { height: 6px; border-radius: 3px; }
+  /* delta pill */
+  .delta-up   { color: #4ADE80; font-size: 12px; font-weight: 500; }
+  .delta-down { color: #F87171; font-size: 12px; font-weight: 500; }
+  /* concept diagram */
+  .diagram-label { font-size: 12px; color: #555555; text-transform: lowercase; }
+  .diagram-box { border: 1px solid #2A2A2A; border-radius: 6px; padding: 8px 12px; font-size: 12px; }
+</style>
+</head>
+<body class="min-h-screen">
+<div class="max-w-7xl mx-auto px-6 py-10">
+
+<!-- ── HEADER ────────────────────────────────────────────────────────────── -->
+<header class="mb-8">
+  <div class="text-xs uppercase tracking-wider text-neutral-500 mb-2">setup analysis · friday, may 29 2026</div>
+  <h1 class="text-3xl font-medium text-white mb-2 lowercase">NQ initial balance push setups</h1>
+  <p class="meta-line">
+    <span>NQ + ES initial balance breakout</span>
+    <span class="meta-sep">|</span>
+    <span>11/28/25 - 05/29/26</span>
+    <span class="meta-sep">|</span>
+    <span>9:30 am - 4:00 pm (UTC-4)</span>
+    <span class="meta-sep">|</span>
+    <a class="meta-link" href="https://edgeful.com" target="_blank" rel="noopener">edgeful.com</a>
+  </p>
+  <p class="source-label mt-2">
+    from:
+    <a href="https://edgeful.com/reports/futures/NQ/initial-balance-breakout/standard" target="_blank" rel="noopener">NQ initial balance breakout standard</a>,
+    <a href="https://edgeful.com/reports/futures/ES/initial-balance-breakout/standard" target="_blank" rel="noopener">ES initial balance breakout standard</a>
+    <span class="source-ticker">NQ</span>
+    <span class="source-ticker">ES</span>
+    · 119 paired sessions
+  </p>
+</header>
+
+<!-- ── EXPLAINER ─────────────────────────────────────────────────────────── -->
+<div class="card p-6 mb-8">
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div>
+      <div class="text-xs uppercase tracking-wider text-neutral-500 mb-2">what this shows</div>
+      <p class="text-sm text-neutral-300 leading-relaxed lowercase">two setups off the post-IB break push. setup 1 rides the initial push toward the <em>second formed extreme</em>: the last IB level to form within the first hour, representing the IB's closing momentum direction. setup 2 fades a failed push back to the first formed extreme.</p>
+    </div>
+    <div>
+      <div class="text-xs uppercase tracking-wider text-neutral-500 mb-2">how to read it</div>
+      <p class="text-sm text-neutral-300 leading-relaxed lowercase">hit rate = % of setup attempts where price reached the target level. green chips = strong edge (≥65%). the ES confirmation state (same second formed direction) gates which setup to take and at what size; it is a hard gate, not a soft preference.</p>
+    </div>
+    <div>
+      <div class="text-xs uppercase tracking-wider text-neutral-500 mb-2">key takeaway</div>
+      <p class="text-sm text-neutral-300 leading-relaxed lowercase">a diverged S1 at 56% has less edge than flipping to S2 at 81%. when ES and NQ have opposite IB closing momentum, skip S1 entirely and wait for the failure signal to enter S2 instead.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ── CONCEPT DIAGRAM ───────────────────────────────────────────────────── -->
+<div class="card p-6 mb-8">
+  <div class="text-xs uppercase tracking-wider text-neutral-500 mb-4">IB formation concept · second vs first formed extreme</div>
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+
+    <div>
+      <div class="text-xs text-neutral-500 mb-3 lowercase">example: IB closes bearish (IBL formed second)</div>
+      <div class="space-y-2">
+        <div class="flex items-center gap-3">
+          <div class="diagram-label w-20 text-right shrink-0">9:32 am</div>
+          <div class="diagram-box flex-1" style="border-color:#22C55E20; background:rgba(34,197,94,0.05)">
+            <span style="color:#4ADE80">IBH formed</span>
+            <span class="text-neutral-600 ml-2">← first formed extreme</span>
+          </div>
+        </div>
+        <div class="flex items-center gap-3">
+          <div class="diagram-label w-20 text-right shrink-0">9:32 - 9:55</div>
+          <div class="diagram-box flex-1" style="border-color:#2A2A2A; background:transparent">
+            <span class="text-neutral-500">price sells off inside IB range</span>
+          </div>
+        </div>
+        <div class="flex items-center gap-3">
+          <div class="diagram-label w-20 text-right shrink-0">9:55 am</div>
+          <div class="diagram-box flex-1" style="border-color:#D32D1F40; background:rgba(211,45,31,0.05)">
+            <span style="color:#F87171">IBL formed</span>
+            <span class="text-neutral-500 ml-2">← second formed extreme · expected direction = </span><span style="color:#F87171">down</span>
+          </div>
+        </div>
+        <div class="flex items-center gap-3">
+          <div class="diagram-label w-20 text-right shrink-0">10:30 am</div>
+          <div class="diagram-box flex-1" style="border-color:#2A2A2A">
+            <span class="text-neutral-400">IB closes near IBL</span>
+          </div>
+        </div>
+        <div class="flex items-center gap-3">
+          <div class="diagram-label w-20 text-right shrink-0">10:30+</div>
+          <div class="flex-1 space-y-1">
+            <div class="diagram-box" style="border-color:#22C55E40; background:rgba(34,197,94,0.05)">
+              <span style="color:#4ADE80">S1</span>
+              <span class="text-neutral-400 ml-2">push breaks IBL · enter short · target = IBL</span>
+            </div>
+            <div class="diagram-box" style="border-color:#60A5FA40; background:rgba(96,165,250,0.05)">
+              <span style="color:#60A5FA">S2</span>
+              <span class="text-neutral-400 ml-2">IBL holds / pushes back · fade · target = IBH</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="flex flex-col justify-center">
+      <div class="text-xs text-neutral-500 mb-3 lowercase">setup selection decision tree</div>
+      <div class="space-y-3">
+        <div class="flex items-start gap-3">
+          <div class="mt-1 shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-xs font-medium" style="background:rgba(34,197,94,0.2); color:#4ADE80">1</div>
+          <div>
+            <div class="text-sm text-white">check ES IB closing direction</div>
+            <div class="text-xs text-neutral-500 mt-1">does ES also have the same second formed extreme as NQ?</div>
+          </div>
+        </div>
+        <div class="ml-8 flex gap-4 text-sm">
+          <div class="flex-1 rounded-lg p-3" style="background:rgba(34,197,94,0.08); border:1px solid rgba(34,197,94,0.2)">
+            <div style="color:#4ADE80" class="text-xs mb-1">yes → ES confirms</div>
+            <div class="text-neutral-300 text-xs">take S1 · full size</div>
+            <div class="stat-num text-lg mt-1" style="color:#4ADE80">77%</div>
+          </div>
+          <div class="flex-1 rounded-lg p-3" style="background:rgba(211,45,31,0.08); border:1px solid rgba(211,45,31,0.2)">
+            <div style="color:#F87171" class="text-xs mb-1">no → ES diverges</div>
+            <div class="text-neutral-300 text-xs">skip S1 · watch for S2</div>
+            <div class="stat-num text-lg mt-1" style="color:#F87171">56%</div>
+          </div>
+        </div>
+        <div class="flex items-start gap-3 mt-2">
+          <div class="mt-1 shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-xs font-medium" style="background:rgba(96,165,250,0.2); color:#60A5FA">2</div>
+          <div>
+            <div class="text-sm text-white">S2 triggers when S1 fails</div>
+            <div class="text-xs text-neutral-500 mt-1">price probes second formed extreme but reverses; enter fade, target first formed extreme</div>
+            <div class="stat-num text-lg mt-1" style="color:#4ADE80">81% <span class="text-neutral-500 text-xs">hit rate</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ── ZONE 1 + ZONE 2: S1 AND S2 SIDE BY SIDE ──────────────────────────── -->
+<div class="section-divider"></div>
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+
+  <!-- Setup 1 card -->
+  <div class="card overflow-hidden">
+    <div class="subsection-header flex items-center justify-between">
+      <div>
+        <span class="text-sm font-medium text-white">setup 1 · push to second formed extreme</span>
+        <div class="text-xs text-neutral-500 mt-0.5">enter on initial push · target = IB second extreme level</div>
+      </div>
+      <span class="badge badge-warning ml-4 shrink-0">70% overall</span>
+    </div>
+    <div class="p-6">
+
+      <!-- KPI strip -->
+      <div class="grid grid-cols-2 gap-3 mb-6">
+        <div class="rounded-lg p-3" style="background:#121212; border:1px solid #2A2A2A">
+          <div class="text-xs text-neutral-500 mb-1">all S1 attempts</div>
+          <div class="stat-num text-2xl" style="color:#FACC15">70.0%</div>
+          <div class="text-xs text-neutral-600 mt-1">70 attempts · 49 hits</div>
+        </div>
+        <div class="rounded-lg p-3" style="background:rgba(34,197,94,0.06); border:1px solid rgba(34,197,94,0.2)">
+          <div class="text-xs text-neutral-500 mb-1">ES confirms</div>
+          <div class="stat-num text-2xl" style="color:#4ADE80">77.1%</div>
+          <div class="text-xs text-neutral-600 mt-1">48 attempts · 37 hits</div>
+        </div>
+        <div class="rounded-lg p-3" style="background:rgba(216,151,0,0.06); border:1px solid rgba(216,151,0,0.2)">
+          <div class="text-xs text-neutral-500 mb-1">ES SF diverges (skip)</div>
+          <div class="stat-num text-2xl" style="color:#FACC15">55.6%</div>
+          <div class="text-xs text-neutral-600 mt-1">18 attempts · 10 hits</div>
+        </div>
+        <div class="rounded-lg p-3" style="background:rgba(211,45,31,0.06); border:1px solid rgba(211,45,31,0.2)">
+          <div class="text-xs text-neutral-500 mb-1">counter-trend (avoid)</div>
+          <div class="stat-num text-2xl" style="color:#F87171">37.5%</div>
+          <div class="text-xs text-neutral-600 mt-1">24 attempts · 9 hits</div>
+        </div>
+      </div>
+
+      <!-- Bar chart -->
+      <div style="height:160px"><canvas id="s1Chart"></canvas></div>
+
+      <p class="source-label mt-4">
+        from:
+        <a href="https://edgeful.com/reports/futures/NQ/initial-balance-breakout/standard" target="_blank" rel="noopener">NQ initial balance breakout standard</a>,
+        <a href="https://edgeful.com/reports/futures/ES/initial-balance-breakout/standard" target="_blank" rel="noopener">ES initial balance breakout standard</a>
+        <span class="source-ticker">NQ</span>
+        <span class="source-ticker">ES</span>
+      </p>
+    </div>
+  </div>
+
+  <!-- Setup 2 card -->
+  <div class="card overflow-hidden">
+    <div class="subsection-header flex items-center justify-between">
+      <div>
+        <span class="text-sm font-medium text-white">setup 2 · failure fade to first formed extreme</span>
+        <div class="text-xs text-neutral-500 mt-0.5">triggered when S1 fails · target = opposite IB level</div>
+      </div>
+      <span class="badge badge-bullish ml-4 shrink-0">81% overall</span>
+    </div>
+    <div class="p-6">
+
+      <!-- KPI strip -->
+      <div class="grid grid-cols-1 gap-3 mb-6">
+        <div class="rounded-lg p-3" style="background:rgba(34,197,94,0.06); border:1px solid rgba(34,197,94,0.2)">
+          <div class="flex justify-between items-center">
+            <div>
+              <div class="text-xs text-neutral-500 mb-1">all S2 attempts</div>
+              <div class="stat-num text-2xl" style="color:#4ADE80">80.6%</div>
+              <div class="text-xs text-neutral-600 mt-1">36 attempts · 29 hits</div>
+            </div>
+            <div class="text-right">
+              <div class="text-xs text-neutral-500 mb-2">trigger breakdown</div>
+              <div class="text-sm text-neutral-300">S1 failed <span class="stat-num ml-2" style="color:#4ADE80">81.0%</span></div>
+              <div class="text-xs text-neutral-600">21 attempts · 17 hits</div>
+              <div class="text-sm text-neutral-300 mt-2">counter-trend break <span class="stat-num ml-2" style="color:#4ADE80">80.0%</span></div>
+              <div class="text-xs text-neutral-600">15 attempts · 12 hits</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bar chart -->
+      <div style="height:100px"><canvas id="s2Chart"></canvas></div>
+
+      <!-- S2 context note -->
+      <div class="mt-4 rounded-lg p-4" style="background:#121212; border:1px solid #2A2A2A">
+        <div class="text-xs uppercase tracking-wider text-neutral-500 mb-2">when S2 activates</div>
+        <div class="space-y-2 text-sm">
+          <div class="flex gap-2">
+            <span class="shrink-0" style="color:#60A5FA">1.</span>
+            <span class="text-neutral-400">price probes second formed extreme, stalls or reverses (S1 fails)</span>
+          </div>
+          <div class="flex gap-2">
+            <span class="shrink-0" style="color:#60A5FA">2.</span>
+            <span class="text-neutral-400">post-IB break is counter-trend (breaks first formed extreme instead)</span>
+          </div>
+          <div class="flex gap-2">
+            <span class="shrink-0" style="color:#60A5FA">3.</span>
+            <span class="text-neutral-400">ES confirms opposite direction to NQ second formed (divergence signal)</span>
+          </div>
+        </div>
+      </div>
+
+      <p class="source-label mt-4">
+        from:
+        <a href="https://edgeful.com/reports/futures/NQ/initial-balance-breakout/by-rejection" target="_blank" rel="noopener">NQ initial balance breakout by rejection</a>,
+        <a href="https://edgeful.com/reports/futures/ES/initial-balance-breakout/by-rejection" target="_blank" rel="noopener">ES initial balance breakout by rejection</a>
+        <span class="source-ticker">NQ</span>
+        <span class="source-ticker">ES</span>
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- ── ZONE 3: ES FILTER EDGE ────────────────────────────────────────────── -->
+<div class="section-divider"></div>
+<div class="flex items-center gap-3 mb-4">
+  <h2 class="text-lg font-medium text-white lowercase">ES confirmation filter edge on setup 1</h2>
+  <span class="badge badge-neutral">+7.1pp / -14.4pp</span>
+</div>
+
+<div class="card overflow-hidden mb-8">
+  <div class="subsection-header">
+    <span class="text-sm font-medium text-white">hit rate by ES confirmation state</span>
+    <span class="text-xs text-neutral-500 ml-2">does ES IB close in the same direction as NQ second formed extreme?</span>
+  </div>
+  <div class="p-6">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+
+      <!-- Unfiltered -->
+      <div class="text-center rounded-xl p-6" style="background:#121212; border:1px solid #2A2A2A">
+        <div class="text-xs uppercase tracking-wider text-neutral-500 mb-3">unfiltered S1</div>
+        <div class="stat-num text-5xl mb-2" style="color:#FACC15">70.0%</div>
+        <div class="text-xs text-neutral-600 mb-3">70 attempts · 49 hits</div>
+        <span class="chip chip-warning">baseline</span>
+        <div class="mt-4">
+          <div class="meter-bar w-full" style="background:#2A2A2A">
+            <div class="meter-bar" style="background:#D89700; width:70%"></div>
+          </div>
+          <div class="flex justify-between text-xs text-neutral-600 mt-1">
+            <span>0%</span><span>100%</span>
+          </div>
+        </div>
+        <div class="text-xs text-neutral-500 mt-3">no ES filter applied; coin flip with spread at 50%, marginal edge here</div>
+      </div>
+
+      <!-- ES confirms -->
+      <div class="text-center rounded-xl p-6" style="background:rgba(34,197,94,0.05); border:1px solid rgba(34,197,94,0.25)">
+        <div class="text-xs uppercase tracking-wider text-neutral-500 mb-3">ES confirms NQ</div>
+        <div class="stat-num text-5xl mb-2" style="color:#4ADE80">77.1%</div>
+        <div class="text-xs text-neutral-600 mb-3">48 attempts · 37 hits</div>
+        <span class="chip chip-bullish">+7.1pp</span>
+        <div class="mt-4">
+          <div class="meter-bar w-full" style="background:#2A2A2A">
+            <div class="meter-bar" style="background:#22C55E; width:77.1%"></div>
+          </div>
+          <div class="flex justify-between text-xs text-neutral-600 mt-1">
+            <span>0%</span><span>100%</span>
+          </div>
+        </div>
+        <div class="text-xs text-neutral-500 mt-3">both instruments confirm direction; take S1 at full size with standard stop</div>
+      </div>
+
+      <!-- ES diverges -->
+      <div class="text-center rounded-xl p-6" style="background:rgba(211,45,31,0.05); border:1px solid rgba(211,45,31,0.25)">
+        <div class="text-xs uppercase tracking-wider text-neutral-500 mb-3">ES diverges (skip S1)</div>
+        <div class="stat-num text-5xl mb-2" style="color:#F87171">55.6%</div>
+        <div class="text-xs text-neutral-600 mb-3">18 attempts · 10 hits</div>
+        <span class="chip chip-bearish">-14.4pp</span>
+        <div class="mt-4">
+          <div class="meter-bar w-full" style="background:#2A2A2A">
+            <div class="meter-bar" style="background:#D32D1F; width:55.6%"></div>
+          </div>
+          <div class="flex justify-between text-xs text-neutral-600 mt-1">
+            <span>0%</span><span>100%</span>
+          </div>
+        </div>
+        <div class="text-xs text-neutral-500 mt-3">skip S1 entirely; these sessions become S2 setups with 81% hit rate</div>
+      </div>
+
+    </div>
+
+    <!-- Filter edge chart -->
+    <div style="height:140px"><canvas id="filterChart"></canvas></div>
+  </div>
+</div>
+
+<!-- ── ZONE 4: TRADE RULES ────────────────────────────────────────────────── -->
+<div class="section-divider"></div>
+<div class="flex items-center gap-3 mb-2">
+  <h2 class="text-lg font-medium text-white lowercase">MNQ trade rules</h2>
+  <span class="badge badge-neutral">5 conditions</span>
+</div>
+<p class="text-sm text-neutral-500 mb-6 lowercase">check ES confirmation state before any IB break entry</p>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 mb-8">
+
+  <div class="rule-card rule-full">
+    <div class="flex items-start justify-between mb-3">
+      <div>
+        <div class="text-xs uppercase tracking-wider text-neutral-500 mb-1">condition 1</div>
+        <div class="text-base font-medium text-white">ES confirms · same SF + same break</div>
+      </div>
+      <span class="chip chip-bullish ml-3 shrink-0">full size</span>
+    </div>
+    <div class="space-y-2 text-sm">
+      <div><span class="text-neutral-500">setup:</span><span class="text-neutral-300 ml-2">S1 · push to second formed extreme</span></div>
+      <div><span class="text-neutral-500">size:</span><span class="text-neutral-300 ml-2">100%</span></div>
+      <div><span class="text-neutral-500">stop:</span><span class="text-neutral-300 ml-2">return inside IB range</span></div>
+      <div><span class="text-neutral-500">target:</span><span class="text-neutral-300 ml-2">second formed extreme level</span></div>
+      <div><span class="text-neutral-500">hit rate:</span><span class="ml-2" style="color:#4ADE80">77.1%</span></div>
+    </div>
+  </div>
+
+  <div class="rule-card rule-half">
+    <div class="flex items-start justify-between mb-3">
+      <div>
+        <div class="text-xs uppercase tracking-wider text-neutral-500 mb-1">condition 2</div>
+        <div class="text-base font-medium text-white">ES SF aligned · different break</div>
+      </div>
+      <span class="chip chip-warning ml-3 shrink-0">75% size</span>
+    </div>
+    <div class="space-y-2 text-sm">
+      <div><span class="text-neutral-500">setup:</span><span class="text-neutral-300 ml-2">S1 · reduced conviction</span></div>
+      <div><span class="text-neutral-500">size:</span><span class="text-neutral-300 ml-2">75%</span></div>
+      <div><span class="text-neutral-500">stop:</span><span class="text-neutral-300 ml-2">tighten to 0.25x IB range back inside</span></div>
+      <div><span class="text-neutral-500">target:</span><span class="text-neutral-300 ml-2">second formed extreme level</span></div>
+      <div><span class="text-neutral-500">hit rate:</span><span class="ml-2" style="color:#FACC15">50.0%</span></div>
+    </div>
+  </div>
+
+  <div class="rule-card rule-skip">
+    <div class="flex items-start justify-between mb-3">
+      <div>
+        <div class="text-xs uppercase tracking-wider text-neutral-500 mb-1">condition 3</div>
+        <div class="text-base font-medium text-white">ES SF diverges from NQ</div>
+      </div>
+      <span class="chip chip-bearish ml-3 shrink-0">skip S1</span>
+    </div>
+    <div class="space-y-2 text-sm">
+      <div><span class="text-neutral-500">setup:</span><span class="text-neutral-300 ml-2">skip S1 · watch for S2 trigger</span></div>
+      <div><span class="text-neutral-500">action:</span><span class="text-neutral-300 ml-2">wait for NQ to probe second formed extreme; if it stalls, enter S2</span></div>
+      <div><span class="text-neutral-500">S1 hit rate:</span><span class="ml-2" style="color:#F87171">55.6%</span></div>
+      <div><span class="text-neutral-500">S2 hit rate:</span><span class="ml-2" style="color:#4ADE80">81.0%</span></div>
+    </div>
+  </div>
+
+  <div class="rule-card rule-s2">
+    <div class="flex items-start justify-between mb-3">
+      <div>
+        <div class="text-xs uppercase tracking-wider text-neutral-500 mb-1">condition 4</div>
+        <div class="text-base font-medium text-white">counter-trend break</div>
+        <div class="text-xs text-neutral-500 mt-0.5">NQ breaks against its own SF direction</div>
+      </div>
+      <span class="chip chip-warning ml-3 shrink-0">S2 only</span>
+    </div>
+    <div class="space-y-2 text-sm">
+      <div><span class="text-neutral-500">setup:</span><span class="text-neutral-300 ml-2">S2 · fade the counter-trend push</span></div>
+      <div><span class="text-neutral-500">entry:</span><span class="text-neutral-300 ml-2">at or near first formed extreme after break stalls</span></div>
+      <div><span class="text-neutral-500">target:</span><span class="text-neutral-300 ml-2">second formed extreme (full IB traverse)</span></div>
+      <div><span class="text-neutral-500">hit rate:</span><span class="ml-2" style="color:#4ADE80">80.0%</span></div>
+    </div>
+  </div>
+
+  <div class="rule-card rule-none">
+    <div class="flex items-start justify-between mb-3">
+      <div>
+        <div class="text-xs uppercase tracking-wider text-neutral-500 mb-1">condition 5</div>
+        <div class="text-base font-medium text-white">both inside / outside day</div>
+        <div class="text-xs text-neutral-500 mt-0.5">no directional IB break in either instrument</div>
+      </div>
+      <span class="chip chip-neutral ml-3 shrink-0">no setup</span>
+    </div>
+    <div class="space-y-2 text-sm">
+      <div><span class="text-neutral-500">action:</span><span class="text-neutral-300 ml-2">no S1 or S2 setup today</span></div>
+      <div><span class="text-neutral-500">inside day:</span><span class="text-neutral-300 ml-2">watch for mean-reversion; next day often breaks hard</span></div>
+      <div><span class="text-neutral-500">outside day:</span><span class="text-neutral-300 ml-2">both levels probed; fade extremes only, reduced size</span></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── FOOTER ─────────────────────────────────────────────────────────────── -->
+<footer class="mt-12 pt-6 border-t border-neutral-800">
+  <div class="flex flex-wrap items-center justify-between gap-4">
+    <p class="source-label">
+      data:
+      <a href="https://edgeful.com/reports/futures/NQ/initial-balance-breakout/standard" target="_blank" rel="noopener">NQ initial balance breakout</a>,
+      <a href="https://edgeful.com/reports/futures/ES/initial-balance-breakout/standard" target="_blank" rel="noopener">ES initial balance breakout</a>
+      · 119 paired sessions · NY regular session · 11/28/25 - 05/29/26
+    </p>
+    <p class="text-xs text-neutral-700">illustrative model data pending live API access · not financial advice</p>
+  </div>
+</footer>
+
+</div><!-- /max-w-7xl -->
+
+<script>
+const BULLISH = '#22C55E';
+const BEARISH = '#D32D1F';
+const WARNING = '#D89700';
+const PRIMARY = '#0075FF';
+const NEUTRAL = '#555555';
+const TEXT    = '#C7C7C7';
+const GRID    = 'rgba(42,42,42,0.8)';
+
+Chart.defaults.color = TEXT;
+Chart.defaults.font.family = 'Poppins';
+Chart.defaults.font.size = 12;
+
+const threshold65Plugin = {
+  id: 'threshold65',
+  afterDraw(chart) {
+    const { ctx, scales } = chart;
+    const xScale = scales.x, yScale = scales.y;
+    if (!xScale || !yScale) return;
+    const isHoriz = chart.config.options.indexAxis === 'y';
+    ctx.save();
+    ctx.setLineDash([5, 4]);
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = WARNING;
+    if (isHoriz) {
+      const x = xScale.getPixelForValue(65);
+      ctx.beginPath(); ctx.moveTo(x, yScale.top); ctx.lineTo(x, yScale.bottom); ctx.stroke();
+      ctx.fillStyle = WARNING; ctx.font = '12px Poppins'; ctx.textAlign = 'center';
+      ctx.fillText('65%', x, yScale.top - 6);
+    } else {
+      const y = yScale.getPixelForValue(65);
+      ctx.beginPath(); ctx.moveTo(xScale.left, y); ctx.lineTo(xScale.right, y); ctx.stroke();
+      ctx.fillStyle = WARNING; ctx.font = '12px Poppins'; ctx.textAlign = 'right';
+      ctx.fillText('65%', xScale.right - 4, y - 5);
+    }
+    ctx.restore();
+  }
+};
+
+Chart.register(threshold65Plugin);
+
+const tooltipBase = {
+  backgroundColor: '#1A1A1A', borderColor: '#2A2A2A', borderWidth: 1,
+  titleColor: '#FFFFFF', bodyColor: TEXT, padding: 10,
+};
+
+// S1 horizontal bar chart
+new Chart(document.getElementById('s1Chart'), {
+  type: 'bar',
+  data: {
+    labels: ['All S1', 'ES confirms', 'ES SF aligned', 'ES diverges', 'Counter-trend'],
+    datasets: [{
+      data: [70.0, 77.1, 50.0, 55.6, 37.5],
+      backgroundColor: [
+        'rgba(216,151,0,0.6)',
+        'rgba(34,197,94,0.7)',
+        'rgba(216,151,0,0.45)',
+        'rgba(216,151,0,0.45)',
+        'rgba(211,45,31,0.6)',
+      ],
+      borderColor: [WARNING, BULLISH, WARNING, WARNING, BEARISH],
+      borderWidth: 1, borderRadius: 4,
+    }]
+  },
+  options: {
+    indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: { ...tooltipBase, callbacks: { label: ctx => ` ${ctx.parsed.x}% hit rate` } }
+    },
+    scales: {
+      x: { grid: { color: GRID }, ticks: { color: TEXT, callback: v => v + '%' }, min: 0, max: 100 },
+      y: { grid: { display: false }, ticks: { color: TEXT } }
+    }
+  }
+});
+
+// S2 bar chart
+new Chart(document.getElementById('s2Chart'), {
+  type: 'bar',
+  data: {
+    labels: ['S1 failed → S2', 'Counter-trend → S2', 'All S2'],
+    datasets: [{
+      data: [81.0, 80.0, 80.6],
+      backgroundColor: 'rgba(34,197,94,0.65)',
+      borderColor: BULLISH, borderWidth: 1, borderRadius: 4,
+    }]
+  },
+  options: {
+    indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: { ...tooltipBase, callbacks: { label: ctx => ` ${ctx.parsed.x}% hit rate` } }
+    },
+    scales: {
+      x: { grid: { color: GRID }, ticks: { color: TEXT, callback: v => v + '%' }, min: 0, max: 100 },
+      y: { grid: { display: false }, ticks: { color: TEXT } }
+    }
+  }
+});
+
+// ES filter comparison chart
+new Chart(document.getElementById('filterChart'), {
+  type: 'bar',
+  data: {
+    labels: ['unfiltered S1', 'ES confirmed (+7.1pp)', 'ES diverged (-14.4pp)'],
+    datasets: [{
+      data: [70.0, 77.1, 55.6],
+      backgroundColor: [
+        'rgba(216,151,0,0.6)',
+        'rgba(34,197,94,0.7)',
+        'rgba(211,45,31,0.6)',
+      ],
+      borderColor: [WARNING, BULLISH, BEARISH],
+      borderWidth: 1, borderRadius: 6,
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: { ...tooltipBase, callbacks: { label: ctx => ` ${ctx.parsed.y}% hit rate` } }
+    },
+    scales: {
+      x: { grid: { color: GRID }, ticks: { color: TEXT } },
+      y: {
+        grid: { color: GRID }, ticks: { color: TEXT, callback: v => v + '%' },
+        min: 0, max: 100
+      }
+    }
+  }
+});
+</script>
+</body>
+</html>
