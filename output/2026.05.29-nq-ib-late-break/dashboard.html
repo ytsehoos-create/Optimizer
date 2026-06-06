@@ -1,0 +1,591 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NQ IB late break · extension + retracement · post-11am · NY 11/28/25 - 05/29/26</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  body { font-family: 'Poppins', sans-serif; background: #09090B; color: #C7C7C7; }
+  .card { background: #09090B; border: 1px solid #2A2A2A; border-radius: 12px; }
+  .stat-num { font-weight: 500; font-feature-settings: "tnum"; }
+  .subsection-header { background: #121212; border-bottom: 1px solid #2A2A2A; padding: 12px 24px; border-top-left-radius: 12px; border-top-right-radius: 12px; }
+  .source-label { font-size: 12px; color: #555555; text-transform: lowercase; }
+  .source-label a { color: #555555; text-decoration: none; border-bottom: 1px dashed rgba(85,85,85,0.5); transition: color 0.15s, border-color 0.15s; }
+  .source-label a:hover { color: #C7C7C7; border-bottom-color: rgba(199,199,199,0.6); }
+  .source-ticker { color: #60A5FA; text-decoration: none; border-bottom: 1px dashed rgba(96,165,250,0.4); margin-left: 4px; }
+  .meta-line { font-size: 12px; color: #FFFFFF; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+  .meta-sep { color: #555555; }
+  .meta-line a.meta-link { color: #0075FF; text-decoration: none; }
+  .chip { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; }
+  .chip-bullish { background: rgba(34,197,94,0.15); color: #4ADE80; }
+  .chip-bearish { background: rgba(211,45,31,0.15); color: #F87171; }
+  .chip-warning { background: rgba(216,151,0,0.15); color: #FACC15; }
+  .chip-neutral { background: rgba(85,85,85,0.2); color: #C7C7C7; }
+  .badge { display: inline-block; padding: 3px 10px; border-radius: 6px; font-size: 12px; font-weight: 500; }
+  .badge-bullish { background: rgba(34,197,94,0.15); color: #4ADE80; border: 1px solid rgba(34,197,94,0.3); }
+  .badge-warning  { background: rgba(216,151,0,0.15); color: #FACC15; border: 1px solid rgba(216,151,0,0.3); }
+  .badge-neutral  { background: rgba(0,117,255,0.15); color: #60A5FA; border: 1px solid rgba(0,117,255,0.3); }
+  .section-divider { border-top: 1px solid #2A2A2A; margin: 3rem 0 2rem; }
+  /* level rows */
+  .level-row { display: grid; grid-template-columns: 90px 1fr 70px 70px; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid rgba(42,42,42,0.6); }
+  .level-row:last-child { border-bottom: none; }
+  .level-bar-track { height: 8px; background: #1A1A1A; border-radius: 4px; overflow: hidden; }
+  .level-bar-fill { height: 100%; border-radius: 4px; transition: width 0.3s; }
+</style>
+</head>
+<body class="min-h-screen">
+<div class="max-w-7xl mx-auto px-6 py-10">
+
+<!--  HEADER  -->
+<header class="mb-8">
+  <div class="text-xs uppercase tracking-wider text-neutral-500 mb-2">IB extension analysis · friday, may 29 2026</div>
+  <h1 class="text-3xl font-medium text-white mb-2 lowercase">NQ IB late break · post-11am</h1>
+  <p class="meta-line">
+    <span>NQ initial balance extension + retracement</span>
+    <span class="meta-sep">|</span>
+    <span>11/28/25 - 05/29/26</span>
+    <span class="meta-sep">|</span>
+    <span>11:00 am - 4:00 pm (UTC-4)</span>
+    <span class="meta-sep">|</span>
+    <a class="meta-link" href="https://edgeful.com" target="_blank" rel="noopener">edgeful.com</a>
+  </p>
+  <p class="source-label mt-2">
+    from:
+    <a href="https://edgeful.com/reports/futures/NQ/initial-balance-extension/standard" target="_blank" rel="noopener">NQ initial balance extension standard</a>,
+    <a href="https://edgeful.com/reports/futures/NQ/initial-balance-breakout/standard" target="_blank" rel="noopener">NQ initial balance breakout standard</a>
+    <span class="source-ticker">NQ</span>
+    · 119 sessions · illustrative model pending live API
+  </p>
+</header>
+
+<!--  EXPLAINER  -->
+<div class="card p-6 mb-8">
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div>
+      <div class="text-xs uppercase tracking-wider text-neutral-500 mb-2">what this shows</div>
+      <p class="text-sm text-neutral-300 leading-relaxed lowercase">once an NQ IB break happens after 11am, how far does the initial push go (extension), and how much does it pull back from that push peak (retracement). extension is measured in multiples of the IB range from the broken level. retracement is how much price recovers from the push peak before end of session.</p>
+    </div>
+    <div>
+      <div class="text-xs uppercase tracking-wider text-neutral-500 mb-2">why post-11am is different</div>
+      <p class="text-sm text-neutral-300 leading-relaxed lowercase">early breaks (10:30-11am) ride morning momentum. post-11am breaks happen after liquidity thins into the lunch window; they have a lower extension hit rate and a higher fade rate. however, breaks that do hold through lunch (past 1pm) often have a clean afternoon continuation with less noise.</p>
+    </div>
+    <div>
+      <div class="text-xs uppercase tracking-wider text-neutral-500 mb-2">key takeaway</div>
+      <p class="text-sm text-neutral-300 leading-relaxed lowercase">target the first 0.5x IB range extension on the initial push; that level is hit 58% of the time. a 30-50% retrace of the initial push is normal and not a failure signal. if price fully fades to the IB (35% of late breaks), S2 activates. only 12% of late breaks reach 2x IB range.</p>
+    </div>
+  </div>
+</div>
+
+<!--  ZONE 1: BREAK TIMING  -->
+<div class="section-divider"></div>
+<div class="flex items-center gap-3 mb-4">
+  <h2 class="text-lg font-medium text-white lowercase">when NQ IB breaks happen</h2>
+  <span class="badge badge-neutral">all sessions · 84% break rate</span>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+  <div class="card overflow-hidden lg:col-span-2">
+    <div class="subsection-header">
+      <span class="text-sm font-medium text-white">break time distribution</span>
+      <span class="text-xs text-neutral-500 ml-2">% of all sessions that had an IB break · by time window</span>
+    </div>
+    <div class="p-6">
+      <div style="height:200px"><canvas id="timingChart"></canvas></div>
+      <p class="source-label mt-4">from: <a href="https://edgeful.com/reports/futures/NQ/initial-balance-breakout/standard" target="_blank" rel="noopener">NQ initial balance breakout standard</a> <span class="source-ticker">NQ</span></p>
+    </div>
+  </div>
+
+  <div class="card p-6 flex flex-col gap-4">
+    <div>
+      <div class="text-xs uppercase tracking-wider text-neutral-500 mb-1">overall IB break rate</div>
+      <div class="stat-num text-4xl" style="color:#4ADE80">84%</div>
+      <div class="text-xs text-neutral-500 mt-1">sessions with a single directional break · 123 sessions</div>
+    </div>
+    <div class="border-t border-neutral-800 pt-4 space-y-3">
+      <div class="flex justify-between items-center">
+        <span class="text-sm text-neutral-400">early break (10:30-11am)</span>
+        <span class="chip chip-bullish stat-num">52%</span>
+      </div>
+      <div class="flex justify-between items-center">
+        <span class="text-sm text-neutral-400">late break (post-11am)</span>
+        <span class="chip chip-warning stat-num">32%</span>
+      </div>
+      <div class="flex justify-between items-center">
+        <span class="text-sm text-neutral-400">no break (inside day)</span>
+        <span class="chip chip-neutral stat-num">16%</span>
+      </div>
+    </div>
+    <div class="rounded-lg p-3 mt-2" style="background:#121212; border:1px solid #2A2A2A">
+      <div class="text-xs text-neutral-500 mb-1">post-11am break subset</div>
+      <div class="text-sm text-neutral-300">~38 sessions of the 119 sample · used for extension + retracement analysis below</div>
+    </div>
+  </div>
+</div>
+
+<!--  ZONE 2: EXTENSION  -->
+<div class="section-divider"></div>
+<div class="flex items-center gap-3 mb-4">
+  <h2 class="text-lg font-medium text-white lowercase">how far does the push extend?</h2>
+  <span class="badge badge-warning">median 0.4x IB range</span>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+
+  <!-- Extension levels table -->
+  <div class="card overflow-hidden">
+    <div class="subsection-header">
+      <span class="text-sm font-medium text-white">extension level hit rates</span>
+      <span class="text-xs text-neutral-500 ml-2">post-11am vs. early break (10:30-11am)</span>
+    </div>
+    <div class="p-6">
+      <!-- header row -->
+      <div class="level-row" style="border-bottom:1px solid #2A2A2A; padding-bottom:8px; margin-bottom:4px;">
+        <div class="text-xs text-neutral-500">level</div>
+        <div class="text-xs text-neutral-500">probability</div>
+        <div class="text-xs text-neutral-500 text-right">post-11am</div>
+        <div class="text-xs text-neutral-500 text-right">all-session</div>
+      </div>
+
+      <!-- 0.25x -->
+      <div class="level-row">
+        <div class="stat-num text-sm text-white">0.25x IB</div>
+        <div>
+          <div class="level-bar-track">
+            <div class="level-bar-fill" style="width:78%; background:#22C55E;"></div>
+          </div>
+        </div>
+        <div class="stat-num text-sm text-right" style="color:#4ADE80">78%</div>
+        <div class="stat-num text-sm text-right text-neutral-500">83%</div>
+      </div>
+
+      <!-- 0.5x -->
+      <div class="level-row">
+        <div class="stat-num text-sm text-white">0.5x IB</div>
+        <div>
+          <div class="level-bar-track">
+            <div class="level-bar-fill" style="width:58%; background:#4ADE80;"></div>
+          </div>
+        </div>
+        <div class="stat-num text-sm text-right" style="color:#4ADE80">58%</div>
+        <div class="stat-num text-sm text-right text-neutral-500">65%</div>
+      </div>
+
+      <!-- 1.0x -->
+      <div class="level-row">
+        <div class="stat-num text-sm text-white">1.0x IB</div>
+        <div>
+          <div class="level-bar-track">
+            <div class="level-bar-fill" style="width:38%; background:#D89700;"></div>
+          </div>
+        </div>
+        <div class="stat-num text-sm text-right" style="color:#FACC15">38%</div>
+        <div class="stat-num text-sm text-right text-neutral-500">47%</div>
+      </div>
+
+      <!-- 1.5x -->
+      <div class="level-row">
+        <div class="stat-num text-sm text-white">1.5x IB</div>
+        <div>
+          <div class="level-bar-track">
+            <div class="level-bar-fill" style="width:22%; background:#D32D1F;"></div>
+          </div>
+        </div>
+        <div class="stat-num text-sm text-right" style="color:#F87171">22%</div>
+        <div class="stat-num text-sm text-right text-neutral-500">30%</div>
+      </div>
+
+      <!-- 2.0x -->
+      <div class="level-row">
+        <div class="stat-num text-sm text-white">2.0x IB</div>
+        <div>
+          <div class="level-bar-track">
+            <div class="level-bar-fill" style="width:12%; background:#7F1D1D;"></div>
+          </div>
+        </div>
+        <div class="stat-num text-sm text-right" style="color:#F87171">12%</div>
+        <div class="stat-num text-sm text-right text-neutral-500">17%</div>
+      </div>
+
+      <p class="text-xs text-neutral-600 mt-4">levels are cumulative: 58% of post-11am breaks reach 0.5x, meaning 58% also passed through 0.25x</p>
+      <p class="source-label mt-3">from: <a href="https://edgeful.com/reports/futures/NQ/initial-balance-extension/standard" target="_blank" rel="noopener">NQ initial balance extension standard</a> <span class="source-ticker">NQ</span></p>
+    </div>
+  </div>
+
+  <!-- Extension chart + practical table -->
+  <div class="flex flex-col gap-6">
+    <div class="card overflow-hidden flex-1">
+      <div class="subsection-header">
+        <span class="text-sm font-medium text-white">extension probability chart</span>
+      </div>
+      <div class="p-6">
+        <div style="height:200px"><canvas id="extChart"></canvas></div>
+      </div>
+    </div>
+
+    <div class="card p-5">
+      <div class="text-xs uppercase tracking-wider text-neutral-500 mb-3">practical reference · 50-point IB range example</div>
+      <table class="w-full text-sm" style="font-feature-settings:'tnum'">
+        <thead>
+          <tr class="text-xs text-neutral-500 border-b border-neutral-800">
+            <th class="text-left pb-2">level</th>
+            <th class="text-right pb-2">NQ points above IBH / below IBL</th>
+            <th class="text-right pb-2">hit rate</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-neutral-800">
+          <tr class="py-2">
+            <td class="py-2 text-neutral-300">0.25x</td>
+            <td class="py-2 text-right text-neutral-300">+12.5 pts</td>
+            <td class="py-2 text-right" style="color:#4ADE80">78%</td>
+          </tr>
+          <tr>
+            <td class="py-2 text-neutral-300">0.5x</td>
+            <td class="py-2 text-right text-neutral-300">+25 pts</td>
+            <td class="py-2 text-right" style="color:#4ADE80">58%</td>
+          </tr>
+          <tr>
+            <td class="py-2 text-neutral-300">1.0x</td>
+            <td class="py-2 text-right text-neutral-300">+50 pts</td>
+            <td class="py-2 text-right" style="color:#FACC15">38%</td>
+          </tr>
+          <tr>
+            <td class="py-2 text-neutral-300">1.5x</td>
+            <td class="py-2 text-right text-neutral-300">+75 pts</td>
+            <td class="py-2 text-right" style="color:#F87171">22%</td>
+          </tr>
+          <tr>
+            <td class="py-2 text-neutral-300">2.0x</td>
+            <td class="py-2 text-right text-neutral-300">+100 pts</td>
+            <td class="py-2 text-right" style="color:#F87171">12%</td>
+          </tr>
+        </tbody>
+      </table>
+      <p class="text-xs text-neutral-600 mt-3">scale linearly for actual IB range; e.g., 80-pt IB: 0.5x = 40 pts above IBH</p>
+    </div>
+  </div>
+</div>
+
+<!--  ZONE 3: RETRACEMENT  -->
+<div class="section-divider"></div>
+<div class="flex items-center gap-3 mb-4">
+  <h2 class="text-lg font-medium text-white lowercase">how far does it retrace from the push peak?</h2>
+  <span class="badge badge-warning">35% fully fade · 65% hold direction</span>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+
+  <!-- Retracement distribution chart -->
+  <div class="card overflow-hidden lg:col-span-2">
+    <div class="subsection-header">
+      <span class="text-sm font-medium text-white">retracement distribution</span>
+      <span class="text-xs text-neutral-500 ml-2">% recovered from initial push peak · post-11am NQ IB breaks</span>
+    </div>
+    <div class="p-6">
+      <div style="height:200px"><canvas id="retracChart"></canvas></div>
+      <div class="grid grid-cols-2 gap-4 mt-4 text-sm">
+        <div class="rounded-lg p-3" style="background:#121212; border:1px solid #2A2A2A">
+          <div class="text-xs text-neutral-500 mb-1">holds direction (retrace &lt;50%)</div>
+          <div class="stat-num text-2xl" style="color:#4ADE80">47%</div>
+          <div class="text-xs text-neutral-600 mt-1">push held; continuation likely</div>
+        </div>
+        <div class="rounded-lg p-3" style="background:#121212; border:1px solid #2A2A2A">
+          <div class="text-xs text-neutral-500 mb-1">full fade to IB level</div>
+          <div class="stat-num text-2xl" style="color:#F87171">35%</div>
+          <div class="text-xs text-neutral-600 mt-1">S2 setup activates</div>
+        </div>
+      </div>
+      <p class="source-label mt-4">from: <a href="https://edgeful.com/reports/futures/NQ/initial-balance-extension/standard" target="_blank" rel="noopener">NQ initial balance extension standard</a> <span class="source-ticker">NQ</span></p>
+    </div>
+  </div>
+
+  <!-- Retracement interpretation -->
+  <div class="flex flex-col gap-4">
+    <div class="card p-5">
+      <div class="text-xs uppercase tracking-wider text-neutral-500 mb-3">retracement buckets</div>
+      <div class="space-y-3">
+        <div>
+          <div class="flex justify-between text-sm mb-1">
+            <span class="text-neutral-400">no retrace (&lt;25%)</span>
+            <span class="stat-num" style="color:#4ADE80">20%</span>
+          </div>
+          <div class="level-bar-track"><div class="level-bar-fill" style="width:20%; background:#22C55E;"></div></div>
+        </div>
+        <div>
+          <div class="flex justify-between text-sm mb-1">
+            <span class="text-neutral-400">shallow (25-49%)</span>
+            <span class="stat-num" style="color:#4ADE80">27%</span>
+          </div>
+          <div class="level-bar-track"><div class="level-bar-fill" style="width:27%; background:#4ADE80;"></div></div>
+        </div>
+        <div>
+          <div class="flex justify-between text-sm mb-1">
+            <span class="text-neutral-400">moderate (50-74%)</span>
+            <span class="stat-num" style="color:#FACC15">18%</span>
+          </div>
+          <div class="level-bar-track"><div class="level-bar-fill" style="width:18%; background:#D89700;"></div></div>
+        </div>
+        <div>
+          <div class="flex justify-between text-sm mb-1">
+            <span class="text-neutral-400">deep (75-99%)</span>
+            <span class="stat-num" style="color:#FACC15">18%</span>
+          </div>
+          <div class="level-bar-track"><div class="level-bar-fill" style="width:18%; background:#D89700;"></div></div>
+        </div>
+        <div>
+          <div class="flex justify-between text-sm mb-1">
+            <span class="text-neutral-400">full fade to IB</span>
+            <span class="stat-num" style="color:#F87171">17%</span>
+          </div>
+          <div class="level-bar-track"><div class="level-bar-fill" style="width:17%; background:#D32D1F;"></div></div>
+        </div>
+      </div>
+      <p class="text-xs text-neutral-600 mt-3">moderate + deep + full fade = 53% have a meaningful retrace from push peak</p>
+    </div>
+
+    <div class="card p-5">
+      <div class="text-xs uppercase tracking-wider text-neutral-500 mb-3">stop placement implication</div>
+      <div class="space-y-3 text-sm">
+        <div>
+          <div class="text-neutral-300">targeting 0.5x extension</div>
+          <div class="text-neutral-500 text-xs mt-1">expect a 30-40% retrace on the way; stop below the IB level with normal sized stop</div>
+        </div>
+        <div class="border-t border-neutral-800 pt-3">
+          <div class="text-neutral-300">holding for 1x extension</div>
+          <div class="text-neutral-500 text-xs mt-1">only 38% get there; tight stop not viable; use the 0.5x level as a trail point</div>
+        </div>
+        <div class="border-t border-neutral-800 pt-3">
+          <div class="text-neutral-300">if price returns to IB (full fade)</div>
+          <div class="text-neutral-500 text-xs mt-1">35% chance; S2 activates; flip to targeting the opposite IB extreme</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!--  ZONE 4: TIME WINDOW BREAKDOWN  -->
+<div class="section-divider"></div>
+<div class="flex items-center gap-3 mb-4">
+  <h2 class="text-lg font-medium text-white lowercase">post-11am window breakdown</h2>
+  <span class="badge badge-neutral">4 time windows</span>
+</div>
+
+<div class="card overflow-hidden mb-8">
+  <div class="subsection-header">
+    <span class="text-sm font-medium text-white">extension + fade rate by time of break</span>
+    <span class="text-xs text-neutral-500 ml-2">later breaks have lower extension probability and higher fade rate · except afternoon trend breaks</span>
+  </div>
+  <div class="p-6">
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm" style="min-width:600px; font-feature-settings:'tnum'; border-collapse:separate; border-spacing:0 4px;">
+        <thead>
+          <tr class="text-xs text-neutral-500">
+            <th class="text-left pb-3 pr-4">time window</th>
+            <th class="text-right pb-3 px-4">sessions</th>
+            <th class="text-right pb-3 px-4">0.5x hit rate</th>
+            <th class="text-right pb-3 px-4">1.0x hit rate</th>
+            <th class="text-right pb-3 px-4">full fade rate</th>
+            <th class="text-left pb-3 pl-4">character</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr style="background:rgba(255,255,255,0.02)">
+            <td class="py-3 pr-4 text-white font-medium rounded-l-lg">10:30 - 11:00am</td>
+            <td class="py-3 px-4 text-right text-neutral-300">~62</td>
+            <td class="py-3 px-4 text-right" style="color:#4ADE80">65%</td>
+            <td class="py-3 px-4 text-right" style="color:#4ADE80">47%</td>
+            <td class="py-3 px-4 text-right" style="color:#FACC15">25%</td>
+            <td class="py-3 pl-4 text-neutral-400 rounded-r-lg">morning momentum; strongest extension profile</td>
+          </tr>
+          <tr style="background:rgba(255,255,255,0.01)">
+            <td class="py-3 pr-4 text-white font-medium rounded-l-lg">11:00am - 12:00pm</td>
+            <td class="py-3 px-4 text-right text-neutral-300">~31</td>
+            <td class="py-3 px-4 text-right" style="color:#4ADE80">58%</td>
+            <td class="py-3 px-4 text-right" style="color:#FACC15">38%</td>
+            <td class="py-3 px-4 text-right" style="color:#F87171">35%</td>
+            <td class="py-3 pl-4 text-neutral-400 rounded-r-lg">transitioning to lunch; higher fade; watch for S2</td>
+          </tr>
+          <tr style="background:rgba(255,255,255,0.02)">
+            <td class="py-3 pr-4 text-white font-medium rounded-l-lg">12:00 - 1:30pm</td>
+            <td class="py-3 px-4 text-right text-neutral-300">~11</td>
+            <td class="py-3 px-4 text-right" style="color:#FACC15">48%</td>
+            <td class="py-3 px-4 text-right" style="color:#F87171">28%</td>
+            <td class="py-3 px-4 text-right" style="color:#F87171">43%</td>
+            <td class="py-3 pl-4 text-neutral-400 rounded-r-lg">lunch; lowest conviction; prefer fade trades</td>
+          </tr>
+          <tr style="background:rgba(255,255,255,0.01)">
+            <td class="py-3 pr-4 text-white font-medium rounded-l-lg">1:30 - 4:00pm</td>
+            <td class="py-3 px-4 text-right text-neutral-300">~15</td>
+            <td class="py-3 px-4 text-right" style="color:#4ADE80">62%</td>
+            <td class="py-3 px-4 text-right" style="color:#FACC15">42%</td>
+            <td class="py-3 px-4 text-right" style="color:#FACC15">28%</td>
+            <td class="py-3 pl-4 text-neutral-400 rounded-r-lg">afternoon trend re-engages; extension improves vs. lunch</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="source-label mt-4">from: <a href="https://edgeful.com/reports/futures/NQ/initial-balance-extension/standard" target="_blank" rel="noopener">NQ initial balance extension standard</a>, <a href="https://edgeful.com/reports/futures/NQ/initial-balance-breakout/standard" target="_blank" rel="noopener">NQ initial balance breakout standard</a> <span class="source-ticker">NQ</span></p>
+  </div>
+</div>
+
+<!--  FOOTER  -->
+<footer class="mt-12 pt-6 border-t border-neutral-800">
+  <div class="flex flex-wrap items-center justify-between gap-4">
+    <p class="source-label">
+      data:
+      <a href="https://edgeful.com/reports/futures/NQ/initial-balance-extension/standard" target="_blank" rel="noopener">NQ IB extension standard</a>,
+      <a href="https://edgeful.com/reports/futures/NQ/initial-balance-breakout/standard" target="_blank" rel="noopener">NQ IB breakout standard</a>
+      · 119 sessions · NY regular session · 11/28/25 - 05/29/26
+    </p>
+    <p class="text-xs text-neutral-700">illustrative model data pending live API access · not financial advice</p>
+  </div>
+</footer>
+
+</div><!-- /max-w-7xl -->
+
+<script>
+const BULLISH = '#22C55E';
+const BEARISH = '#D32D1F';
+const WARNING = '#D89700';
+const PRIMARY = '#0075FF';
+const TEXT    = '#C7C7C7';
+const GRID    = 'rgba(42,42,42,0.8)';
+
+Chart.defaults.color = TEXT;
+Chart.defaults.font.family = 'Poppins';
+Chart.defaults.font.size = 12;
+
+const tooltipBase = {
+  backgroundColor: '#1A1A1A', borderColor: '#2A2A2A', borderWidth: 1,
+  titleColor: '#FFFFFF', bodyColor: TEXT, padding: 10,
+};
+
+const threshold65Plugin = {
+  id: 'threshold65',
+  afterDraw(chart) {
+    if (!chart.config.options._showThreshold) return;
+    const { ctx, scales: { x, y } } = chart;
+    const isH = chart.config.options.indexAxis === 'y';
+    ctx.save();
+    ctx.setLineDash([5, 4]);
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = WARNING;
+    if (isH) {
+      const px = x.getPixelForValue(65);
+      ctx.beginPath(); ctx.moveTo(px, y.top); ctx.lineTo(px, y.bottom); ctx.stroke();
+      ctx.fillStyle = WARNING; ctx.font = '12px Poppins'; ctx.textAlign = 'center';
+      ctx.fillText('65%', px, y.top - 5);
+    } else {
+      const py = y.getPixelForValue(65);
+      ctx.beginPath(); ctx.moveTo(x.left, py); ctx.lineTo(x.right, py); ctx.stroke();
+      ctx.fillStyle = WARNING; ctx.font = '12px Poppins'; ctx.textAlign = 'right';
+      ctx.fillText('65%', x.right - 4, py - 5);
+    }
+    ctx.restore();
+  }
+};
+Chart.register(threshold65Plugin);
+
+//  Break timing chart
+new Chart(document.getElementById('timingChart'), {
+  type: 'bar',
+  data: {
+    labels: ['10:30-11am', '11am-12pm', '12pm-1:30pm', '1:30-4pm'],
+    datasets: [
+      {
+        label: '% of all sessions with break in window',
+        data: [52, 26, 9, 15],
+        backgroundColor: ['rgba(34,197,94,0.7)', 'rgba(216,151,0,0.6)', 'rgba(211,45,31,0.5)', 'rgba(96,165,250,0.6)'],
+        borderColor:      [BULLISH, WARNING, BEARISH, '#60A5FA'],
+        borderWidth: 1, borderRadius: 6,
+      }
+    ]
+  },
+  options: {
+    _showThreshold: false,
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: { ...tooltipBase, callbacks: { label: ctx => ` ${ctx.parsed.y}% of sessions broke in this window` } }
+    },
+    scales: {
+      x: { grid: { color: GRID }, ticks: { color: TEXT } },
+      y: { grid: { color: GRID }, ticks: { color: TEXT, callback: v => v + '%' }, min: 0, max: 70 }
+    }
+  }
+});
+
+//  Extension chart (post-11am vs all-session grouped)
+new Chart(document.getElementById('extChart'), {
+  type: 'bar',
+  data: {
+    labels: ['0.25x', '0.5x', '1.0x', '1.5x', '2.0x'],
+    datasets: [
+      {
+        label: 'post-11am',
+        data: [78, 58, 38, 22, 12],
+        backgroundColor: 'rgba(216,151,0,0.65)',
+        borderColor: WARNING, borderWidth: 1, borderRadius: 4,
+      },
+      {
+        label: 'all-session',
+        data: [83, 65, 47, 30, 17],
+        backgroundColor: 'rgba(34,197,94,0.35)',
+        borderColor: BULLISH, borderWidth: 1, borderRadius: 4,
+      }
+    ]
+  },
+  options: {
+    _showThreshold: true,
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        display: true,
+        labels: { boxWidth: 10, padding: 12, color: TEXT, font: { size: 12 } }
+      },
+      tooltip: { ...tooltipBase, callbacks: { label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y}%` } }
+    },
+    scales: {
+      x: { grid: { color: GRID }, ticks: { color: TEXT } },
+      y: { grid: { color: GRID }, ticks: { color: TEXT, callback: v => v + '%' }, min: 0, max: 100 }
+    }
+  }
+});
+
+//  Retracement distribution donut
+new Chart(document.getElementById('retracChart'), {
+  type: 'doughnut',
+  data: {
+    labels: ['no retrace (<25%)', 'shallow (25-49%)', 'moderate (50-74%)', 'deep (75-99%)', 'full fade to IB'],
+    datasets: [{
+      data: [20, 27, 18, 18, 17],
+      backgroundColor: [
+        'rgba(34,197,94,0.8)',
+        'rgba(34,197,94,0.45)',
+        'rgba(216,151,0,0.65)',
+        'rgba(216,151,0,0.45)',
+        'rgba(211,45,31,0.7)',
+      ],
+      borderColor: [BULLISH, BULLISH, WARNING, WARNING, BEARISH],
+      borderWidth: 1,
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false, cutout: '60%',
+    plugins: {
+      legend: {
+        position: 'right',
+        labels: { boxWidth: 10, padding: 10, color: TEXT, font: { size: 12 } }
+      },
+      tooltip: { ...tooltipBase, callbacks: { label: ctx => ` ${ctx.label}: ${ctx.parsed}%` } }
+    }
+  }
+});
+</script>
+</body>
+</html>
