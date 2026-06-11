@@ -1,0 +1,635 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>nq daily probability stats, NQ NY 06/11/25 - 06/10/26</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  body { font-family: 'Poppins', sans-serif; background: #09090B; color: #C7C7C7; }
+  .card { background: #09090B; border: 1px solid #2A2A2A; border-radius: 12px; }
+  .stat-num { font-weight: 500; font-feature-settings: "tnum"; }
+  table { font-feature-settings: "tnum"; }
+
+  .subsection-header { background: #121212; border-bottom: 1px solid #2A2A2A; padding: 12px 24px; border-top-left-radius: 12px; border-top-right-radius: 12px; }
+  .source-label { font-size: 12px; color: #555555; text-transform: lowercase; }
+  .source-label a { color: #555555; text-decoration: none; border-bottom: 1px dashed rgba(85, 85, 85, 0.5); transition: color 0.15s, border-color 0.15s; }
+  .source-label a:hover { color: #C7C7C7; border-bottom-color: rgba(199, 199, 199, 0.6); }
+  .source-ticker { color: #60A5FA; text-decoration: none; border-bottom: 1px dashed rgba(96, 165, 250, 0.4); margin-left: 4px; transition: color 0.15s, border-color 0.15s; }
+  .source-ticker:hover { color: #93C5FD; border-bottom-color: rgba(147, 197, 253, 0.7); }
+  .meta-line { font-size: 12px; color: #FFFFFF; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+  .meta-sep { color: #555555; }
+  .meta-line a.meta-link { color: #0075FF; text-decoration: none; transition: color 0.15s; }
+  .meta-line a.meta-link:hover { color: #60A5FA; }
+
+  .row-bullish { background: rgba(34, 197, 94, 0.06); }
+  .row-bullish:hover { background: rgba(34, 197, 94, 0.12); }
+  .row-bearish { background: rgba(211, 45, 31, 0.06); }
+  .row-bearish:hover { background: rgba(211, 45, 31, 0.12); }
+  tr:hover { background: rgba(255, 255, 255, 0.03); }
+  th { cursor: pointer; user-select: none; color: #C7C7C7; }
+  th:hover { color: #FFFFFF; }
+
+  .chip { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; }
+  .chip-bullish { background: rgba(34, 197, 94, 0.15); color: #4ADE80; }
+  .chip-bearish { background: rgba(211, 45, 31, 0.15); color: #F87171; }
+  .chip-warning { background: rgba(216, 151, 0, 0.15); color: #FACC15; }
+  .chip-neutral { background: rgba(85, 85, 85, 0.2); color: #C7C7C7; }
+
+  .badge { display: inline-block; padding: 3px 10px; border-radius: 6px; font-size: 12px; font-weight: 500; letter-spacing: 0.5px; }
+  .badge-bullish { background: rgba(34, 197, 94, 0.15); color: #4ADE80; border: 1px solid rgba(34, 197, 94, 0.3); }
+  .badge-bearish { background: rgba(211, 45, 31, 0.15); color: #F87171; border: 1px solid rgba(211, 45, 31, 0.3); }
+  .badge-neutral { background: rgba(0, 117, 255, 0.15); color: #60A5FA; border: 1px solid rgba(0, 117, 255, 0.3); }
+
+  .filter-btn { padding: 6px 12px; border-radius: 8px; border: 1px solid #2A2A2A; background: #121212; color: #C7C7C7; transition: all 0.15s; font-size: 13px; cursor: pointer; }
+  .filter-btn:hover { border-color: #404040; color: #FFFFFF; }
+  .filter-btn.active { background: #0075FF; color: #FFFFFF; border-color: #0075FF; font-weight: 500; }
+
+  .section-divider { border-top: 1px solid #2A2A2A; margin: 3rem 0 2rem; }
+</style>
+</head>
+<body class="min-h-screen">
+<div class="max-w-7xl mx-auto px-6 py-10">
+
+  <!-- ============ header ============ -->
+  <header class="mb-8">
+    <div class="text-xs uppercase tracking-wider text-neutral-500 mb-2">edgeful api dashboard</div>
+    <h1 class="text-3xl font-medium text-white mb-2 lowercase">nq daily probability stats</h1>
+    <p class="meta-line">
+      <span>NQ futures</span>
+      <span class="meta-sep">|</span>
+      <span>06/11/25 - 06/10/26</span>
+      <span class="meta-sep">|</span>
+      <span>9:30 am - 4:00 pm (UTC-4)</span>
+      <span class="meta-sep">|</span>
+      <a class="meta-link" href="https://edgeful.com" target="_blank" rel="noopener">edgeful.com</a>
+    </p>
+    <p class="source-label mt-2">
+      from: 6 reports (gap fill, opening stats, outside days, previous days range, ADR, performance by weekday). view in app:
+      <a class="source-ticker" href="https://edgeful.com/reports/futures/NQ/gap-fill/standard" target="_blank" rel="noopener">NQ</a>
+    </p>
+  </header>
+
+  <!-- ============ explainer ============ -->
+  <div class="card p-6 mb-8">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div>
+        <div class="text-xs uppercase tracking-wider text-neutral-500 mb-2">what this shows</div>
+        <p class="text-sm text-neutral-300 leading-relaxed lowercase">how NQ behaved over the last 259 NY sessions across six edgeful reports: gaps, opens, outside days, prior-day range breaks, daily range vs ADR, and weekday performance.</p>
+      </div>
+      <div>
+        <div class="text-xs uppercase tracking-wider text-neutral-500 mb-2">how to read it</div>
+        <p class="text-sm text-neutral-300 leading-relaxed lowercase">green values mark probabilities at or above 65%, the threshold edgeful treats as a tradeable edge. yellow is 50 to 64%, context only. red is below 50%.</p>
+      </div>
+      <div>
+        <div class="text-xs uppercase tracking-wider text-neutral-500 mb-2">takeaway</div>
+        <p class="text-sm text-neutral-300 leading-relaxed lowercase">the standout stats this year: gaps fill (88% up, 94% down), a prior-day high break closes green 74% of the time, and bearish outside days reverse 91% of the time on a small sample.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ zone 1: gap fill ============ -->
+  <section class="mb-12">
+    <div class="flex items-center gap-3 mb-3">
+      <span class="badge badge-neutral">zone 1</span>
+      <h2 class="text-2xl font-medium text-white lowercase">gap behavior</h2>
+    </div>
+    <p class="text-sm text-neutral-400 mb-6 lowercase max-w-3xl">how often NQ opens away from the prior close, and how reliably that gap fills back during the session.</p>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div class="card p-6">
+        <div class="text-xs uppercase tracking-wider text-neutral-500 mb-2">gap up days</div>
+        <div class="stat-num text-4xl text-white">143</div>
+        <div class="text-sm text-neutral-400 mt-1 lowercase">55% of sessions</div>
+      </div>
+      <div class="card p-6">
+        <div class="text-xs uppercase tracking-wider text-neutral-500 mb-2">gap up fill rate</div>
+        <div class="stat-num text-4xl" style="color: #22C55E;">88%</div>
+        <div class="text-sm text-neutral-400 mt-1 lowercase">126 of 143 filled</div>
+      </div>
+      <div class="card p-6">
+        <div class="text-xs uppercase tracking-wider text-neutral-500 mb-2">gap down days</div>
+        <div class="stat-num text-4xl text-white">103</div>
+        <div class="text-sm text-neutral-400 mt-1 lowercase">45% of sessions</div>
+      </div>
+      <div class="card p-6">
+        <div class="text-xs uppercase tracking-wider text-neutral-500 mb-2">gap down fill rate</div>
+        <div class="stat-num text-4xl" style="color: #22C55E;">94%</div>
+        <div class="text-sm text-neutral-400 mt-1 lowercase">97 of 103 filled</div>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+      <div class="card">
+        <div class="subsection-header">
+          <div class="flex items-baseline justify-between">
+            <h3 class="text-lg font-medium text-white lowercase">gap up outcomes</h3>
+            <span class="source-label">from: <a href="https://edgeful.com/reports/futures/NQ/gap-fill/standard" target="_blank" rel="noopener">gap fill standard</a></span>
+          </div>
+          <p class="meta-line mt-1">
+            <span>NQ gap fill</span>
+            <span class="meta-sep">|</span>
+            <span>06/11/25 - 06/10/26</span>
+            <span class="meta-sep">|</span>
+            <span>9:30 am - 4:00 pm (UTC-4)</span>
+            <span class="meta-sep">|</span>
+            <a class="meta-link" href="https://edgeful.com" target="_blank" rel="noopener">edgeful.com</a>
+          </p>
+        </div>
+        <div class="p-6">
+          <p class="text-sm text-neutral-400 mb-4 lowercase">143 gap ups, 88% traded back to the prior close.</p>
+          <div class="h-64"><canvas id="gapUpChart"></canvas></div>
+          <p class="text-xs text-neutral-500 mt-3 lowercase">sample: 143 gap up sessions</p>
+        </div>
+      </div>
+      <div class="card">
+        <div class="subsection-header">
+          <div class="flex items-baseline justify-between">
+            <h3 class="text-lg font-medium text-white lowercase">gap down outcomes</h3>
+            <span class="source-label">from: <a href="https://edgeful.com/reports/futures/NQ/gap-fill/standard" target="_blank" rel="noopener">gap fill standard</a></span>
+          </div>
+          <p class="meta-line mt-1">
+            <span>NQ gap fill</span>
+            <span class="meta-sep">|</span>
+            <span>06/11/25 - 06/10/26</span>
+            <span class="meta-sep">|</span>
+            <span>9:30 am - 4:00 pm (UTC-4)</span>
+            <span class="meta-sep">|</span>
+            <a class="meta-link" href="https://edgeful.com" target="_blank" rel="noopener">edgeful.com</a>
+          </p>
+        </div>
+        <div class="p-6">
+          <p class="text-sm text-neutral-400 mb-4 lowercase">103 gap downs, 94% traded back to the prior close.</p>
+          <div class="h-64"><canvas id="gapDownChart"></canvas></div>
+          <p class="text-xs text-neutral-500 mt-3 lowercase">sample: 103 gap down sessions</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ zone 2: open and range behavior ============ -->
+  <div class="section-divider"></div>
+  <section class="mb-12">
+    <div class="flex items-center gap-3 mb-3">
+      <span class="badge badge-neutral">zone 2</span>
+      <h2 class="text-2xl font-medium text-white lowercase">open location and prior-range behavior</h2>
+    </div>
+    <p class="text-sm text-neutral-400 mb-6 lowercase max-w-3xl">where NQ opens relative to yesterday's range, what happens on the rare outside-range opens, and how often the prior day's high or low gets taken out.</p>
+
+    <div class="card mb-6">
+      <div class="subsection-header">
+        <div class="flex items-baseline justify-between">
+          <h3 class="text-lg font-medium text-white lowercase">where does NQ open?</h3>
+          <span class="source-label">from: <a href="https://edgeful.com/reports/futures/NQ/opening-stats/standard" target="_blank" rel="noopener">opening stats standard</a></span>
+        </div>
+        <p class="meta-line mt-1">
+          <span>NQ opening stats</span>
+          <span class="meta-sep">|</span>
+          <span>06/11/25 - 06/10/26</span>
+          <span class="meta-sep">|</span>
+          <span>9:30 am - 4:00 pm (UTC-4)</span>
+          <span class="meta-sep">|</span>
+          <a class="meta-link" href="https://edgeful.com" target="_blank" rel="noopener">edgeful.com</a>
+        </p>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 p-6">
+        <div class="card p-5">
+          <div class="text-xs uppercase tracking-wider text-neutral-500 mb-1">opens inside prior range</div>
+          <div class="stat-num text-3xl" style="color: #22C55E;">91.5%</div>
+          <div class="text-xs text-neutral-500 mt-1">237 of 259 days</div>
+        </div>
+        <div class="card p-5">
+          <div class="text-xs uppercase tracking-wider text-neutral-500 mb-1">opens above prior high</div>
+          <div class="stat-num text-3xl text-white">4.2%</div>
+          <div class="text-xs text-neutral-500 mt-1">11 days</div>
+        </div>
+        <div class="card p-5">
+          <div class="text-xs uppercase tracking-wider text-neutral-500 mb-1">opens below prior low</div>
+          <div class="stat-num text-3xl text-white">4.2%</div>
+          <div class="text-xs text-neutral-500 mt-1">11 days</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+      <div class="card">
+        <div class="subsection-header">
+          <div class="flex items-baseline justify-between">
+            <h3 class="text-lg font-medium text-white lowercase">outside day reversals</h3>
+            <span class="source-label">from: <a href="https://edgeful.com/reports/futures/NQ/outside-days/standard" target="_blank" rel="noopener">outside days standard</a></span>
+          </div>
+          <p class="meta-line mt-1">
+            <span>NQ outside days</span>
+            <span class="meta-sep">|</span>
+            <span>06/11/25 - 06/10/26</span>
+            <span class="meta-sep">|</span>
+            <span>9:30 am - 4:00 pm (UTC-4)</span>
+            <span class="meta-sep">|</span>
+            <a class="meta-link" href="https://edgeful.com" target="_blank" rel="noopener">edgeful.com</a>
+          </p>
+        </div>
+        <div class="p-6">
+          <p class="text-sm text-neutral-400 mb-4 lowercase">of the 22 days that opened outside yesterday's range, how many reversed back inside. small sample, treat as context.</p>
+          <div class="h-64"><canvas id="outsideChart"></canvas></div>
+          <p class="text-xs text-neutral-500 mt-3 lowercase">sample: 11 bullish, 11 bearish outside days</p>
+        </div>
+      </div>
+      <div class="card">
+        <div class="subsection-header">
+          <div class="flex items-baseline justify-between">
+            <h3 class="text-lg font-medium text-white lowercase">prior-day level breaks and the close</h3>
+            <span class="source-label">from: <a href="https://edgeful.com/reports/futures/NQ/previous-days-range/standard" target="_blank" rel="noopener">previous days range standard</a></span>
+          </div>
+          <p class="meta-line mt-1">
+            <span>NQ previous days range</span>
+            <span class="meta-sep">|</span>
+            <span>06/11/25 - 06/10/26</span>
+            <span class="meta-sep">|</span>
+            <span>9:30 am - 4:00 pm (UTC-4)</span>
+            <span class="meta-sep">|</span>
+            <a class="meta-link" href="https://edgeful.com" target="_blank" rel="noopener">edgeful.com</a>
+          </p>
+        </div>
+        <div class="p-6">
+          <p class="text-sm text-neutral-400 mb-4 lowercase">prior high broke on 152 days (59%), prior low on 108 days (42%). bars show how those days closed.</p>
+          <div class="h-64"><canvas id="prevDayChart"></canvas></div>
+          <p class="text-xs text-neutral-500 mt-3 lowercase">break the high, close green 74%. break the low, close red 64%.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ zone 3: range and weekday ============ -->
+  <div class="section-divider"></div>
+  <section class="mb-12">
+    <div class="flex items-center gap-3 mb-3">
+      <span class="badge badge-neutral">zone 3</span>
+      <h2 class="text-2xl font-medium text-white lowercase">daily range and weekday tendencies</h2>
+    </div>
+    <p class="text-sm text-neutral-400 mb-6 lowercase max-w-3xl">how today's range compares to the rolling ADR baseline, and which weekdays have leaned green or red this year.</p>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      <div class="card p-6">
+        <div class="text-xs uppercase tracking-wider text-neutral-500 mb-2">current ADR</div>
+        <div class="stat-num text-4xl text-white">1,064.95</div>
+        <div class="text-sm text-neutral-400 mt-1 lowercase">points, rolling baseline</div>
+      </div>
+      <div class="card p-6">
+        <div class="text-xs uppercase tracking-wider text-neutral-500 mb-2">range exceeded ADR</div>
+        <div class="stat-num text-4xl" style="color: #D32D1F;">46.3%</div>
+        <div class="text-sm text-neutral-400 mt-1 lowercase">120 of 259 sessions</div>
+      </div>
+      <div class="card p-6">
+        <div class="text-xs uppercase tracking-wider text-neutral-500 mb-2">range respected ADR</div>
+        <div class="stat-num text-4xl" style="color: #D89700;">53.7%</div>
+        <div class="text-sm text-neutral-400 mt-1 lowercase">139 of 259 sessions</div>
+      </div>
+    </div>
+    <p class="source-label mb-6">from: <a href="https://edgeful.com/reports/futures/NQ/ADR-average-daily-range/standard" target="_blank" rel="noopener">ADR average daily range standard</a></p>
+
+    <div class="card mb-6">
+      <div class="subsection-header">
+        <div class="flex items-baseline justify-between">
+          <h3 class="text-lg font-medium text-white lowercase">green vs red days by weekday</h3>
+          <span class="source-label">from: <a href="https://edgeful.com/reports/futures/NQ/performance-by-weekday/standard" target="_blank" rel="noopener">performance by weekday standard</a></span>
+        </div>
+        <p class="meta-line mt-1">
+          <span>NQ performance by weekday</span>
+          <span class="meta-sep">|</span>
+          <span>06/11/25 - 06/10/26</span>
+          <span class="meta-sep">|</span>
+          <span>9:30 am - 4:00 pm (UTC-4)</span>
+          <span class="meta-sep">|</span>
+          <a class="meta-link" href="https://edgeful.com" target="_blank" rel="noopener">edgeful.com</a>
+        </p>
+      </div>
+      <div class="p-6">
+        <p class="text-sm text-neutral-400 mb-4 lowercase">monday has been the strongest day this year (69% green), thursday the weakest (46% green).</p>
+        <div class="h-72"><canvas id="weekdayChart"></canvas></div>
+        <p class="text-xs text-neutral-500 mt-3 lowercase">sample: 259 sessions, 06/11/25 - 06/10/26</p>
+      </div>
+    </div>
+
+    <div class="card mb-6">
+      <div class="subsection-header">
+        <div class="flex items-baseline justify-between">
+          <h3 class="text-lg font-medium text-white lowercase">weekday detail</h3>
+          <span class="source-label">from: <a href="https://edgeful.com/reports/futures/NQ/performance-by-weekday/standard" target="_blank" rel="noopener">performance by weekday standard</a></span>
+        </div>
+        <p class="meta-line mt-1">
+          <span>NQ performance by weekday</span>
+          <span class="meta-sep">|</span>
+          <span>06/11/25 - 06/10/26</span>
+          <span class="meta-sep">|</span>
+          <span>9:30 am - 4:00 pm (UTC-4)</span>
+          <span class="meta-sep">|</span>
+          <a class="meta-link" href="https://edgeful.com" target="_blank" rel="noopener">edgeful.com</a>
+        </p>
+      </div>
+      <div class="p-6">
+
+        <div class="flex flex-wrap gap-2 mb-4">
+          <button class="filter-btn active" data-filter="all">all (5)</button>
+          <button class="filter-btn" data-filter="bullish">green-leaning (2)</button>
+          <button class="filter-btn" data-filter="bearish">red-leaning (3)</button>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="border-b border-neutral-700">
+              <tr class="text-left text-xs uppercase tracking-wider text-neutral-500">
+                <th class="px-3 py-2 lowercase" data-sort="text">weekday</th>
+                <th class="px-3 py-2 text-right lowercase" data-sort="num">sessions</th>
+                <th class="px-3 py-2 text-right lowercase" data-sort="num">green days</th>
+                <th class="px-3 py-2 text-right lowercase" data-sort="num">green rate</th>
+                <th class="px-3 py-2 text-right lowercase" data-sort="num">avg green move</th>
+                <th class="px-3 py-2 text-right lowercase" data-sort="num">avg red move</th>
+                <th class="px-3 py-2 lowercase" data-sort="text">lean</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="row-bullish" data-category="bullish">
+                <td class="px-3 py-2 text-neutral-300">monday</td>
+                <td class="px-3 py-2 text-right tabular-nums text-white">52</td>
+                <td class="px-3 py-2 text-right tabular-nums text-white">36</td>
+                <td class="px-3 py-2 text-right tabular-nums" style="color:#22C55E;">69%</td>
+                <td class="px-3 py-2 text-right tabular-nums text-white">+0.97%</td>
+                <td class="px-3 py-2 text-right tabular-nums text-white">-0.45%</td>
+                <td class="px-3 py-2"><span class="chip chip-bullish">green</span></td>
+              </tr>
+              <tr class="row-bearish" data-category="bearish">
+                <td class="px-3 py-2 text-neutral-300">tuesday</td>
+                <td class="px-3 py-2 text-right tabular-nums text-white">52</td>
+                <td class="px-3 py-2 text-right tabular-nums text-white">23</td>
+                <td class="px-3 py-2 text-right tabular-nums" style="color:#D32D1F;">44%</td>
+                <td class="px-3 py-2 text-right tabular-nums text-white">+0.79%</td>
+                <td class="px-3 py-2 text-right tabular-nums text-white">-0.69%</td>
+                <td class="px-3 py-2"><span class="chip chip-bearish">red</span></td>
+              </tr>
+              <tr class="row-bullish" data-category="bullish">
+                <td class="px-3 py-2 text-neutral-300">wednesday</td>
+                <td class="px-3 py-2 text-right tabular-nums text-white">53</td>
+                <td class="px-3 py-2 text-right tabular-nums text-white">34</td>
+                <td class="px-3 py-2 text-right tabular-nums" style="color:#D89700;">64%</td>
+                <td class="px-3 py-2 text-right tabular-nums text-white">+0.92%</td>
+                <td class="px-3 py-2 text-right tabular-nums text-white">-0.59%</td>
+                <td class="px-3 py-2"><span class="chip chip-bullish">green</span></td>
+              </tr>
+              <tr class="row-bearish" data-category="bearish">
+                <td class="px-3 py-2 text-neutral-300">thursday</td>
+                <td class="px-3 py-2 text-right tabular-nums text-white">50</td>
+                <td class="px-3 py-2 text-right tabular-nums text-white">23</td>
+                <td class="px-3 py-2 text-right tabular-nums" style="color:#D32D1F;">46%</td>
+                <td class="px-3 py-2 text-right tabular-nums text-white">+0.69%</td>
+                <td class="px-3 py-2 text-right tabular-nums text-white">-0.96%</td>
+                <td class="px-3 py-2"><span class="chip chip-bearish">red</span></td>
+              </tr>
+              <tr class="row-bearish" data-category="bearish">
+                <td class="px-3 py-2 text-neutral-300">friday</td>
+                <td class="px-3 py-2 text-right tabular-nums text-white">52</td>
+                <td class="px-3 py-2 text-right tabular-nums text-white">26</td>
+                <td class="px-3 py-2 text-right tabular-nums" style="color:#D89700;">50%</td>
+                <td class="px-3 py-2 text-right tabular-nums text-white">+0.84%</td>
+                <td class="px-3 py-2 text-right tabular-nums text-white">-1.15%</td>
+                <td class="px-3 py-2"><span class="chip chip-bearish">red</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ footer ============ -->
+  <footer class="mt-16 pt-6 border-t border-neutral-800 text-xs text-neutral-500 lowercase">
+    <p>data from <a href="https://edgeful.com" class="text-neutral-400 hover:text-white">edgeful.com</a> · 06/11/25 - 06/10/26 · 259 sessions</p>
+    <p class="mt-1">generated 2026-06-11 · for educational purposes only · historical performance is not a prediction of future results</p>
+  </footer>
+
+</div>
+
+<script>
+  const palette = {
+    bullish:    '#22C55E',
+    bearish:    '#D32D1F',
+    warning:    '#D89700',
+    primary:    '#0075FF',
+    neutral:    '#555555',
+    textSecondary: '#C7C7C7',
+    textMuted:  '#555555',
+    grid:       '#2A2A2A',
+    surface:    '#121212',
+    border:     '#2A2A2A',
+  };
+
+  const fill = {
+    bullish: 'rgba(34, 197, 94, 0.7)',
+    bearish: 'rgba(211, 45, 31, 0.7)',
+    warning: 'rgba(216, 151, 0, 0.7)',
+    primary: 'rgba(0, 117, 255, 0.7)',
+    neutral: 'rgba(85, 85, 85, 0.4)',
+    bullishLight: 'rgba(34, 197, 94, 0.15)',
+    bearishLight: 'rgba(211, 45, 31, 0.15)',
+  };
+
+  const baseTooltip = {
+    backgroundColor: palette.surface,
+    titleColor: '#FFFFFF',
+    bodyColor: palette.textSecondary,
+    borderColor: palette.border,
+    borderWidth: 1,
+    padding: 10,
+    cornerRadius: 6,
+    titleFont: { family: 'Poppins', size: 12, weight: '500' },
+    bodyFont:  { family: 'Poppins', size: 12, weight: '400' },
+  };
+
+  const baseScales = {
+    x: {
+      ticks: { color: palette.textSecondary, font: { family: 'Poppins', size: 12 } },
+      grid:  { color: palette.grid, drawBorder: false },
+    },
+    y: {
+      ticks: { color: palette.textSecondary, font: { family: 'Poppins', size: 12 } },
+      grid:  { color: palette.grid, drawBorder: false },
+      beginAtZero: true,
+    },
+  };
+
+  const baseOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { labels: { color: palette.textSecondary, font: { family: 'Poppins', size: 12 } } },
+      tooltip: baseTooltip,
+    },
+  };
+
+  // zone 1: gap fill doughnuts
+  const doughnutOptions = (total) => ({
+    ...baseOptions,
+    cutout: '60%',
+    plugins: {
+      ...baseOptions.plugins,
+      legend: { position: 'right', labels: { color: palette.textSecondary, font: { family: 'Poppins', size: 12 }, padding: 12 } },
+      tooltip: { ...baseTooltip, callbacks: { label: (ctx) => `${ctx.label}: ${ctx.parsed} sessions (${Math.round(ctx.parsed/total*100)}%)` } },
+    },
+  });
+
+  new Chart(document.getElementById('gapUpChart'), {
+    type: 'doughnut',
+    data: {
+      labels: ['filled', 'not filled'],
+      datasets: [{
+        data: [126, 17],
+        backgroundColor: [fill.bullish, fill.bearish],
+        borderColor:     [palette.bullish, palette.bearish],
+        borderWidth: 1,
+      }],
+    },
+    options: doughnutOptions(143),
+  });
+
+  new Chart(document.getElementById('gapDownChart'), {
+    type: 'doughnut',
+    data: {
+      labels: ['filled', 'not filled'],
+      datasets: [{
+        data: [97, 6],
+        backgroundColor: [fill.bullish, fill.bearish],
+        borderColor:     [palette.bullish, palette.bearish],
+        borderWidth: 1,
+      }],
+    },
+    options: doughnutOptions(103),
+  });
+
+  // zone 2: outside day reversals, grouped bar, reversed vs continued per direction
+  new Chart(document.getElementById('outsideChart'), {
+    type: 'bar',
+    data: {
+      labels: ['bullish outside day', 'bearish outside day'],
+      datasets: [
+        {
+          label: 'reversed back inside',
+          data: [7, 10],
+          backgroundColor: fill.bullish,
+          borderColor: palette.bullish,
+          borderWidth: 1,
+          borderRadius: 6,
+        },
+        {
+          label: 'continued',
+          data: [4, 1],
+          backgroundColor: fill.bearish,
+          borderColor: palette.bearish,
+          borderWidth: 1,
+          borderRadius: 6,
+        },
+      ],
+    },
+    options: {
+      ...baseOptions,
+      scales: baseScales,
+    },
+  });
+
+  // zone 2: prior-day breaks, grouped bar, closed green vs closed red
+  new Chart(document.getElementById('prevDayChart'), {
+    type: 'bar',
+    data: {
+      labels: ['broke prior high (152)', 'broke prior low (108)'],
+      datasets: [
+        {
+          label: 'closed green',
+          data: [112, 39],
+          backgroundColor: fill.bullish,
+          borderColor: palette.bullish,
+          borderWidth: 1,
+          borderRadius: 6,
+        },
+        {
+          label: 'closed red',
+          data: [40, 69],
+          backgroundColor: fill.bearish,
+          borderColor: palette.bearish,
+          borderWidth: 1,
+          borderRadius: 6,
+        },
+      ],
+    },
+    options: {
+      ...baseOptions,
+      scales: baseScales,
+    },
+  });
+
+  // zone 3: weekday green vs red days
+  new Chart(document.getElementById('weekdayChart'), {
+    type: 'bar',
+    data: {
+      labels: ['mon', 'tue', 'wed', 'thu', 'fri'],
+      datasets: [
+        {
+          label: 'green days',
+          data: [36, 23, 34, 23, 26],
+          backgroundColor: fill.bullish,
+          borderColor: palette.bullish,
+          borderWidth: 1,
+          borderRadius: 6,
+        },
+        {
+          label: 'red days',
+          data: [16, 29, 19, 27, 26],
+          backgroundColor: fill.bearish,
+          borderColor: palette.bearish,
+          borderWidth: 1,
+          borderRadius: 6,
+        },
+      ],
+    },
+    options: {
+      ...baseOptions,
+      scales: baseScales,
+    },
+  });
+
+  // table interactions
+  document.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const group = e.target.closest('.card');
+      group.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      e.target.classList.add('active');
+      const filter = e.target.dataset.filter;
+      group.querySelectorAll('tbody tr').forEach(row => {
+        row.style.display = (filter === 'all' || row.dataset.category === filter) ? '' : 'none';
+      });
+    });
+  });
+
+  document.querySelectorAll('th[data-sort]').forEach(th => {
+    th.addEventListener('click', () => {
+      const table = th.closest('table');
+      const tbody = table.querySelector('tbody');
+      const idx = Array.from(th.parentNode.children).indexOf(th);
+      const type = th.dataset.sort;
+      const rows = Array.from(tbody.querySelectorAll('tr'));
+      const dir = th.dataset.dir === 'asc' ? 'desc' : 'asc';
+      th.dataset.dir = dir;
+      rows.sort((a, b) => {
+        const av = a.children[idx].textContent.trim();
+        const bv = b.children[idx].textContent.trim();
+        if (type === 'num') return (parseFloat(av) - parseFloat(bv)) * (dir === 'asc' ? 1 : -1);
+        return av.localeCompare(bv) * (dir === 'asc' ? 1 : -1);
+      });
+      rows.forEach(r => tbody.appendChild(r));
+    });
+  });
+</script>
+</body>
+</html>
