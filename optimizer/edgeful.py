@@ -1,19 +1,19 @@
 """Edgeful market-data API client.
 
-Edgeful provides probability-based trading reports (gap fills, ORB, initial
-balance, previous-day levels, etc.) plus a "What's in Play?" live-setup feed.
+Real endpoint structure (confirmed via probing):
+  GET /report_calculation/{slug}/{asset_class}/{ticker}
+      ?start_date=YYYY-MM-DD&end_date=YYYY-MM-DD[&extra_params]
 
-Authentication: Bearer token via the ``Authorization`` header.
+  GET /historic_data_screener?market_type={market_type}&tickers={ticker}
+
+Authentication: Authorization: Bearer <api_key>
 Base URL:       https://api.edgeful.com
-
-All public methods return plain Python dicts / lists so callers don't need to
-import anything from this module beyond the client class itself.
 """
 from __future__ import annotations
 
 import logging
 import os
-import time
+from datetime import date, timedelta
 from typing import Any, Dict, List, Optional
 
 try:
@@ -27,7 +27,45 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 _BASE_URL = "https://api.edgeful.com"
-_DEFAULT_TIMEOUT = 15  # seconds per request
+_DEFAULT_TIMEOUT = 15
+
+# Confirmed-working report slugs (daily OHLC reports).
+# Intraday-bar reports (ORB, IB, session, engulfing, FVG, etc.) return 404
+# and are not yet accessible via the API.
+REPORT_SLUGS = [
+    "gap-fill-standard",
+    "gap-fill-by-close",
+    "gap-fill-by-prev-candle",
+    "gap-fill-by-weekday",
+    "gap-fill-by-size",
+    "outside-days-standard",
+    "outside-days-by-weekday",
+    "outside-days-by-close",
+    "previous-days-range-standard",
+    "green-and-red-days-by-weekday-standard",
+    "green-and-red-streaks-standard",
+    "opening-stats-standard",
+    "opening-stats-by-weekday",
+    "adr-average-daily-range-standard",
+    "adr-average-daily-range-by-extension",
+    "adr-average-daily-range-by-weekday",
+    "adr-average-daily-range-by-streak",
+    "adr-average-daily-range-by-range-to-adr-by-weekday",
+    "atr-average-true-range-standard",
+    "performance-by-weekday-standard",
+    "overnight-continuation-standard",
+    "overnight-continuation-by-weekday",
+    "fibonacci-levels-standard",
+    "high-and-low-by-weekday-standard",
+    "inside-bars-standard",
+    "inside-bars-by-weekday",
+    "previous-session-correlation-standard",
+    "previous-weeks-range-standard",
+    "seasonality-standard",
+    "sma-performance-standard",
+    "volume-and-range-by-weekday-standard",
+    "pivot-points-standard",
+]
 
 
 class EdgefulClient:
@@ -37,15 +75,12 @@ class EdgefulClient:
 
         client = EdgefulClient(api_key="ef_live_…")
 
-        # What's in play right now?
-        live = client.get_live_setups()
+        # Fetch a specific report
+        data = client.get_report("gap-fill-standard", "futures", "NQ",
+                                 start_date="2025-06-01", end_date="2026-06-11")
 
-        # Historical probability reports
-        reports = client.list_reports()
-        detail  = client.get_report(reports[0]["id"])
-
-        # Instrument metadata
-        instruments = client.list_instruments()
+        # Live screener snapshot
+        screener = client.get_screener("futures", tickers=["NQ", "ES"])
     """
 
     def __init__(
@@ -56,7 +91,7 @@ class EdgefulClient:
     ):
         if not _REQUESTS_AVAILABLE:
             raise ImportError(
-                "The 'requests' package is required for Edgeful API access.\n"
+                "The 'requests' package is required.\n"
                 "Install it with:  pip install requests"
             )
 
@@ -72,16 +107,11 @@ class EdgefulClient:
 
         self._session = self._build_session()
 
-    # ------------------------------------------------------------------
-    # Session setup
-    # ------------------------------------------------------------------
-
     def _build_session(self) -> "requests.Session":
         session = requests.Session()
         session.headers.update({
             "Authorization": f"Bearer {self.api_key}",
             "Accept":        "application/json",
-            "Content-Type":  "application/json",
         })
         retry = Retry(
             total=3,
@@ -94,10 +124,6 @@ class EdgefulClient:
         session.mount("http://",  adapter)
         return session
 
-    # ------------------------------------------------------------------
-    # Core request helper
-    # ------------------------------------------------------------------
-
     def _get(self, path: str, params: Optional[Dict] = None) -> Any:
         url = f"{self.base_url}/{path.lstrip('/')}"
         log.debug("GET %s  params=%s", url, params)
@@ -105,213 +131,85 @@ class EdgefulClient:
         resp.raise_for_status()
         return resp.json()
 
+    @staticmethod
+    def _default_dates(lookback_days: int = 365) -> tuple[str, str]:
+        end   = date.today()
+        start = end - timedelta(days=lookback_days)
+        return start.isoformat(), end.isoformat()
+
     # ------------------------------------------------------------------
-    # Reports — 150+ historical probability reports
+    # Reports
     # ------------------------------------------------------------------
 
-    def list_reports(
+    def get_report(
         self,
-        asset_class: Optional[str] = None,
-        symbol:      Optional[str] = None,
-    ) -> List[Dict]:
-        """Return the list of available probability reports.
-
-        Args:
-            asset_class: Filter by asset class, e.g. ``"futures"``, ``"stocks"``,
-                         ``"forex"``, ``"crypto"``, ``"etf"``.
-            symbol:      Filter by ticker symbol, e.g. ``"ES"``, ``"NQ"``, ``"SPY"``.
-
-        Returns:
-            List of report dicts, each containing at minimum:
-            ``id``, ``name``, ``asset_class``, ``symbol``, ``description``.
-        """
-        params: Dict[str, str] = {}
-        if asset_class:
-            params["asset_class"] = asset_class
-        if symbol:
-            params["symbol"] = symbol
-        data = self._get("/v1/reports", params or None)
-        return data if isinstance(data, list) else data.get("data", data.get("reports", []))
-
-    def get_report(self, report_id: str, symbol: Optional[str] = None) -> Dict:
-        """Fetch the full data for a single report.
-
-        Args:
-            report_id: The report identifier returned by :meth:`list_reports`.
-            symbol:    Optional symbol override if the report supports multiple
-                       instruments (e.g. ``"ES"``, ``"NQ"``).
-
-        Returns:
-            Dict with the report payload, typically including:
-            ``id``, ``name``, ``symbol``, ``statistics``, ``updated_at``.
-        """
-        params = {"symbol": symbol} if symbol else None
-        return self._get(f"/v1/reports/{report_id}", params)
-
-    def get_report_statistics(
-        self,
-        report_id: str,
-        symbol: Optional[str] = None,
-        lookback_days: Optional[int] = None,
+        slug: str,
+        asset_class: str,
+        symbol: str,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+        **extra_params: Any,
     ) -> Dict:
-        """Return just the statistical summary for a report.
+        """Fetch a single probability report.
 
-        Useful for quickly checking probability percentages without the full
-        metadata payload.
+        Args:
+            slug:        Report slug, e.g. ``"gap-fill-standard"``.
+            asset_class: ``"futures"``, ``"stocks"``, ``"forex"``, ``"crypto"``.
+            symbol:      Ticker, e.g. ``"NQ"``, ``"ES"``, ``"SPY"``.
+            start_date:  ISO date string. Defaults to 12 months ago.
+            end_date:    ISO date string. Defaults to today.
+            **extra_params: Additional query params forwarded to the endpoint.
+
+        Returns:
+            Raw JSON dict from the API.
         """
-        params: Dict[str, Any] = {}
-        if symbol:
-            params["symbol"] = symbol
-        if lookback_days:
-            params["lookback_days"] = lookback_days
-        return self._get(f"/v1/reports/{report_id}/statistics", params or None)
+        if not start_date or not end_date:
+            start_date, end_date = self._default_dates()
+        params: Dict[str, Any] = {"start_date": start_date, "end_date": end_date}
+        params.update(extra_params)
+        return self._get(f"/report_calculation/{slug}/{asset_class}/{symbol}", params)
 
-    # ------------------------------------------------------------------
-    # Live data — "What's in Play?" real-time setup feed
-    # ------------------------------------------------------------------
-
-    def get_live_setups(
+    def get_reports(
         self,
-        asset_class: Optional[str] = None,
-        min_probability: Optional[float] = None,
-    ) -> List[Dict]:
-        """Return the current "What's in Play?" live setups.
-
-        Each setup represents a high-probability trade scenario that is active
-        *right now* based on Edgeful's real-time scanning engine.
-
-        Args:
-            asset_class:     Optionally filter by ``"futures"``, ``"stocks"``, etc.
-            min_probability: Only return setups with probability ≥ this value
-                             (0–100).
-
-        Returns:
-            List of setup dicts, each containing:
-            ``symbol``, ``report_name``, ``setup_type``, ``probability``,
-            ``direction``, ``entry_zone``, ``target``, ``stop``, ``timestamp``.
-        """
-        params: Dict[str, Any] = {}
-        if asset_class:
-            params["asset_class"] = asset_class
-        if min_probability is not None:
-            params["min_probability"] = min_probability
-        data = self._get("/v1/live/setups", params or None)
-        return data if isinstance(data, list) else data.get("data", data.get("setups", []))
-
-    def get_live_summary(self) -> Dict:
-        """Return a high-level summary of the current market state.
-
-        Includes counts of active setups per asset class, overall market
-        sentiment, and the timestamp of the last data refresh.
-        """
-        return self._get("/v1/live/summary")
-
-    # ------------------------------------------------------------------
-    # Instruments
-    # ------------------------------------------------------------------
-
-    def list_instruments(self, asset_class: Optional[str] = None) -> List[Dict]:
-        """Return all instruments supported by the Edgeful platform.
-
-        Args:
-            asset_class: Optional filter, e.g. ``"futures"``.
-
-        Returns:
-            List of instrument dicts with ``symbol``, ``name``, ``asset_class``,
-            ``exchange``, and ``active`` fields.
-        """
-        params = {"asset_class": asset_class} if asset_class else None
-        data = self._get("/v1/instruments", params)
-        return data if isinstance(data, list) else data.get("data", data.get("instruments", []))
-
-    # ------------------------------------------------------------------
-    # Market context — gap fills, ORB, IB, prev-day levels
-    # ------------------------------------------------------------------
-
-    def get_gap_fill_probability(self, symbol: str) -> Dict:
-        """Fetch today's gap-fill probability for *symbol*.
-
-        Returns a dict with:
-        ``symbol``, ``gap_direction``, ``gap_size_pct``, ``probability``,
-        ``historical_fill_rate``, ``avg_fill_time_min``, ``as_of``.
-        """
-        return self._get(f"/v1/market/{symbol}/gap-fill")
-
-    def get_orb_statistics(self, symbol: str, orb_minutes: int = 15) -> Dict:
-        """Opening Range Breakout statistics for *symbol*.
-
-        Args:
-            symbol:      Ticker symbol, e.g. ``"ES"``.
-            orb_minutes: ORB period in minutes (common values: 5, 15, 30, 60).
-
-        Returns:
-            Dict with ``breakout_up_probability``, ``breakout_down_probability``,
-            ``avg_extension_atr``, ``false_breakout_rate``, ``best_time_window``.
-        """
-        return self._get(
-            f"/v1/market/{symbol}/orb",
-            {"minutes": orb_minutes},
-        )
-
-    def get_initial_balance(self, symbol: str) -> Dict:
-        """Initial Balance levels and extension probabilities for *symbol*.
-
-        Returns:
-        ``ib_high``, ``ib_low``, ``ib_range``, ``extension_1_prob``,
-        ``extension_2_prob``, ``value_area_high``, ``value_area_low``.
-        """
-        return self._get(f"/v1/market/{symbol}/initial-balance")
-
-    def get_previous_day_levels(self, symbol: str) -> Dict:
-        """Previous-day high, low, close, and reaction probabilities.
-
-        Returns:
-        ``pdh``, ``pdl``, ``pdc``, ``pdh_reaction_prob``, ``pdl_reaction_prob``,
-        ``overnight_high``, ``overnight_low``.
-        """
-        return self._get(f"/v1/market/{symbol}/prev-day-levels")
-
-    def get_market_context(self, symbol: str) -> Dict:
-        """Convenience method — fetch all available context for *symbol* in one call.
-
-        Returns a unified dict with keys ``gap_fill``, ``orb``,
-        ``initial_balance``, ``prev_day_levels``, and ``live_setups``.
-        Falls back gracefully if individual endpoints are unavailable.
-        """
-        result: Dict[str, Any] = {"symbol": symbol}
-        for key, method, kwargs in [
-            ("gap_fill",       self.get_gap_fill_probability, {}),
-            ("orb",            self.get_orb_statistics,       {}),
-            ("initial_balance",self.get_initial_balance,      {}),
-            ("prev_day_levels",self.get_previous_day_levels,  {}),
-        ]:
+        slugs: List[str],
+        asset_class: str,
+        symbol: str,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Fetch multiple reports, returning {slug: data_or_error}."""
+        if not start_date or not end_date:
+            start_date, end_date = self._default_dates()
+        results: Dict[str, Any] = {}
+        for slug in slugs:
             try:
-                result[key] = method(symbol, **kwargs)
+                results[slug] = self.get_report(slug, asset_class, symbol,
+                                                start_date, end_date)
             except Exception as exc:
-                log.warning("Edgeful %s for %s: %s", key, symbol, exc)
-                result[key] = None
-
-        try:
-            all_setups = self.get_live_setups()
-            result["live_setups"] = [s for s in all_setups if s.get("symbol") == symbol]
-        except Exception as exc:
-            log.warning("Edgeful live setups for %s: %s", symbol, exc)
-            result["live_setups"] = []
-
-        return result
+                log.warning("report %s: %s", slug, exc)
+                results[slug] = None
+        return results
 
     # ------------------------------------------------------------------
-    # Account / health
+    # Live screener snapshot
     # ------------------------------------------------------------------
 
-    def get_account_info(self) -> Dict:
-        """Return the authenticated account details and subscription tier."""
-        return self._get("/v1/account")
+    def get_screener(
+        self,
+        market_type: str = "futures",
+        tickers: Optional[List[str]] = None,
+    ) -> Dict:
+        """Fetch the most recent screener snapshot (last completed session).
 
-    def health_check(self) -> bool:
-        """Return True if the API is reachable and the key is valid."""
-        try:
-            self._get("/v1/health")
-            return True
-        except Exception:
-            return False
+        Args:
+            market_type: ``"futures"``, ``"stocks"``, ``"forex"``, ``"crypto"``.
+            tickers:     Optional list of tickers to filter, e.g. ``["NQ", "ES"]``.
+
+        Returns:
+            Dict keyed by ticker symbol with per-report analysis nested under each.
+        """
+        params: Dict[str, Any] = {"market_type": market_type}
+        if tickers:
+            params["tickers"] = ",".join(tickers)
+        data = self._get("/historic_data_screener", params)
+        return data.get("historic_data", data) if isinstance(data, dict) else data
