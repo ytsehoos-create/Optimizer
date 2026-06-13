@@ -1,0 +1,958 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NQ IB (60min) setups — NQ &amp; ES futures 12/15/25 - 06/12/26</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  body { font-family: 'Poppins', sans-serif; background: #09090B; color: #C7C7C7; }
+  .card { background: #09090B; border: 1px solid #2A2A2A; border-radius: 12px; }
+  .stat-num { font-weight: 500; font-feature-settings: "tnum"; }
+  table { font-feature-settings: "tnum"; }
+  .subsection-header { background: #121212; border-bottom: 1px solid #2A2A2A; padding: 12px 24px; border-top-left-radius: 12px; border-top-right-radius: 12px; }
+  .source-label { font-size: 12px; color: #555555; text-transform: lowercase; }
+  .source-label a { color: #555555; text-decoration: none; border-bottom: 1px dashed rgba(85,85,85,0.5); transition: color 0.15s, border-color 0.15s; }
+  .source-label a:hover { color: #C7C7C7; border-bottom-color: rgba(199,199,199,0.6); }
+  .meta-line { font-size: 12px; color: #FFFFFF; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+  .meta-sep { color: #555555; }
+  .meta-line a.meta-link { color: #0075FF; text-decoration: none; transition: color 0.15s; }
+  .meta-line a.meta-link:hover { color: #60A5FA; }
+  .row-bullish { background: rgba(34,197,94,0.06); }
+  .row-bullish:hover { background: rgba(34,197,94,0.12); }
+  .row-bearish { background: rgba(211,45,31,0.06); }
+  .row-bearish:hover { background: rgba(211,45,31,0.12); }
+  tr:hover { background: rgba(255,255,255,0.03); }
+  th { cursor: pointer; user-select: none; color: #C7C7C7; }
+  th:hover { color: #FFFFFF; }
+  .chip { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; }
+  .chip-bullish { background: rgba(34,197,94,0.15); color: #4ADE80; }
+  .chip-bearish { background: rgba(211,45,31,0.15); color: #F87171; }
+  .chip-warning { background: rgba(216,151,0,0.15); color: #FACC15; }
+  .chip-neutral { background: rgba(85,85,85,0.2); color: #C7C7C7; }
+  .badge { display: inline-block; padding: 3px 10px; border-radius: 6px; font-size: 12px; font-weight: 500; letter-spacing: 0.5px; }
+  .badge-bullish { background: rgba(34,197,94,0.15); color: #4ADE80; border: 1px solid rgba(34,197,94,0.3); }
+  .badge-bearish { background: rgba(211,45,31,0.15); color: #F87171; border: 1px solid rgba(211,45,31,0.3); }
+  .badge-warning { background: rgba(216,151,0,0.15); color: #FACC15; border: 1px solid rgba(216,151,0,0.3); }
+  .badge-neutral { background: rgba(0,117,255,0.15); color: #60A5FA; border: 1px solid rgba(0,117,255,0.3); }
+  .filter-btn { padding: 6px 12px; border-radius: 8px; border: 1px solid #2A2A2A; background: #121212; color: #C7C7C7; transition: all 0.15s; font-size: 13px; cursor: pointer; }
+  .filter-btn:hover { border-color: #404040; color: #FFFFFF; }
+  .filter-btn.active { background: #0075FF; color: #FFFFFF; border-color: #0075FF; font-weight: 500; }
+  .section-divider { border-top: 1px solid #2A2A2A; margin: 3rem 0 2rem; }
+  .timeline-step { display: flex; gap: 16px; align-items: flex-start; padding: 12px 0; border-bottom: 1px solid #2A2A2A; }
+  .timeline-step:last-child { border-bottom: none; }
+  .timeline-time { font-size: 12px; font-weight: 500; color: #0075FF; min-width: 60px; padding-top: 2px; }
+  .timeline-dot { width: 8px; height: 8px; border-radius: 50%; background: #2A2A2A; border: 2px solid #555555; margin-top: 4px; flex-shrink: 0; }
+  .timeline-dot-active { background: #0075FF; border-color: #0075FF; }
+  .timeline-dot-signal { background: #22C55E; border-color: #22C55E; }
+  .timeline-dot-entry { background: #D89700; border-color: #D89700; }
+</style>
+</head>
+<body class="min-h-screen">
+<div class="max-w-7xl mx-auto px-6 py-10">
+
+<!-- HEADER -->
+<header class="mb-8">
+  <div class="text-xs uppercase tracking-wider text-neutral-500 mb-2">IB trade setup research</div>
+  <h1 class="text-3xl font-medium text-white mb-2 lowercase">NQ initial balance (60min) — three setups</h1>
+  <p class="meta-line">
+    <span>NQ and ES futures — IB break, IB extension, and IB break-fail reversion</span>
+    <span class="meta-sep">|</span>
+    <span>12/15/25 - 06/12/26</span>
+    <span class="meta-sep">|</span>
+    <span>9:30 am - 4:00 pm (UTC-4)</span>
+    <span class="meta-sep">|</span>
+    <a class="meta-link" href="https://edgeful.com" target="_blank" rel="noopener">edgeful.com</a>
+  </p>
+  <p class="source-label mt-2">from:
+    <a href="https://edgeful.com/reports/futures/NQ/initial-balance/standard" target="_blank" rel="noopener">initial balance standard</a>,
+    <a href="https://edgeful.com/reports/futures/NQ/initial-balance/retracement" target="_blank" rel="noopener">initial balance retracement</a>,
+    <a href="https://edgeful.com/reports/futures/NQ/opening-candle/continuation" target="_blank" rel="noopener">opening candle continuation</a>
+  </p>
+</header>
+
+<!-- IB DEFINITION / HOW IT WORKS -->
+<div class="card p-6 mb-8">
+  <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+    <div>
+      <div class="text-xs uppercase tracking-wider text-neutral-500 mb-2">IB definition</div>
+      <p class="text-sm text-neutral-300 leading-relaxed lowercase">the initial balance (IB) is the high and low printed from 9:30 am to 10:30 am ET — the first 60 minutes of RTH. it defines the early-session range that the rest of the day either respects or breaks.</p>
+    </div>
+    <div>
+      <div class="text-xs uppercase tracking-wider text-neutral-500 mb-2">three setups</div>
+      <p class="text-sm text-neutral-300 leading-relaxed lowercase"><strong class="text-white">setup A</strong> — read the IB formation in real time: which side prints first predicts the post-IB break direction (63–81%). <strong class="text-white">setup B</strong> — after 10:30, trade the IB break with extension targets. <strong class="text-white">setup C</strong> — fade the failed IB break (double-break sessions).</p>
+    </div>
+    <div>
+      <div class="text-xs uppercase tracking-wider text-neutral-500 mb-2">ES as confirmation</div>
+      <p class="text-sm text-neutral-300 leading-relaxed lowercase">ES and NQ run identical IB patterns. when ES breaks an IB extreme first, use it as the NQ entry trigger — ES leading NQ on the same IB break is the highest-confidence version of any of the three setups.</p>
+    </div>
+    <div>
+      <div class="text-xs uppercase tracking-wider text-neutral-500 mb-2">sample</div>
+      <div class="grid grid-cols-2 gap-3 mt-1">
+        <div>
+          <div class="text-2xl stat-num text-white">127</div>
+          <div class="text-xs text-neutral-500">sessions analyzed</div>
+        </div>
+        <div>
+          <div class="text-2xl stat-num" style="color:#22C55E;">80.3%</div>
+          <div class="text-xs text-neutral-500">clean single IB break</div>
+        </div>
+        <div>
+          <div class="text-2xl stat-num" style="color:#D89700;">14.2%</div>
+          <div class="text-xs text-neutral-500">double break (both sides)</div>
+        </div>
+        <div>
+          <div class="text-2xl stat-num text-neutral-400">5.5%</div>
+          <div class="text-xs text-neutral-500">IB never broken</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ZONE 1: SETUP A — PRE-IB SIGNAL READ -->
+<section>
+  <h2 class="text-2xl font-medium text-white mb-1 lowercase">setup A — reading the IB formation: which side prints first?</h2>
+  <p class="text-sm text-neutral-500 mb-4 lowercase">the live signal during 9:30–10:30. no indicator needed — just watch which IB extreme forms first.</p>
+
+  <!-- Core reversal stat: 4 KPI cards -->
+  <div class="card mb-4">
+    <div class="subsection-header">
+      <div class="flex items-baseline justify-between">
+        <h3 class="text-lg font-medium text-white lowercase">NQ 60min IB — which side forms first predicts the break direction</h3>
+        <span class="source-label">from: <a href="https://edgeful.com/reports/futures/NQ/initial-balance/standard" target="_blank" rel="noopener">initial balance standard</a></span>
+      </div>
+      <p class="meta-line mt-1">
+        <span>NQ futures — 60-min initial balance formation sequence</span>
+        <span class="meta-sep">|</span>
+        <span>12/15/25 - 06/12/26</span>
+        <span class="meta-sep">|</span>
+        <span>127 sessions</span>
+        <span class="meta-sep">|</span>
+        <a class="meta-link" href="https://edgeful.com" target="_blank" rel="noopener">edgeful.com</a>
+      </p>
+    </div>
+    <div class="p-6">
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div class="p-5 rounded-xl" style="background:#09090B;border:1px solid #2A2A2A;">
+          <div class="text-xs uppercase tracking-wider text-neutral-500 mb-1">IB low forms first</div>
+          <div class="text-xs text-neutral-500 mb-3">bearish early move (67 sessions)</div>
+          <div class="text-4xl stat-num" style="color:#22C55E;">81%</div>
+          <div class="text-xs text-neutral-400 mt-2">IB high breaks after 10:30</div>
+          <div class="text-xs text-neutral-600 mt-1">reversal to the upside</div>
+        </div>
+        <div class="p-5 rounded-xl" style="background:#09090B;border:1px solid #2A2A2A;">
+          <div class="text-xs uppercase tracking-wider text-neutral-500 mb-1">IB low forms first</div>
+          <div class="text-xs text-neutral-500 mb-3">continuation case</div>
+          <div class="text-4xl stat-num" style="color:#D32D1F;">18%</div>
+          <div class="text-xs text-neutral-400 mt-2">IB low breaks after 10:30</div>
+          <div class="text-xs text-neutral-600 mt-1">continuation of early bearish move</div>
+        </div>
+        <div class="p-5 rounded-xl" style="background:#09090B;border:1px solid #2A2A2A;">
+          <div class="text-xs uppercase tracking-wider text-neutral-500 mb-1">IB high forms first</div>
+          <div class="text-xs text-neutral-500 mb-3">bullish early move (60 sessions)</div>
+          <div class="text-4xl stat-num" style="color:#22C55E;">63%</div>
+          <div class="text-xs text-neutral-400 mt-2">IB low breaks after 10:30</div>
+          <div class="text-xs text-neutral-600 mt-1">reversal to the downside</div>
+        </div>
+        <div class="p-5 rounded-xl" style="background:#09090B;border:1px solid #2A2A2A;">
+          <div class="text-xs uppercase tracking-wider text-neutral-500 mb-1">IB high forms first</div>
+          <div class="text-xs text-neutral-500 mb-3">continuation case</div>
+          <div class="text-4xl stat-num" style="color:#D32D1F;">27%</div>
+          <div class="text-xs text-neutral-400 mt-2">IB high breaks after 10:30</div>
+          <div class="text-xs text-neutral-600 mt-1">continuation of early bullish move</div>
+        </div>
+      </div>
+      <div class="p-4 rounded-xl" style="background:#121212;border:1px solid #2A2A2A;">
+        <p class="text-sm text-neutral-300 lowercase"><strong class="text-white">the core insight:</strong> whichever extreme forms first during the IB, the <em>opposite</em> extreme is the higher-probability post-IB target. NQ is a mean-reverting instrument during the IB formation window. the bearish-open case (IB low first) is the stronger signal at 81% — nearly 4:1 odds on the reversal.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Opening candle color as proxy -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+    <div class="card">
+      <div class="subsection-header">
+        <div class="flex items-baseline justify-between">
+          <h3 class="text-lg font-medium text-white lowercase">opening candle color → day direction</h3>
+          <span class="source-label">from: <a href="https://edgeful.com/reports/futures/NQ/opening-candle/continuation" target="_blank" rel="noopener">opening candle continuation</a></span>
+        </div>
+        <p class="meta-line mt-1">
+          <span>NQ — 60min opening candle color vs rest-of-day direction</span>
+          <span class="meta-sep">|</span>
+          <a class="meta-link" href="https://edgeful.com" target="_blank" rel="noopener">edgeful.com</a>
+        </p>
+      </div>
+      <div class="p-6">
+        <p class="text-sm text-neutral-400 mb-4 lowercase">the 60min candle (9:30–10:30) IS the IB. its close direction is a strong predictor of the rest-of-day move. a green 60min candle means IB high printed later than IB low (bullish IB) — and the day continues green 75% of the time.</p>
+        <div class="h-64"><canvas id="openingCandleChart"></canvas></div>
+        <p class="text-xs text-neutral-500 mt-3 lowercase">sample: 73 green opens, 53 red opens (127 sessions). "green day" = daily close above 9:30 open. this is the post-IB continuation rate, not the IB formation signal.</p>
+      </div>
+    </div>
+    <div class="card">
+      <div class="subsection-header">
+        <div class="flex items-baseline justify-between">
+          <h3 class="text-lg font-medium text-white lowercase">NQ vs ES — IB reversal rates compared</h3>
+          <span class="source-label">from: <a href="https://edgeful.com/reports/futures/ES/initial-balance/standard" target="_blank" rel="noopener">ES initial balance standard</a></span>
+        </div>
+        <p class="meta-line mt-1">
+          <span>NQ vs ES — % that breaks opposite IB extreme after 10:30</span>
+          <span class="meta-sep">|</span>
+          <a class="meta-link" href="https://edgeful.com" target="_blank" rel="noopener">edgeful.com</a>
+        </p>
+      </div>
+      <div class="p-6">
+        <p class="text-sm text-neutral-400 mb-4 lowercase">NQ and ES show near-identical IB reversal rates. when ES prints the same IB extreme first, the reversal confirmation is doubled — both instruments are setting up the same trade. NQ amplifies on the bearish-open case (81% vs ES 75%).</p>
+        <div class="h-64"><canvas id="esNqReversalChart"></canvas></div>
+        <p class="text-xs text-neutral-500 mt-3 lowercase">green = "IB low formed first" reversal rate (fade bearish open, target IB high). blue = "IB high formed first" reversal rate (fade bullish open, target IB low). 65% line = minimum actionable threshold.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Setup A trade plan -->
+  <div class="card mb-4">
+    <div class="subsection-header">
+      <h3 class="text-lg font-medium text-white lowercase">setup A trade plan — live read during IB formation</h3>
+    </div>
+    <div class="p-6">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div>
+          <div class="flex items-center gap-3 mb-4">
+            <span class="badge badge-bullish">81% edge</span>
+            <span class="text-sm text-white font-medium">IB low prints first → long NQ targeting IBH</span>
+          </div>
+          <div class="space-y-3">
+            <div class="timeline-step">
+              <div class="timeline-time">9:30</div>
+              <div class="timeline-dot timeline-dot-active"></div>
+              <div class="text-sm text-neutral-300 lowercase">RTH opens. watch which direction price moves first.</div>
+            </div>
+            <div class="timeline-step">
+              <div class="timeline-time">~9:45</div>
+              <div class="timeline-dot timeline-dot-signal"></div>
+              <div class="text-sm text-neutral-300 lowercase"><strong class="text-white">signal:</strong> IB low clearly established (price dropped, made a low, reversed). NQ IB high still forming. ES also printing IB low first = double confirmation.</div>
+            </div>
+            <div class="timeline-step">
+              <div class="timeline-time">9:45–10:15</div>
+              <div class="timeline-dot"></div>
+              <div class="text-sm text-neutral-300 lowercase">watch for price to climb back toward the 9:30 open. ORB high (10:00) breaking is an early long signal if IB low is well-defined.</div>
+            </div>
+            <div class="timeline-step">
+              <div class="timeline-time">10:00–10:30</div>
+              <div class="timeline-dot timeline-dot-entry"></div>
+              <div class="text-sm text-neutral-300 lowercase"><strong class="text-white">entry:</strong> long near IB low after bounce confirms. stop below IB low. target: IB high (defined at 10:30). secondary: L1 extension above IBH (58% of 60min breakouts reach L1).</div>
+            </div>
+            <div class="timeline-step">
+              <div class="timeline-time">10:30+</div>
+              <div class="timeline-dot"></div>
+              <div class="text-sm text-neutral-300 lowercase">if IBH breaks cleanly after 10:30, hold for L1/L2 extension targets per setup B.</div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div class="flex items-center gap-3 mb-4">
+            <span class="badge badge-warning">63% edge</span>
+            <span class="text-sm text-white font-medium">IB high prints first → short NQ targeting IBL</span>
+          </div>
+          <div class="space-y-3">
+            <div class="timeline-step">
+              <div class="timeline-time">9:30</div>
+              <div class="timeline-dot timeline-dot-active"></div>
+              <div class="text-sm text-neutral-300 lowercase">RTH opens. price rallies immediately, making the session high early.</div>
+            </div>
+            <div class="timeline-step">
+              <div class="timeline-time">~9:45</div>
+              <div class="timeline-dot timeline-dot-signal"></div>
+              <div class="text-sm text-neutral-300 lowercase"><strong class="text-white">signal:</strong> IB high clearly established. price reversing back down from the early high. ES also printing IB high first = double confirmation.</div>
+            </div>
+            <div class="timeline-step">
+              <div class="timeline-time">9:45–10:15</div>
+              <div class="timeline-dot"></div>
+              <div class="text-sm text-neutral-300 lowercase">watch for retest of the IB high that fails. a failed retest of the early high with lower volume is the key tell.</div>
+            </div>
+            <div class="timeline-step">
+              <div class="timeline-time">10:00–10:30</div>
+              <div class="timeline-dot timeline-dot-entry"></div>
+              <div class="text-sm text-neutral-300 lowercase"><strong class="text-white">entry:</strong> short on failed retest of IB high. stop above IB high. target: IB low (63% of these sessions break the IBL). lower conviction than the bearish-open case — require ES confirmation.</div>
+            </div>
+            <div class="timeline-step">
+              <div class="timeline-time">10:30+</div>
+              <div class="timeline-dot"></div>
+              <div class="text-sm text-neutral-300 lowercase">if IBL breaks cleanly, hold for L1/L2 extension targets (60min breakdown: L1=72%, L2=51%).</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- ZONE 2: SETUP B — IB BREAK + EXTENSION -->
+<section>
+  <h2 class="text-2xl font-medium text-white mb-1 lowercase">setup B — IB break + extension: how far does price travel after 10:30?</h2>
+  <p class="text-sm text-neutral-500 mb-4 lowercase">the momentum trade. IB is fully defined at 10:30. first clean break of the IBH or IBL is the signal. breakdowns extend further than breakouts.</p>
+
+  <!-- Extension KPI comparison -->
+  <div class="card mb-4">
+    <div class="subsection-header">
+      <div class="flex items-baseline justify-between">
+        <h3 class="text-lg font-medium text-white lowercase">NQ 60min IB — extension levels after breakout and breakdown</h3>
+        <span class="source-label">from: <a href="https://edgeful.com/reports/futures/NQ/initial-balance/retracement" target="_blank" rel="noopener">initial balance retracement</a></span>
+      </div>
+      <p class="meta-line mt-1">
+        <span>NQ — 59 IB breakouts (above IBH) and 43 IB breakdowns (below IBL), 127 sessions</span>
+        <span class="meta-sep">|</span>
+        <a class="meta-link" href="https://edgeful.com" target="_blank" rel="noopener">edgeful.com</a>
+      </p>
+    </div>
+    <div class="p-6">
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div class="p-5 rounded-xl" style="background:#09090B;border:1px solid #22C55E33;">
+          <div class="text-xs uppercase tracking-wider text-neutral-500 mb-1">breakdown L1</div>
+          <div class="text-xs text-neutral-500 mb-3">25% of IB range below IBL</div>
+          <div class="text-4xl stat-num" style="color:#22C55E;">72.1%</div>
+          <div class="text-xs text-neutral-400 mt-2">31 of 43 breakdowns</div>
+        </div>
+        <div class="p-5 rounded-xl" style="background:#09090B;border:1px solid #22C55E22;">
+          <div class="text-xs uppercase tracking-wider text-neutral-500 mb-1">breakdown L2</div>
+          <div class="text-xs text-neutral-500 mb-3">50% of IB range below IBL</div>
+          <div class="text-4xl stat-num" style="color:#D89700;">51.2%</div>
+          <div class="text-xs text-neutral-400 mt-2">22 of 43 breakdowns</div>
+        </div>
+        <div class="p-5 rounded-xl" style="background:#09090B;border:1px solid #2A2A2A;">
+          <div class="text-xs uppercase tracking-wider text-neutral-500 mb-1">breakout L1</div>
+          <div class="text-xs text-neutral-500 mb-3">25% of IB range above IBH</div>
+          <div class="text-4xl stat-num" style="color:#D89700;">57.6%</div>
+          <div class="text-xs text-neutral-400 mt-2">34 of 59 breakouts</div>
+        </div>
+        <div class="p-5 rounded-xl" style="background:#09090B;border:1px solid #2A2A2A;">
+          <div class="text-xs uppercase tracking-wider text-neutral-500 mb-1">breakout L2</div>
+          <div class="text-xs text-neutral-500 mb-3">50% of IB range above IBH</div>
+          <div class="text-4xl stat-num" style="color:#D32D1F;">32.2%</div>
+          <div class="text-xs text-neutral-400 mt-2">19 of 59 breakouts</div>
+        </div>
+      </div>
+      <div class="h-80 mb-4"><canvas id="extensionChart"></canvas></div>
+      <p class="text-xs text-neutral-500 lowercase">L1 = 25% of IB range projected beyond the break level. L2 = 50%. L3 = 100%. breakdowns reach L1 at 72% vs 58% for breakouts — bearish IB breaks commit harder. scale out half at L1, trail stop to breakeven, target L2 for the remainder. ES shows nearly identical rates (L1=69% breakdown, L1=57% breakout).</p>
+    </div>
+  </div>
+
+  <!-- ES leads NQ -->
+  <div class="card mb-4">
+    <div class="subsection-header">
+      <div class="flex items-baseline justify-between">
+        <h3 class="text-lg font-medium text-white lowercase">ES leading NQ on IB breaks — the confirmation filter</h3>
+        <span class="source-label">from: <a href="https://edgeful.com/reports/futures/ES/initial-balance/standard" target="_blank" rel="noopener">ES initial balance standard</a>, <a href="https://edgeful.com/reports/futures/NQ/initial-balance/standard" target="_blank" rel="noopener">NQ initial balance standard</a></span>
+      </div>
+      <p class="meta-line mt-1">
+        <span>ES vs NQ — IB break extension and correlation</span>
+        <span class="meta-sep">|</span>
+        <a class="meta-link" href="https://edgeful.com" target="_blank" rel="noopener">edgeful.com</a>
+      </p>
+    </div>
+    <div class="p-6">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div>
+          <div class="text-xs uppercase tracking-wider text-neutral-500 mb-3">ES vs NQ extension rates (60min IB, all sessions)</div>
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="text-left border-b border-neutral-800">
+                <th class="pb-2 pr-4 font-medium text-xs">direction</th>
+                <th class="pb-2 pr-4 font-medium text-xs">NQ L1</th>
+                <th class="pb-2 pr-4 font-medium text-xs">NQ L2</th>
+                <th class="pb-2 pr-4 font-medium text-xs">ES L1</th>
+                <th class="pb-2 font-medium text-xs">ES L2</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="border-b border-neutral-800/50">
+                <td class="py-2 pr-4 text-neutral-300">breakdown (below IBL)</td>
+                <td class="py-2 pr-4"><span class="chip chip-bullish">72.1%</span></td>
+                <td class="py-2 pr-4"><span class="chip chip-warning">51.2%</span></td>
+                <td class="py-2 pr-4"><span class="chip chip-warning">69.1%</span></td>
+                <td class="py-2"><span class="chip chip-neutral">45.2%</span></td>
+              </tr>
+              <tr>
+                <td class="py-2 pr-4 text-neutral-300">breakout (above IBH)</td>
+                <td class="py-2 pr-4"><span class="chip chip-neutral">57.6%</span></td>
+                <td class="py-2 pr-4"><span class="chip chip-neutral">32.2%</span></td>
+                <td class="py-2 pr-4"><span class="chip chip-neutral">57.4%</span></td>
+                <td class="py-2"><span class="chip chip-neutral">27.8%</span></td>
+              </tr>
+            </tbody>
+          </table>
+          <p class="text-xs text-neutral-500 mt-3 lowercase">the breakout L1 rate (58%) sits just below the 65% edge threshold — don't trade NQ IBH breakouts in isolation. ES breaking IBH first is the filter that raises conviction to the level your trade yesterday demonstrated.</p>
+        </div>
+        <div>
+          <div class="text-xs uppercase tracking-wider text-neutral-500 mb-3">how to use ES as the NQ entry trigger</div>
+          <div class="space-y-3 text-sm text-neutral-300 lowercase">
+            <p>ES and NQ run in near-lockstep on IB breaks. when ES cleanly breaks the IBH or IBL <em>while NQ is still near its IB level</em>, that divergence is the signal. NQ will typically follow within minutes.</p>
+            <p>the mechanism: ES breaking its IB confirms institutional commitment to the direction. a solo NQ break with ES still inside is a fakeout candidate (part of the 28% of NQ breakouts that fail to reach L1).</p>
+            <p><strong class="text-white">entry protocol for ES-led IB break:</strong></p>
+            <ul class="space-y-1 pl-4" style="list-style: disc;">
+              <li>ES breaks IBH (or IBL) cleanly with momentum</li>
+              <li>NQ is still at or near its own IB level</li>
+              <li>enter NQ in the same direction as ES on the first NQ pullback to the IB level</li>
+              <li>stop: back inside NQ IB by more than 0.1%. target: NQ L1 (58% breakout / 72% breakdown)</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Setup B summary card -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+    <div class="card">
+      <div class="subsection-header">
+        <div class="flex items-baseline gap-3">
+          <span class="badge badge-bullish">72% L1</span>
+          <h3 class="text-lg font-medium text-white lowercase">setup B1 — IB breakdown (short)</h3>
+        </div>
+      </div>
+      <div class="p-6 space-y-3">
+        <div>
+          <div class="text-xs uppercase tracking-wider text-neutral-500 mb-1">trigger (10:30+)</div>
+          <p class="text-sm text-neutral-300 lowercase">clean break and close below IBL. ES breaking IBL simultaneously = highest conviction.</p>
+        </div>
+        <div>
+          <div class="text-xs uppercase tracking-wider text-neutral-500 mb-1">entry</div>
+          <p class="text-sm text-neutral-300 lowercase">short on first 1-min or 5-min candle that closes below IBL. or pull-back-to-IBL short if IBL becomes resistance.</p>
+        </div>
+        <div>
+          <div class="text-xs uppercase tracking-wider text-neutral-500 mb-1">stop</div>
+          <p class="text-sm text-neutral-300 lowercase">above IBL. if IBL reclaims with a full candle close above, exit — this is the breakdown failure (setup C).</p>
+        </div>
+        <div>
+          <div class="text-xs uppercase tracking-wider text-neutral-500 mb-1">targets</div>
+          <p class="text-sm text-neutral-300 lowercase">T1 = L1 (IBL minus 25% of IB range) — 72% hit rate, take half off. T2 = L2 (IBL minus 50% of IB range) — 51% hit rate. trail to breakeven after T1.</p>
+        </div>
+        <div>
+          <div class="text-xs uppercase tracking-wider text-neutral-500 mb-1">avoid when</div>
+          <p class="text-sm text-neutral-300 lowercase">IB low formed first during 9:30–10:30 (setup A signals a reversal up — this is the opposing trade). if IB high formed first during formation, this is the higher-probability direction.</p>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="subsection-header">
+        <div class="flex items-baseline gap-3">
+          <span class="badge badge-warning">58% L1</span>
+          <h3 class="text-lg font-medium text-white lowercase">setup B2 — IB breakout (long)</h3>
+        </div>
+      </div>
+      <div class="p-6 space-y-3">
+        <div>
+          <div class="text-xs uppercase tracking-wider text-neutral-500 mb-1">trigger (10:30+)</div>
+          <p class="text-sm text-neutral-300 lowercase">clean break and close above IBH. <strong class="text-white">require ES confirmation</strong> — ES breaking IBH first raises win rate meaningfully. do not trade NQ IBH breaks in isolation.</p>
+        </div>
+        <div>
+          <div class="text-xs uppercase tracking-wider text-neutral-500 mb-1">entry</div>
+          <p class="text-sm text-neutral-300 lowercase">long on ES IBH break, enter NQ on the pull-back to NQ IBH level (IBH becomes support).</p>
+        </div>
+        <div>
+          <div class="text-xs uppercase tracking-wider text-neutral-500 mb-1">stop</div>
+          <p class="text-sm text-neutral-300 lowercase">below NQ IBH. if IBH reclaims from above then fails back below = breakout failure (setup C).</p>
+        </div>
+        <div>
+          <div class="text-xs uppercase tracking-wider text-neutral-500 mb-1">targets</div>
+          <p class="text-sm text-neutral-300 lowercase">T1 = L1 (IBH plus 25% of IB range) — 58% hit rate, take half off. T2 = L2 — 32% hit rate. L2 is a stretch; only hold for L2 if the breakout is trend-day quality with expanding volume.</p>
+        </div>
+        <div>
+          <div class="text-xs uppercase tracking-wider text-neutral-500 mb-1">avoid when</div>
+          <p class="text-sm text-neutral-500 lowercase">IB high formed first during 9:30–10:30 (setup A signals reversal down — IBH breakout is only 27% continuation). ES not confirming. avoid tuesdays (highest double-break rate).</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- ZONE 3: SETUP C — BREAK FAIL + REVERSION -->
+<section>
+  <h2 class="text-2xl font-medium text-white mb-1 lowercase">setup C — IB break-fail and reversion: fading the failed break</h2>
+  <p class="text-sm text-neutral-500 mb-4 lowercase">14.2% of NQ sessions (18 of 127) break both sides of the IB — the first break fails and price reverses to break the other side. this is the highest R:R setup when it triggers.</p>
+
+  <div class="card mb-4">
+    <div class="subsection-header">
+      <div class="flex items-baseline justify-between">
+        <h3 class="text-lg font-medium text-white lowercase">how the double-break (break-fail) session unfolds</h3>
+        <span class="source-label">from: <a href="https://edgeful.com/reports/futures/NQ/initial-balance/standard" target="_blank" rel="noopener">initial balance standard</a></span>
+      </div>
+      <p class="meta-line mt-1">
+        <span>NQ 60min IB — double-break frequency and context</span>
+        <span class="meta-sep">|</span>
+        <a class="meta-link" href="https://edgeful.com" target="_blank" rel="noopener">edgeful.com</a>
+      </p>
+    </div>
+    <div class="p-6">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-4">
+        <div>
+          <div class="grid grid-cols-3 gap-4 mb-4">
+            <div class="p-4 rounded-xl text-center" style="background:#09090B;border:1px solid #2A2A2A;">
+              <div class="text-3xl stat-num" style="color:#22C55E;">80.3%</div>
+              <div class="text-xs text-neutral-500 mt-1">single break</div>
+              <div class="text-xs text-neutral-600">clean trend session</div>
+            </div>
+            <div class="p-4 rounded-xl text-center" style="background:#09090B;border:1px solid #D8970044;">
+              <div class="text-3xl stat-num" style="color:#D89700;">14.2%</div>
+              <div class="text-xs text-neutral-500 mt-1">double break</div>
+              <div class="text-xs text-neutral-600">break-fail sessions</div>
+            </div>
+            <div class="p-4 rounded-xl text-center" style="background:#09090B;border:1px solid #2A2A2A;">
+              <div class="text-3xl stat-num text-neutral-400">5.5%</div>
+              <div class="text-xs text-neutral-500 mt-1">no break</div>
+              <div class="text-xs text-neutral-600">IB holds all day</div>
+            </div>
+          </div>
+          <div class="h-56"><canvas id="breakTypeDonut"></canvas></div>
+        </div>
+        <div>
+          <div class="text-xs uppercase tracking-wider text-neutral-500 mb-3">double-break frequency by weekday (60min IB, NQ)</div>
+          <div class="h-56"><canvas id="doubleBreakByDay"></canvas></div>
+        </div>
+      </div>
+      <p class="text-xs text-neutral-500 lowercase">tuesday has the highest double-break rate — avoid setup B on tuesdays without ES confirmation. wednesday has the lowest double-break rate — the cleanest single-direction IB break sessions.</p>
+    </div>
+  </div>
+
+  <!-- Setup C trade plan -->
+  <div class="card mb-4">
+    <div class="subsection-header">
+      <div class="flex items-baseline gap-3">
+        <span class="badge badge-neutral">14% of sessions</span>
+        <h3 class="text-lg font-medium text-white lowercase">setup C — break-fail + reversion trade plan</h3>
+      </div>
+    </div>
+    <div class="p-6">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div>
+          <div class="text-xs uppercase tracking-wider text-neutral-500 mb-3">how to recognize and trade it</div>
+          <div class="space-y-4">
+            <div class="timeline-step">
+              <div class="timeline-time">10:30</div>
+              <div class="timeline-dot timeline-dot-active"></div>
+              <div class="text-sm text-neutral-300 lowercase">IB fully defined. price breaks one side — say the IBH breaks (bullish move).</div>
+            </div>
+            <div class="timeline-step">
+              <div class="timeline-time">10:30–11:00</div>
+              <div class="timeline-dot" style="border-color:#D32D1F;"></div>
+              <div class="text-sm text-neutral-300 lowercase"><strong class="text-white">failure signal:</strong> the breakout stalls and reverses back inside the IB within 1–3 candles. price closes back below IBH on a full 5-min candle. this is the failed break.</div>
+            </div>
+            <div class="timeline-step">
+              <div class="timeline-time">11:00</div>
+              <div class="timeline-dot timeline-dot-entry"></div>
+              <div class="text-sm text-neutral-300 lowercase"><strong class="text-white">entry:</strong> short (fade the failed breakout) when price closes back below IBH. stop above IBH. target: IBL first, then L1 extension below IBL (72% of breakdowns reach L1 once IBL breaks).</div>
+            </div>
+            <div class="timeline-step">
+              <div class="timeline-time">11:00+</div>
+              <div class="timeline-dot timeline-dot-signal"></div>
+              <div class="text-sm text-neutral-300 lowercase"><strong class="text-white">confirmation:</strong> ES also fading back from its IBH. if ES is holding above its IBH while NQ fails, avoid — this may be NQ catching up to ES, not a true failure.</div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div class="text-xs uppercase tracking-wider text-neutral-500 mb-3">why this setup works</div>
+          <div class="space-y-3 text-sm text-neutral-300 lowercase">
+            <p>the 60min IB only generates a double-break on 14% of sessions. the single-break rate (80%) means the first IB break has strong trend-day odds — but when the first break IS failing, the aggressive sellers (or buyers) who caused the break are now trapped.</p>
+            <p>a failed IBH break = longs are trapped above the IB. when price closes back below IBH, those longs exit simultaneously, creating the fuel for the reversion to IBL and beyond.</p>
+            <p>the setup C R:R is typically superior to setup B because you're entering after a confirmed failure rather than chasing momentum:</p>
+            <ul class="space-y-1 pl-4" style="list-style: disc;">
+              <li>entry at/near IBH (the failed breakout level)</li>
+              <li>stop just above IBH — tight</li>
+              <li>target IBL (the full IB range away) — then L1 beyond that</li>
+            </ul>
+            <p class="text-neutral-500">filter: require ES to also fail its IBH within the same window. if only NQ fails and ES holds, this is a divergence trade, not a setup C — different playbook.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Setup C context: which days have most double breaks -->
+  <div class="card mb-4">
+    <div class="subsection-header">
+      <div class="flex items-baseline justify-between">
+        <h3 class="text-lg font-medium text-white lowercase">double-break context — when to be on alert for setup C</h3>
+        <span class="source-label">from: <a href="https://edgeful.com/reports/futures/NQ/initial-balance/standard" target="_blank" rel="noopener">initial balance standard</a></span>
+      </div>
+      <p class="meta-line mt-1">
+        <span>conditions that raise double-break probability</span>
+        <span class="meta-sep">|</span>
+        <a class="meta-link" href="https://edgeful.com" target="_blank" rel="noopener">edgeful.com</a>
+      </p>
+    </div>
+    <div class="p-6 overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="text-left border-b border-neutral-800">
+            <th class="pb-3 pr-6 font-medium">weekday</th>
+            <th class="pb-3 pr-6 font-medium">total sessions</th>
+            <th class="pb-3 pr-6 font-medium">double-break count</th>
+            <th class="pb-3 pr-6 font-medium">double-break %</th>
+            <th class="pb-3 font-medium">setup B or C?</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="border-b border-neutral-800/50">
+            <td class="py-3 pr-6 text-white font-medium">monday</td>
+            <td class="py-3 pr-6">26</td>
+            <td class="py-3 pr-6">4</td>
+            <td class="py-3 pr-6"><span class="chip chip-neutral">15.4%</span></td>
+            <td class="py-3 text-neutral-300 text-xs lowercase">moderate — use ES confirmation for setup B</td>
+          </tr>
+          <tr class="border-b border-neutral-800/50 row-bearish">
+            <td class="py-3 pr-6 text-white font-medium">tuesday</td>
+            <td class="py-3 pr-6">26</td>
+            <td class="py-3 pr-6">6</td>
+            <td class="py-3 pr-6"><span class="chip chip-warning">23.1%</span></td>
+            <td class="py-3 text-neutral-300 text-xs lowercase">highest double-break day — be alert for setup C. require ES to confirm before setup B.</td>
+          </tr>
+          <tr class="border-b border-neutral-800/50 row-bullish">
+            <td class="py-3 pr-6 text-white font-medium">wednesday</td>
+            <td class="py-3 pr-6">26</td>
+            <td class="py-3 pr-6">1</td>
+            <td class="py-3 pr-6"><span class="chip chip-bullish">3.9%</span></td>
+            <td class="py-3 text-neutral-300 text-xs lowercase">cleanest single-break day — setup B is high conviction on wednesdays</td>
+          </tr>
+          <tr class="border-b border-neutral-800/50">
+            <td class="py-3 pr-6 text-white font-medium">thursday</td>
+            <td class="py-3 pr-6">24</td>
+            <td class="py-3 pr-6">5</td>
+            <td class="py-3 pr-6"><span class="chip chip-warning">20.8%</span></td>
+            <td class="py-3 text-neutral-300 text-xs lowercase">elevated double-break — moderate caution on setup B, watch for setup C</td>
+          </tr>
+          <tr>
+            <td class="py-3 pr-6 text-white font-medium">friday</td>
+            <td class="py-3 pr-6">25</td>
+            <td class="py-3 pr-6">2</td>
+            <td class="py-3 pr-6"><span class="chip chip-bullish">8.0%</span></td>
+            <td class="py-3 text-neutral-300 text-xs lowercase">low double-break — setup B trades cleanly on fridays</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- ZONE 4: DECISION FRAMEWORK -->
+<section>
+  <h2 class="text-2xl font-medium text-white mb-4 lowercase">decision framework — which setup to trade at 10:30</h2>
+  <div class="card">
+    <div class="subsection-header">
+      <h3 class="text-lg font-medium text-white lowercase">IB setup selector — read this after the IB closes at 10:30</h3>
+    </div>
+    <div class="p-6 overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="text-left border-b border-neutral-800">
+            <th class="pb-3 pr-4 font-medium">IB formation (9:30–10:30)</th>
+            <th class="pb-3 pr-4 font-medium">ES behavior</th>
+            <th class="pb-3 pr-4 font-medium">post-IB action</th>
+            <th class="pb-3 pr-4 font-medium">setup</th>
+            <th class="pb-3 font-medium">probability</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="border-b border-neutral-800/50 row-bullish">
+            <td class="py-3 pr-4 text-neutral-300 lowercase">IB low formed first (bearish open)</td>
+            <td class="py-3 pr-4 text-neutral-300 lowercase">ES also printed IBL first</td>
+            <td class="py-3 pr-4 text-neutral-300 lowercase">price near IB high or breaking IBH</td>
+            <td class="py-3 pr-4"><span class="badge badge-bullish">A / B2 long</span></td>
+            <td class="py-3"><span style="color:#22C55E;font-weight:500;">81%</span> reversal to IBH</td>
+          </tr>
+          <tr class="border-b border-neutral-800/50 row-bullish">
+            <td class="py-3 pr-4 text-neutral-300 lowercase">IB low formed first (bearish open)</td>
+            <td class="py-3 pr-4 text-neutral-300 lowercase">ES broke IBH first</td>
+            <td class="py-3 pr-4 text-neutral-300 lowercase">NQ still near IB level</td>
+            <td class="py-3 pr-4"><span class="badge badge-bullish">B2 long (ES-led)</span></td>
+            <td class="py-3"><span style="color:#22C55E;font-weight:500;">highest conviction</span> — ES leading NQ</td>
+          </tr>
+          <tr class="border-b border-neutral-800/50">
+            <td class="py-3 pr-4 text-neutral-300 lowercase">IB high formed first (bullish open)</td>
+            <td class="py-3 pr-4 text-neutral-300 lowercase">ES also printed IBH first</td>
+            <td class="py-3 pr-4 text-neutral-300 lowercase">price near IB low or breaking IBL</td>
+            <td class="py-3 pr-4"><span class="badge badge-warning">A / B1 short</span></td>
+            <td class="py-3"><span style="color:#D89700;font-weight:500;">63%</span> reversal to IBL</td>
+          </tr>
+          <tr class="border-b border-neutral-800/50">
+            <td class="py-3 pr-4 text-neutral-300 lowercase">IB high formed first (bullish open)</td>
+            <td class="py-3 pr-4 text-neutral-300 lowercase">ES broke IBL first</td>
+            <td class="py-3 pr-4 text-neutral-300 lowercase">NQ still near IB level</td>
+            <td class="py-3 pr-4"><span class="badge badge-bullish">B1 short (ES-led)</span></td>
+            <td class="py-3"><span style="color:#22C55E;font-weight:500;">high conviction</span> — ES leading NQ</td>
+          </tr>
+          <tr class="border-b border-neutral-800/50">
+            <td class="py-3 pr-4 text-neutral-300 lowercase">either — IB break occurs first</td>
+            <td class="py-3 pr-4 text-neutral-300 lowercase">ES breaks same side, then quickly reverses back inside</td>
+            <td class="py-3 pr-4 text-neutral-300 lowercase">NQ also fails at IB level, closes back inside IB</td>
+            <td class="py-3 pr-4"><span class="badge badge-neutral">C — fade the failure</span></td>
+            <td class="py-3"><span style="color:#0075FF;font-weight:500;">14% of days</span> — high R:R when confirmed</td>
+          </tr>
+          <tr>
+            <td class="py-3 pr-4 text-neutral-300 lowercase">tuesday, ambiguous IB formation</td>
+            <td class="py-3 pr-4 text-neutral-300 lowercase">ES and NQ diverging (one broke, one didn't)</td>
+            <td class="py-3 pr-4 text-neutral-300 lowercase">any</td>
+            <td class="py-3 pr-4"><span class="chip chip-neutral">no trade</span></td>
+            <td class="py-3 text-neutral-500 text-xs lowercase">wait for clarity — divergence sessions have no clean setup</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="mt-12 pt-6 border-t border-neutral-800">
+  <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-2">
+    <p class="text-xs text-neutral-500 lowercase">data from <a href="https://edgeful.com" target="_blank" rel="noopener" class="text-neutral-400 hover:text-neutral-300 transition-colors">edgeful.com</a> — historic data screener, initial balance standard and retracement reports. NQ and ES futures, RTH sessions 9:30–4:00 ET. 12/15/25 - 06/12/26. 127 sessions.</p>
+    <p class="text-xs text-neutral-600 lowercase">generated 06/13/26</p>
+  </div>
+</footer>
+
+</div>
+
+<!-- CHART SCRIPTS -->
+<script>
+  const palette = {
+    bullish:    '#22C55E',
+    bearish:    '#D32D1F',
+    warning:    '#D89700',
+    primary:    '#0075FF',
+    neutral:    '#555555',
+    textSecondary: '#C7C7C7',
+    textMuted:  '#555555',
+    grid:       '#2A2A2A',
+    surface:    '#121212',
+    border:     '#2A2A2A',
+  };
+  const fill = {
+    bullish:     'rgba(34, 197, 94, 0.7)',
+    bearish:     'rgba(211, 45, 31, 0.7)',
+    warning:     'rgba(216, 151, 0, 0.7)',
+    primary:     'rgba(0, 117, 255, 0.7)',
+    neutral:     'rgba(85, 85, 85, 0.4)',
+    bullishLight:'rgba(34, 197, 94, 0.15)',
+    bearishLight:'rgba(211, 45, 31, 0.15)',
+  };
+  const series = { primary: '#0075FF', secondary: '#3D4B5C', tertiary: '#C7C7C7' };
+  const seriesFill = {
+    primary:   'rgba(0, 117, 255, 0.85)',
+    secondary: 'rgba(61, 75, 92, 0.85)',
+    tertiary:  'rgba(199, 199, 199, 0.65)',
+  };
+  const baseTooltip = {
+    backgroundColor: palette.surface,
+    titleColor: '#FFFFFF',
+    bodyColor: palette.textSecondary,
+    borderColor: palette.border,
+    borderWidth: 1,
+    padding: 10,
+    cornerRadius: 6,
+    titleFont: { family: 'Poppins', size: 12, weight: '500' },
+    bodyFont:  { family: 'Poppins', size: 12, weight: '400' },
+  };
+  const baseScales = {
+    x: {
+      ticks: { color: palette.textSecondary, font: { family: 'Poppins', size: 12 } },
+      grid:  { color: palette.grid, drawBorder: false },
+    },
+    y: {
+      ticks: { color: palette.textSecondary, font: { family: 'Poppins', size: 12 } },
+      grid:  { color: palette.grid, drawBorder: false },
+      beginAtZero: true,
+    },
+  };
+  const baseOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { labels: { color: palette.textSecondary, font: { family: 'Poppins', size: 12 } } },
+      tooltip: baseTooltip,
+    },
+  };
+
+  // Opening candle color → day direction
+  new Chart(document.getElementById('openingCandleChart'), {
+    type: 'bar',
+    data: {
+      labels: ['green 60min open\n(73 sessions)', 'red 60min open\n(53 sessions)'],
+      datasets: [
+        {
+          label: 'green day (IB high breaks)',
+          data: [75, 26],
+          backgroundColor: fill.bullish,
+          borderColor: palette.bullish,
+          borderWidth: 1,
+          borderRadius: 6,
+        },
+        {
+          label: 'red day (IB low breaks)',
+          data: [25, 74],
+          backgroundColor: fill.bearish,
+          borderColor: palette.bearish,
+          borderWidth: 1,
+          borderRadius: 6,
+        },
+      ],
+    },
+    options: {
+      ...baseOptions,
+      scales: {
+        x: baseScales.x,
+        y: {
+          ...baseScales.y,
+          max: 100,
+          ticks: { ...baseScales.y.ticks, callback: (v) => v + '%', stepSize: 25 },
+        },
+      },
+    },
+  });
+
+  // ES vs NQ reversal rates (IB 60min)
+  new Chart(document.getElementById('esNqReversalChart'), {
+    type: 'bar',
+    data: {
+      labels: ['IB low first\n(fade bearish open)', 'IB high first\n(fade bullish open)'],
+      datasets: [
+        {
+          label: 'NQ',
+          data: [81, 63],
+          backgroundColor: fill.bullish,
+          borderColor: palette.bullish,
+          borderWidth: 1,
+          borderRadius: 6,
+        },
+        {
+          label: 'ES',
+          data: [75, 71],
+          backgroundColor: seriesFill.primary,
+          borderColor: series.primary,
+          borderWidth: 1,
+          borderRadius: 6,
+        },
+      ],
+    },
+    options: {
+      ...baseOptions,
+      scales: {
+        x: baseScales.x,
+        y: {
+          ...baseScales.y,
+          min: 50,
+          max: 95,
+          ticks: { ...baseScales.y.ticks, callback: (v) => v + '%', stepSize: 10 },
+        },
+      },
+    },
+  });
+
+  // Extension levels: breakdown vs breakout (NQ 60min)
+  new Chart(document.getElementById('extensionChart'), {
+    type: 'bar',
+    data: {
+      labels: ['L1 (IB range x 0.25)', 'L2 (IB range x 0.50)', 'L3 (IB range x 1.00)'],
+      datasets: [
+        {
+          label: 'IB breakdown (below IBL) — 43 sessions',
+          data: [72.1, 51.2, 16.3],
+          backgroundColor: fill.bearish,
+          borderColor: palette.bearish,
+          borderWidth: 1,
+          borderRadius: 6,
+        },
+        {
+          label: 'IB breakout (above IBH) — 59 sessions',
+          data: [57.6, 32.2, 15.2],
+          backgroundColor: seriesFill.primary,
+          borderColor: series.primary,
+          borderWidth: 1,
+          borderRadius: 6,
+        },
+      ],
+    },
+    options: {
+      ...baseOptions,
+      scales: {
+        x: baseScales.x,
+        y: {
+          ...baseScales.y,
+          max: 100,
+          ticks: { ...baseScales.y.ticks, callback: (v) => v + '%', stepSize: 20 },
+        },
+      },
+    },
+  });
+
+  // Break type donut (single / double / no break)
+  new Chart(document.getElementById('breakTypeDonut'), {
+    type: 'doughnut',
+    data: {
+      labels: ['single break (clean trend)', 'double break (break-fail)', 'no break'],
+      datasets: [{
+        data: [102, 18, 7],
+        backgroundColor: [fill.bullish, fill.warning, fill.neutral],
+        borderColor:     [palette.bullish, palette.warning, palette.neutral],
+        borderWidth: 1,
+      }],
+    },
+    options: {
+      ...baseOptions,
+      cutout: '60%',
+      plugins: {
+        ...baseOptions.plugins,
+        legend: { position: 'right', labels: { color: palette.textSecondary, font: { family: 'Poppins', size: 12 }, padding: 10 } },
+        tooltip: { ...baseTooltip, callbacks: { label: (ctx) => `${ctx.label}: ${ctx.parsed} sessions` } },
+      },
+    },
+  });
+
+  // Double break by weekday
+  new Chart(document.getElementById('doubleBreakByDay'), {
+    type: 'bar',
+    data: {
+      labels: ['mon', 'tue', 'wed', 'thu', 'fri'],
+      datasets: [
+        {
+          label: 'single break',
+          data: [21, 20, 23, 17, 21],
+          backgroundColor: seriesFill.primary,
+          borderColor: series.primary,
+          borderWidth: 1,
+          borderRadius: 4,
+        },
+        {
+          label: 'double break',
+          data: [4, 6, 1, 5, 2],
+          backgroundColor: fill.warning,
+          borderColor: palette.warning,
+          borderWidth: 1,
+        },
+        {
+          label: 'no break',
+          data: [1, 0, 2, 2, 2],
+          backgroundColor: fill.neutral,
+          borderColor: palette.neutral,
+          borderWidth: 1,
+        },
+      ],
+    },
+    options: {
+      ...baseOptions,
+      scales: {
+        x: { ...baseScales.x, stacked: true },
+        y: { ...baseScales.y, stacked: true, ticks: { ...baseScales.y.ticks, stepSize: 5 } },
+      },
+    },
+  });
+</script>
+</body>
+</html>
