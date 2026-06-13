@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>NQ initial balance analysis — NQ futures 12/15/25 - 06/12/26</title>
+<title>NQ IB and ORB analysis — NQ futures 12/15/25 - 06/12/26</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -50,9 +50,9 @@
 <!-- HEADER -->
 <header class="mb-8">
   <div class="text-xs uppercase tracking-wider text-neutral-500 mb-2">market structure research</div>
-  <h1 class="text-3xl font-medium text-white mb-2 lowercase">NQ initial balance analysis</h1>
+  <h1 class="text-3xl font-medium text-white mb-2 lowercase">NQ initial balance and ORB analysis</h1>
   <p class="meta-line">
-    <span>NQ futures — initial balance breakout, retracement, and ES correlation</span>
+    <span>NQ futures — IB (60min) and ORB (30min) breakout, retracement, and ES correlation</span>
     <span class="meta-sep">|</span>
     <span>12/15/25 - 06/12/26</span>
     <span class="meta-sep">|</span>
@@ -76,28 +76,28 @@
     </div>
     <div>
       <div class="text-xs uppercase tracking-wider text-neutral-500 mb-2">how to read it</div>
-      <p class="text-sm text-neutral-300 leading-relaxed lowercase">the 30-minute IB is the high/low formed in the first 30 min of RTH. "IB low formed first" means the session opened with a bearish move into the IB low before establishing the IB high. "reversal" means price then broke the opposite side of the IB.</p>
+      <p class="text-sm text-neutral-300 leading-relaxed lowercase">the 60-minute IB is the high/low formed in the first 60 min of RTH. the 30-minute range is the ORB (opening range breakout). "IB low formed first" means the session opened with a bearish move into the IB low before establishing the IB high. "reversal" means price then broke the opposite side of the IB.</p>
     </div>
     <div>
       <div class="text-xs uppercase tracking-wider text-neutral-500 mb-2">key edge</div>
-      <p class="text-sm text-neutral-300 leading-relaxed lowercase">when the IB low forms first in NQ (bearish opening move), price reverses and breaks the IB high <span class="text-green-400 font-medium">75%</span> of the time with the 30min IB. the same pattern in ES triggers the same NQ reversal with similar frequency — confirming ES leads NQ on IB breaks.</p>
+      <p class="text-sm text-neutral-300 leading-relaxed lowercase">when the ORB low forms first in NQ (bearish opening move), price reverses and breaks the ORB high <span style="color:#22C55E;font-weight:500;">75%</span> of the time. with the true 60min IB that number rises to <span style="color:#22C55E;font-weight:500;">81%</span>. the same pattern in ES triggers the same NQ reversal with similar frequency — confirming ES leads NQ on IB/ORB breaks.</p>
     </div>
   </div>
 </div>
 
 <!-- ZONE 1: IB BREAK TYPE -->
 <section>
-  <h2 class="text-2xl font-medium text-white mb-4 lowercase">zone 1 — IB break type: how often does NQ break each side?</h2>
+  <h2 class="text-2xl font-medium text-white mb-4 lowercase">zone 1 — break type: how often does NQ break the ORB and IB?</h2>
 
   <!-- KPI strip: aggregate 30min IB -->
   <div class="card mb-4">
     <div class="subsection-header">
       <div class="flex items-baseline justify-between">
-        <h3 class="text-lg font-medium text-white lowercase">NQ 30min IB — aggregate break stats (127 sessions)</h3>
+        <h3 class="text-lg font-medium text-white lowercase">NQ ORB (30min) — aggregate break stats (127 sessions)</h3>
         <span class="source-label">from: <a href="https://edgeful.com/reports/futures/NQ/initial-balance/standard" target="_blank" rel="noopener">initial balance standard</a></span>
       </div>
       <p class="meta-line mt-1">
-        <span>NQ futures — 30-min initial balance</span>
+        <span>NQ futures — 30-min ORB (opening range breakout)</span>
         <span class="meta-sep">|</span>
         <span>12/15/25 - 06/12/26</span>
         <span class="meta-sep">|</span>
@@ -129,7 +129,7 @@
           <div class="text-xs text-neutral-500 mt-1">1 of 127 sessions</div>
         </div>
       </div>
-      <p class="text-xs text-neutral-500 mt-4 lowercase">takeaway: NQ breaks the 30-min IB on 99.2% of sessions. the overwhelming norm is a clean single directional break — the IB almost always resolves trend-day style.</p>
+      <p class="text-xs text-neutral-500 mt-4 lowercase">takeaway: NQ breaks the 30-min ORB on 99.2% of sessions. the overwhelming norm is a clean single directional break — the IB almost always resolves trend-day style.</p>
     </div>
   </div>
 
@@ -138,7 +138,7 @@
     <div class="card">
       <div class="subsection-header">
         <div class="flex items-baseline justify-between">
-          <h3 class="text-lg font-medium text-white lowercase">NQ 30min IB — break type by weekday</h3>
+          <h3 class="text-lg font-medium text-white lowercase">NQ ORB (30min) — break type by weekday</h3>
           <span class="source-label">from: <a href="https://edgeful.com/reports/futures/NQ/initial-balance/standard" target="_blank" rel="noopener">initial balance standard</a></span>
         </div>
         <p class="meta-line mt-1">
@@ -148,7 +148,7 @@
         </p>
       </div>
       <div class="p-6">
-        <p class="text-sm text-neutral-400 mb-4 lowercase">wednesday and friday show the cleanest single-directional breaks. tuesday has the most double-break (whipsaw) sessions.</p>
+        <p class="text-sm text-neutral-400 mb-4 lowercase">wednesday and friday show the cleanest single-directional breaks on the ORB. tuesday has the most double-break (whipsaw) sessions.</p>
         <div class="h-72"><canvas id="nqBreakTypeChart"></canvas></div>
         <p class="text-xs text-neutral-500 mt-3 lowercase">single = one side only broken (directional). double = both sides broken (whipsaw). no-break = IB held all session.</p>
       </div>
@@ -156,7 +156,7 @@
     <div class="card">
       <div class="subsection-header">
         <div class="flex items-baseline justify-between">
-          <h3 class="text-lg font-medium text-white lowercase">ES 30min IB — break type by weekday</h3>
+          <h3 class="text-lg font-medium text-white lowercase">ES ORB (30min) — break type by weekday</h3>
           <span class="source-label">from: <a href="https://edgeful.com/reports/futures/ES/initial-balance/standard" target="_blank" rel="noopener">ES initial balance standard</a></span>
         </div>
         <p class="meta-line mt-1">
@@ -166,7 +166,7 @@
         </p>
       </div>
       <div class="p-6">
-        <p class="text-sm text-neutral-400 mb-4 lowercase">ES runs more double-break sessions than NQ overall (38% vs 30%). NQ tends to commit to direction more cleanly once a break occurs.</p>
+        <p class="text-sm text-neutral-400 mb-4 lowercase">ES runs more double-break ORB sessions than NQ overall (38% vs 30%). NQ tends to commit to direction more cleanly once a break occurs.</p>
         <div class="h-72"><canvas id="esBreakTypeChart"></canvas></div>
         <p class="text-xs text-neutral-500 mt-3 lowercase">same definitions as NQ. compare: ES has zero no-break sessions across 127 trading days.</p>
       </div>
@@ -177,11 +177,11 @@
   <div class="card mb-4">
     <div class="subsection-header">
       <div class="flex items-baseline justify-between">
-        <h3 class="text-lg font-medium text-white lowercase">IB break rate by timeframe — NQ vs ES</h3>
+        <h3 class="text-lg font-medium text-white lowercase">break rate by timeframe — NQ vs ES (ORB = 30min, IB = 60min)</h3>
         <span class="source-label">from: <a href="https://edgeful.com/reports/futures/NQ/initial-balance/standard" target="_blank" rel="noopener">initial balance standard</a></span>
       </div>
       <p class="meta-line mt-1">
-        <span>30min / 45min / 60min IB — single vs double vs no-break</span>
+        <span>ORB (30min) / 45min / IB (60min) — single vs double vs no-break</span>
         <span class="meta-sep">|</span>
         <a class="meta-link" href="https://edgeful.com" target="_blank" rel="noopener">edgeful.com</a>
       </p>
@@ -200,49 +200,49 @@
         <tbody>
           <tr class="border-b border-neutral-800/50 row-bullish">
             <td class="py-3 pr-4 text-white font-medium">NQ</td>
-            <td class="py-3 pr-4">30 min</td>
+            <td class="py-3 pr-4">ORB 30min</td>
             <td class="py-3 pr-4"><span class="chip chip-bullish">69.3%</span></td>
             <td class="py-3 pr-4"><span class="chip chip-warning">29.9%</span></td>
             <td class="py-3"><span class="chip chip-neutral">0.8%</span></td>
           </tr>
           <tr class="border-b border-neutral-800/50">
             <td class="py-3 pr-4 text-white font-medium">NQ</td>
-            <td class="py-3 pr-4">45 min</td>
+            <td class="py-3 pr-4">45min</td>
             <td class="py-3 pr-4"><span class="chip chip-bullish">77.2%</span></td>
             <td class="py-3 pr-4"><span class="chip chip-warning">19.7%</span></td>
             <td class="py-3"><span class="chip chip-neutral">3.1%</span></td>
           </tr>
           <tr class="border-b border-neutral-800/50">
             <td class="py-3 pr-4 text-white font-medium">NQ</td>
-            <td class="py-3 pr-4">60 min</td>
+            <td class="py-3 pr-4">IB 60min</td>
             <td class="py-3 pr-4"><span class="chip chip-bullish">80.3%</span></td>
             <td class="py-3 pr-4"><span class="chip chip-warning">14.2%</span></td>
             <td class="py-3"><span class="chip chip-neutral">5.5%</span></td>
           </tr>
           <tr class="border-b border-neutral-800/50 row-bullish">
             <td class="py-3 pr-4 text-white font-medium">ES</td>
-            <td class="py-3 pr-4">30 min</td>
+            <td class="py-3 pr-4">ORB 30min</td>
             <td class="py-3 pr-4"><span class="chip chip-bullish">62.2%</span></td>
             <td class="py-3 pr-4"><span class="chip chip-warning">37.8%</span></td>
             <td class="py-3"><span class="chip chip-neutral">0.0%</span></td>
           </tr>
           <tr class="border-b border-neutral-800/50">
             <td class="py-3 pr-4 text-white font-medium">ES</td>
-            <td class="py-3 pr-4">45 min</td>
+            <td class="py-3 pr-4">45min</td>
             <td class="py-3 pr-4"><span class="chip chip-bullish">70.9%</span></td>
             <td class="py-3 pr-4"><span class="chip chip-warning">28.3%</span></td>
             <td class="py-3"><span class="chip chip-neutral">0.8%</span></td>
           </tr>
           <tr>
             <td class="py-3 pr-4 text-white font-medium">ES</td>
-            <td class="py-3 pr-4">60 min</td>
+            <td class="py-3 pr-4">IB 60min</td>
             <td class="py-3 pr-4"><span class="chip chip-bullish">75.6%</span></td>
             <td class="py-3 pr-4"><span class="chip chip-warning">22.0%</span></td>
             <td class="py-3"><span class="chip chip-neutral">2.4%</span></td>
           </tr>
         </tbody>
       </table>
-      <p class="text-xs text-neutral-500 mt-4 lowercase">insight: longer IB timeframes produce cleaner single-break readings. the 60min IB is the best timeframe for NQ — 80% of sessions give a clean directional break with no fakeout. NQ commits to direction more than ES across all timeframes.</p>
+      <p class="text-xs text-neutral-500 mt-4 lowercase">insight: the true IB (60min) gives NQ the cleanest single-break reading at 80% of sessions. the ORB (30min) is more likely to generate double-breaks (whipsaw) at 30% vs 14% for the 60min IB. NQ commits to direction more than ES across all timeframes.</p>
     </div>
   </div>
 </section>
@@ -257,7 +257,7 @@
     <div class="flex items-start gap-4">
       <span class="badge badge-bullish mt-1">65%+ edge</span>
       <div>
-        <p class="text-sm text-neutral-300 leading-relaxed lowercase">when the <strong class="text-white">IB low forms first</strong> in NQ (price drops and makes the session low early), the IB high gets broken on 75% of sessions (30min IB). this is the mean-reversion setup: fade the bearish open, target the IB high. the same directional bias appears in ES, confirming that ES-leading-NQ is a real pattern.</p>
+        <p class="text-sm text-neutral-300 leading-relaxed lowercase">when the <strong class="text-white">IB low forms first</strong> in NQ (price drops and makes the session low early), the ORB high gets broken on 75% of sessions (ORB, 30min) — rising to 81% with the true 60min IB. this is the mean-reversion setup: fade the bearish open, target the range high. the same directional bias appears in ES, confirming that ES-leading-NQ is a real pattern.</p>
         <p class="text-sm text-neutral-500 mt-2 lowercase">both "IB low first → high breaks" and "IB high first → low breaks" are reversal setups — the key insight is that whichever side of the IB forms first, the <em>opposite</em> side is the higher-probability target 65-81% of the time depending on timeframe.</p>
       </div>
     </div>
@@ -268,37 +268,37 @@
     <div class="card">
       <div class="subsection-header">
         <div class="flex items-baseline justify-between">
-          <h3 class="text-lg font-medium text-white lowercase">NQ 30min IB — when IB high forms first</h3>
+          <h3 class="text-lg font-medium text-white lowercase">NQ ORB (30min) — when ORB high forms first</h3>
           <span class="source-label">from: <a href="https://edgeful.com/reports/futures/NQ/initial-balance/standard" target="_blank" rel="noopener">initial balance standard</a></span>
         </div>
         <p class="meta-line mt-1">
-          <span>NQ — 54 sessions where IB high formed before IB low</span>
+          <span>NQ — 54 sessions where ORB high formed before ORB low</span>
           <span class="meta-sep">|</span>
           <a class="meta-link" href="https://edgeful.com" target="_blank" rel="noopener">edgeful.com</a>
         </p>
       </div>
       <div class="p-6">
-        <p class="text-sm text-neutral-400 mb-4 lowercase">bullish opening move establishes IB high first — price then reverses and breaks the IB low <span style="color:#22C55E;font-weight:500;">70%</span> of the time. fade the early move.</p>
+        <p class="text-sm text-neutral-400 mb-4 lowercase">bullish opening move establishes ORB high first — price then reverses and breaks the IB low <span style="color:#22C55E;font-weight:500;">70%</span> of the time. fade the early move.</p>
         <div class="h-64"><canvas id="nqHighFirstChart"></canvas></div>
-        <p class="text-xs text-neutral-500 mt-3 lowercase">sample: 54 sessions (42.5% of all sessions). "break IB high" = continuation. "break IB low" = reversal (the higher-probability outcome).</p>
+        <p class="text-xs text-neutral-500 mt-3 lowercase">sample: 54 sessions (42.5% of all sessions, ORB). "break ORB high" = continuation. "break ORB low" = reversal (the higher-probability outcome).</p>
       </div>
     </div>
     <div class="card">
       <div class="subsection-header">
         <div class="flex items-baseline justify-between">
-          <h3 class="text-lg font-medium text-white lowercase">NQ 30min IB — when IB low forms first</h3>
+          <h3 class="text-lg font-medium text-white lowercase">NQ ORB (30min) — when ORB low forms first</h3>
           <span class="source-label">from: <a href="https://edgeful.com/reports/futures/NQ/initial-balance/standard" target="_blank" rel="noopener">initial balance standard</a></span>
         </div>
         <p class="meta-line mt-1">
-          <span>NQ — 73 sessions where IB low formed before IB high</span>
+          <span>NQ — 73 sessions where ORB low formed before ORB high</span>
           <span class="meta-sep">|</span>
           <a class="meta-link" href="https://edgeful.com" target="_blank" rel="noopener">edgeful.com</a>
         </p>
       </div>
       <div class="p-6">
-        <p class="text-sm text-neutral-400 mb-4 lowercase">bearish opening move establishes IB low first — price reverses and breaks the IB high <span style="color:#22C55E;font-weight:500;">75%</span> of the time. the strongest reversal edge in the data.</p>
+        <p class="text-sm text-neutral-400 mb-4 lowercase">bearish opening move establishes ORB low first — price reverses and breaks the IB high <span style="color:#22C55E;font-weight:500;">75%</span> of the time. the strongest reversal edge in the data.</p>
         <div class="h-64"><canvas id="nqLowFirstChart"></canvas></div>
-        <p class="text-xs text-neutral-500 mt-3 lowercase">sample: 73 sessions (57.5% of all sessions — bearish opens are slightly more common for NQ). "break IB high" = reversal (the higher-probability outcome).</p>
+        <p class="text-xs text-neutral-500 mt-3 lowercase">sample: 73 sessions (57.5% of all sessions — bearish opens are slightly more common for NQ, ORB). "break ORB high" = reversal (the higher-probability outcome).</p>
       </div>
     </div>
   </div>
@@ -307,19 +307,19 @@
   <div class="card mb-4">
     <div class="subsection-header">
       <div class="flex items-baseline justify-between">
-        <h3 class="text-lg font-medium text-white lowercase">reversal probability by IB timeframe — NQ vs ES</h3>
+        <h3 class="text-lg font-medium text-white lowercase">reversal probability by timeframe — NQ vs ES (ORB=30min, IB=60min)</h3>
         <span class="source-label">from: <a href="https://edgeful.com/reports/futures/NQ/initial-balance/standard" target="_blank" rel="noopener">initial balance standard</a></span>
       </div>
       <p class="meta-line mt-1">
-        <span>% of sessions where price breaks the OPPOSITE side from the one that formed first</span>
+        <span>% of sessions where price breaks the OPPOSITE side from the one that formed first (ORB and IB)</span>
         <span class="meta-sep">|</span>
         <a class="meta-link" href="https://edgeful.com" target="_blank" rel="noopener">edgeful.com</a>
       </p>
     </div>
     <div class="p-6">
-      <p class="text-sm text-neutral-400 mb-4 lowercase">the reversal probability when IB low forms first is consistently higher than when IB high forms first — across both NQ and ES and all timeframes. bearish opens revert more reliably. NQ amplifies the reversal tendency vs ES on the "IB low first" setup (81% at 60min vs ES 75%).</p>
+      <p class="text-sm text-neutral-400 mb-4 lowercase">the reversal probability when the ORB/IB low forms first is consistently higher than when IB high forms first — across both NQ and ES and all timeframes. bearish opens revert more reliably. NQ amplifies the reversal tendency vs ES on the "low first" setup (81% at the true 60min IB vs ES 75%).</p>
       <div class="h-80"><canvas id="reversalComparisonChart"></canvas></div>
-      <p class="text-xs text-neutral-500 mt-3 lowercase">green bars = reversal rate when IB low formed first (fade bearish open, target IB high). blue bars = reversal rate when IB high formed first (fade bullish open, target IB low). 65% threshold line = minimum actionable edge.</p>
+      <p class="text-xs text-neutral-500 mt-3 lowercase">green bars = reversal rate when low formed first (fade bearish open). blue bars = reversal rate when high formed first (fade bullish open). 65% threshold line = minimum actionable edge. x-axis: ORB 30min / 45min / IB 60min.</p>
     </div>
   </div>
 
@@ -328,11 +328,11 @@
     <div class="card">
       <div class="subsection-header">
         <div class="flex items-baseline justify-between">
-          <h3 class="text-lg font-medium text-white lowercase">ES 30min IB — when IB high forms first</h3>
+          <h3 class="text-lg font-medium text-white lowercase">ES ORB (30min) — when ORB high forms first</h3>
           <span class="source-label">from: <a href="https://edgeful.com/reports/futures/ES/initial-balance/standard" target="_blank" rel="noopener">ES initial balance standard</a></span>
         </div>
         <p class="meta-line mt-1">
-          <span>ES — 53 sessions where IB high formed before IB low</span>
+          <span>ES — 53 sessions where ORB high formed before ORB low</span>
           <span class="meta-sep">|</span>
           <a class="meta-link" href="https://edgeful.com" target="_blank" rel="noopener">edgeful.com</a>
         </p>
@@ -340,17 +340,17 @@
       <div class="p-6">
         <p class="text-sm text-neutral-400 mb-4 lowercase">when ES prints IB high first, the IB low breaks 60% of the time — slightly lower than NQ (70%). ES is leading the directional move; NQ follows with higher conviction.</p>
         <div class="h-64"><canvas id="esHighFirstChart"></canvas></div>
-        <p class="text-xs text-neutral-500 mt-3 lowercase">sample: 53 ES sessions (41.7%). compare to NQ's 70% reversal rate on the same setup.</p>
+        <p class="text-xs text-neutral-500 mt-3 lowercase">sample: 53 ES sessions (41.7%, ORB). compare to NQ's 70% reversal rate on the same setup.</p>
       </div>
     </div>
     <div class="card">
       <div class="subsection-header">
         <div class="flex items-baseline justify-between">
-          <h3 class="text-lg font-medium text-white lowercase">ES 30min IB — when IB low forms first</h3>
+          <h3 class="text-lg font-medium text-white lowercase">ES ORB (30min) — when ORB low forms first</h3>
           <span class="source-label">from: <a href="https://edgeful.com/reports/futures/ES/initial-balance/standard" target="_blank" rel="noopener">ES initial balance standard</a></span>
         </div>
         <p class="meta-line mt-1">
-          <span>ES — 74 sessions where IB low formed before IB high</span>
+          <span>ES — 74 sessions where ORB low formed before ORB high</span>
           <span class="meta-sep">|</span>
           <a class="meta-link" href="https://edgeful.com" target="_blank" rel="noopener">edgeful.com</a>
         </p>
@@ -358,7 +358,7 @@
       <div class="p-6">
         <p class="text-sm text-neutral-400 mb-4 lowercase">when ES prints IB low first, the IB high breaks 72% of the time. NQ follows this pattern with 75% — almost identical, confirming the lead-lag relationship.</p>
         <div class="h-64"><canvas id="esLowFirstChart"></canvas></div>
-        <p class="text-xs text-neutral-500 mt-3 lowercase">sample: 74 ES sessions (58.3%). NQ shows 75% on the same pattern — the two instruments align tightly on bearish-open reversals.</p>
+        <p class="text-xs text-neutral-500 mt-3 lowercase">sample: 74 ES sessions (58.3%, ORB). NQ shows 75% on the same pattern — the two instruments align tightly on bearish-open reversals.</p>
       </div>
     </div>
   </div>
@@ -373,11 +373,11 @@
   <div class="card mb-4">
     <div class="subsection-header">
       <div class="flex items-baseline justify-between">
-        <h3 class="text-lg font-medium text-white lowercase">NQ 30min IB retracement — extension levels after breakout and breakdown</h3>
+        <h3 class="text-lg font-medium text-white lowercase">NQ ORB (30min) retracement — extension levels after breakout and breakdown</h3>
         <span class="source-label">from: <a href="https://edgeful.com/reports/futures/NQ/initial-balance/retracement" target="_blank" rel="noopener">initial balance retracement</a></span>
       </div>
       <p class="meta-line mt-1">
-        <span>NQ — 127 sessions | 48 breakouts (above IB high) | 40 breakdowns (below IB low)</span>
+        <span>NQ — 127 sessions | 48 ORB breakouts (above ORB high) | 40 ORB breakdowns (below ORB low)</span>
         <span class="meta-sep">|</span>
         <a class="meta-link" href="https://edgeful.com" target="_blank" rel="noopener">edgeful.com</a>
       </p>
@@ -385,29 +385,29 @@
     <div class="p-6">
       <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <div class="p-5 rounded-xl" style="background:#09090B;border:1px solid #2A2A2A;">
-          <div class="text-xs uppercase tracking-wider text-neutral-500 mb-2">IB breakouts (above high)</div>
+          <div class="text-xs uppercase tracking-wider text-neutral-500 mb-2">ORB breakouts (above ORB high)</div>
           <div class="text-3xl stat-num text-white">48</div>
           <div class="text-xs text-neutral-500 mt-1">37.8% of sessions</div>
         </div>
         <div class="p-5 rounded-xl" style="background:#09090B;border:1px solid #2A2A2A;">
-          <div class="text-xs uppercase tracking-wider text-neutral-500 mb-2">breakout L1 hit rate</div>
+          <div class="text-xs uppercase tracking-wider text-neutral-500 mb-2">ORB breakout L1 hit rate</div>
           <div class="text-3xl stat-num" style="color:#D89700;">66.7%</div>
           <div class="text-xs text-neutral-500 mt-1">32 of 48 breakouts</div>
         </div>
         <div class="p-5 rounded-xl" style="background:#09090B;border:1px solid #2A2A2A;">
-          <div class="text-xs uppercase tracking-wider text-neutral-500 mb-2">IB breakdowns (below low)</div>
+          <div class="text-xs uppercase tracking-wider text-neutral-500 mb-2">ORB breakdowns (below ORB low)</div>
           <div class="text-3xl stat-num text-white">40</div>
           <div class="text-xs text-neutral-500 mt-1">31.5% of sessions</div>
         </div>
         <div class="p-5 rounded-xl" style="background:#09090B;border:1px solid #2A2A2A;">
-          <div class="text-xs uppercase tracking-wider text-neutral-500 mb-2">breakdown L1 hit rate</div>
+          <div class="text-xs uppercase tracking-wider text-neutral-500 mb-2">ORB breakdown L1 hit rate</div>
           <div class="text-3xl stat-num" style="color:#22C55E;">85.0%</div>
           <div class="text-xs text-neutral-500 mt-1">34 of 40 breakdowns</div>
         </div>
       </div>
-      <p class="text-sm text-neutral-400 mb-4 lowercase">NQ breakdowns extend further than breakouts. when the IB low breaks, price reaches L1 on 85% of breakdowns vs 67% of breakouts. breakdowns are more committed moves. L1 = 25% of IB range projected beyond the break point.</p>
+      <p class="text-sm text-neutral-400 mb-4 lowercase">NQ ORB breakdowns extend further than breakouts. when the ORB low breaks, price reaches L1 on 85% of breakdowns vs 67% of breakouts. breakdowns are more committed moves. L1 = 25% of IB range projected beyond the break point.</p>
       <div class="h-80"><canvas id="extensionChart"></canvas></div>
-      <p class="text-xs text-neutral-500 mt-3 lowercase">L1/L2/L3 = 25% / 50% / 100% of the IB range projected beyond the breakout or breakdown level. sample: 48 NQ breakouts, 40 NQ breakdowns (30min IB, 127 sessions).</p>
+      <p class="text-xs text-neutral-500 mt-3 lowercase">L1/L2/L3 = 25% / 50% / 100% of the IB range projected beyond the breakout or breakdown level. sample: 48 NQ ORB breakouts, 40 NQ ORB breakdowns (ORB 30min, 127 sessions). note: the true 60min IB shows 72% L1 on breakdowns — still strong.</p>
     </div>
   </div>
 
@@ -419,7 +419,7 @@
         <span class="source-label">from: <a href="https://edgeful.com/reports/futures/NQ/initial-balance/retracement" target="_blank" rel="noopener">initial balance retracement</a></span>
       </div>
       <p class="meta-line mt-1">
-        <span>L1 hit rate for breakouts and breakdowns across 30/45/60min IB windows</span>
+        <span>L1 hit rate for breakouts and breakdowns across ORB (30min) / 45min / IB (60min) windows</span>
         <span class="meta-sep">|</span>
         <a class="meta-link" href="https://edgeful.com" target="_blank" rel="noopener">edgeful.com</a>
       </p>
@@ -441,7 +441,7 @@
         <tbody>
           <tr class="border-b border-neutral-800/50 row-bullish">
             <td class="py-3 pr-4 text-white font-medium">NQ</td>
-            <td class="py-3 pr-4">30 min</td>
+            <td class="py-3 pr-4">ORB 30min</td>
             <td class="py-3 pr-4 text-neutral-300">48</td>
             <td class="py-3 pr-4"><span class="chip chip-warning">66.7%</span></td>
             <td class="py-3 pr-4"><span class="chip chip-neutral">31.3%</span></td>
@@ -451,7 +451,7 @@
           </tr>
           <tr class="border-b border-neutral-800/50">
             <td class="py-3 pr-4 text-white font-medium">NQ</td>
-            <td class="py-3 pr-4">45 min</td>
+            <td class="py-3 pr-4">45min</td>
             <td class="py-3 pr-4 text-neutral-300">53</td>
             <td class="py-3 pr-4"><span class="chip chip-neutral">50.9%</span></td>
             <td class="py-3 pr-4"><span class="chip chip-neutral">30.2%</span></td>
@@ -461,7 +461,7 @@
           </tr>
           <tr class="border-b border-neutral-800/50">
             <td class="py-3 pr-4 text-white font-medium">NQ</td>
-            <td class="py-3 pr-4">60 min</td>
+            <td class="py-3 pr-4">IB 60min</td>
             <td class="py-3 pr-4 text-neutral-300">59</td>
             <td class="py-3 pr-4"><span class="chip chip-neutral">57.6%</span></td>
             <td class="py-3 pr-4"><span class="chip chip-neutral">32.2%</span></td>
@@ -471,7 +471,7 @@
           </tr>
           <tr class="border-b border-neutral-800/50 row-bullish">
             <td class="py-3 pr-4 text-white font-medium">ES</td>
-            <td class="py-3 pr-4">30 min</td>
+            <td class="py-3 pr-4">ORB 30min</td>
             <td class="py-3 pr-4 text-neutral-300">47</td>
             <td class="py-3 pr-4"><span class="chip chip-warning">66.0%</span></td>
             <td class="py-3 pr-4"><span class="chip chip-neutral">36.2%</span></td>
@@ -481,7 +481,7 @@
           </tr>
           <tr class="border-b border-neutral-800/50">
             <td class="py-3 pr-4 text-white font-medium">ES</td>
-            <td class="py-3 pr-4">45 min</td>
+            <td class="py-3 pr-4">45min</td>
             <td class="py-3 pr-4 text-neutral-300">51</td>
             <td class="py-3 pr-4"><span class="chip chip-warning">60.8%</span></td>
             <td class="py-3 pr-4"><span class="chip chip-neutral">37.3%</span></td>
@@ -491,7 +491,7 @@
           </tr>
           <tr>
             <td class="py-3 pr-4 text-white font-medium">ES</td>
-            <td class="py-3 pr-4">60 min</td>
+            <td class="py-3 pr-4">IB 60min</td>
             <td class="py-3 pr-4 text-neutral-300">54</td>
             <td class="py-3 pr-4"><span class="chip chip-neutral">57.4%</span></td>
             <td class="py-3 pr-4"><span class="chip chip-neutral">27.8%</span></td>
@@ -501,7 +501,7 @@
           </tr>
         </tbody>
       </table>
-      <p class="text-xs text-neutral-500 mt-4 lowercase">key finding: breakdowns extend further than breakouts in NQ, especially with the 30min IB (85% L1 vs 67%). ES shows the same directional asymmetry but with less spread. L1 = 25% IB-range extension beyond the break level.</p>
+      <p class="text-xs text-neutral-500 mt-4 lowercase">key finding: breakdowns extend further than breakouts in NQ across all timeframes. the ORB (30min) shows the starkest split (85% vs 67%). the true IB (60min) breakdown still reaches L1 at 72%. ES shows the same directional asymmetry. L1 = 25% IB-range extension beyond the break level.</p>
     </div>
   </div>
 </section>
@@ -524,11 +524,11 @@
         <div class="space-y-3">
           <div>
             <div class="text-xs uppercase tracking-wider text-neutral-500 mb-1">trigger</div>
-            <p class="text-sm text-neutral-300 lowercase">IB low forms first (bearish open) — fade back to IB high target</p>
+            <p class="text-sm text-neutral-300 lowercase">ORB/IB low forms first (bearish opening move) — fade back to the range high target</p>
           </div>
           <div>
             <div class="text-xs uppercase tracking-wider text-neutral-500 mb-1">probability</div>
-            <p class="text-sm font-medium" style="color:#22C55E;">75% (30min IB) — 81% (60min IB)</p>
+            <p class="text-sm font-medium" style="color:#22C55E;">75% (ORB, 30min) rising to 81% (IB, 60min)</p>
           </div>
           <div>
             <div class="text-xs uppercase tracking-wider text-neutral-500 mb-1">ES confirmation</div>
@@ -536,11 +536,11 @@
           </div>
           <div>
             <div class="text-xs uppercase tracking-wider text-neutral-500 mb-1">target</div>
-            <p class="text-sm text-neutral-300 lowercase">IB high. secondary target: L1 extension above IB high (67% of breakouts reach L1)</p>
+            <p class="text-sm text-neutral-300 lowercase">ORB/IB high. secondary: L1 extension above the range high (67% of ORB breakouts, 58% of IB breakouts reach L1)</p>
           </div>
           <div>
             <div class="text-xs uppercase tracking-wider text-neutral-500 mb-1">stop</div>
-            <p class="text-sm text-neutral-300 lowercase">below IB low. if IB low further extends instead of reversing, exit — this is the 25% failure case</p>
+            <p class="text-sm text-neutral-300 lowercase">below the range low. if the low further extends instead of reversing, exit — this is the 25% failure case</p>
           </div>
         </div>
       </div>
@@ -548,7 +548,7 @@
 
     <div class="card">
       <div class="subsection-header">
-        <h3 class="text-lg font-medium text-white lowercase">setup 2: IB breakdown extension</h3>
+        <h3 class="text-lg font-medium text-white lowercase">setup 2: ORB/IB breakdown extension</h3>
       </div>
       <div class="p-6">
         <div class="mb-4">
@@ -557,11 +557,11 @@
         <div class="space-y-3">
           <div>
             <div class="text-xs uppercase tracking-wider text-neutral-500 mb-1">trigger</div>
-            <p class="text-sm text-neutral-300 lowercase">30min IB low breaks with momentum — enter short on confirmed close below IB low</p>
+            <p class="text-sm text-neutral-300 lowercase">ORB low (30min) or IB low (60min) breaks with momentum — enter short on confirmed close below the range low</p>
           </div>
           <div>
             <div class="text-xs uppercase tracking-wider text-neutral-500 mb-1">probability</div>
-            <p class="text-sm font-medium" style="color:#22C55E;">85% reach L1 after IB low breaks (30min IB)</p>
+            <p class="text-sm font-medium" style="color:#22C55E;">85% reach L1 after ORB low breaks (30min). 72% after true IB low breaks (60min).</p>
           </div>
           <div>
             <div class="text-xs uppercase tracking-wider text-neutral-500 mb-1">ES confirmation</div>
@@ -573,7 +573,7 @@
           </div>
           <div>
             <div class="text-xs uppercase tracking-wider text-neutral-500 mb-1">stop</div>
-            <p class="text-sm text-neutral-300 lowercase">back above IB low. breakdown reversals (15% of cases) tend to reclaim IB low quickly</p>
+            <p class="text-sm text-neutral-300 lowercase">back above the broken level. breakdown reversals (15% of ORB cases, 28% of IB cases) tend to reclaim quickly</p>
           </div>
         </div>
       </div>
@@ -581,7 +581,7 @@
 
     <div class="card">
       <div class="subsection-header">
-        <h3 class="text-lg font-medium text-white lowercase">setup 3: IB breakout continuation</h3>
+        <h3 class="text-lg font-medium text-white lowercase">setup 3: ORB/IB breakout continuation</h3>
       </div>
       <div class="p-6">
         <div class="mb-4">
@@ -590,11 +590,11 @@
         <div class="space-y-3">
           <div>
             <div class="text-xs uppercase tracking-wider text-neutral-500 mb-1">trigger</div>
-            <p class="text-sm text-neutral-300 lowercase">IB high breaks with momentum — enter long on confirmed close above IB high (30min IB)</p>
+            <p class="text-sm text-neutral-300 lowercase">ORB high (30min) or IB high (60min) breaks with momentum — enter long on confirmed close above the range high</p>
           </div>
           <div>
             <div class="text-xs uppercase tracking-wider text-neutral-500 mb-1">probability</div>
-            <p class="text-sm font-medium" style="color:#D89700;">66.7% reach L1 — borderline, needs confirmation</p>
+            <p class="text-sm font-medium" style="color:#D89700;">66.7% reach L1 on ORB breakout. 57.6% on true IB (60min) breakout — borderline, needs confirmation</p>
           </div>
           <div>
             <div class="text-xs uppercase tracking-wider text-neutral-500 mb-1">ES confirmation</div>
@@ -606,7 +606,7 @@
           </div>
           <div>
             <div class="text-xs uppercase tracking-wider text-neutral-500 mb-1">caveat</div>
-            <p class="text-sm text-neutral-300 lowercase">breakout L1 hit rate is below 67% at 45min and 60min IB timeframes — the 30min IB is the only timeframe where breakouts have meaningful extension odds</p>
+            <p class="text-sm text-neutral-300 lowercase">ORB breakout extension odds are meaningfully weaker than breakdown odds at every timeframe. the ORB (30min) has the best breakout L1 rate at 67%; the true IB (60min) drops to 58%. require ES confirmation before trading breakout continuations</p>
           </div>
         </div>
       </div>
@@ -631,13 +631,13 @@
         <div>
           <div class="text-xs uppercase tracking-wider text-neutral-500 mb-3">the lead-lag pattern</div>
           <div class="space-y-3 text-sm text-neutral-300 lowercase">
-            <p>ES and NQ show nearly identical IB reversal probabilities (72% vs 75% on "IB low first" with 30min IB). this means ES is not generating a signal before NQ — they're running the same setup in parallel.</p>
+            <p>ES and NQ show nearly identical IB reversal probabilities (72% vs 75% on "low first" with the ORB (30min)). this means ES is not generating a signal before NQ — they're running the same setup in parallel.</p>
             <p>the edge from watching ES is <em>confirmation</em>: when both ES and NQ print the same IB extreme first (both IB low first), the joint signal reduces the risk of one instrument reversing while the other continues — the double-break case (30% for NQ alone).</p>
             <p>practical use: wait for ES to break or hold an IB level before acting in NQ. if ES is still inside its IB while NQ is testing the IB extreme, the NQ move is more likely to be a fakeout.</p>
           </div>
         </div>
         <div>
-          <div class="text-xs uppercase tracking-wider text-neutral-500 mb-3">reversal rates side-by-side</div>
+          <div class="text-xs uppercase tracking-wider text-neutral-500 mb-3">ORB (30min) reversal rates — NQ vs ES</div>
           <div class="h-64"><canvas id="esNqComparisonChart"></canvas></div>
         </div>
       </div>
@@ -648,7 +648,7 @@
 <!-- FOOTER -->
 <footer class="mt-12 pt-6 border-t border-neutral-800">
   <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-2">
-    <p class="text-xs text-neutral-500 lowercase">data from <a href="https://edgeful.com" target="_blank" rel="noopener" class="text-neutral-400 hover:text-neutral-300 transition-colors">edgeful.com</a> — historic data screener, initial balance standard and retracement reports. NQ and ES futures, RTH sessions. 12/15/25 - 06/12/26. 127 sessions.</p>
+    <p class="text-xs text-neutral-500 lowercase">data from <a href="https://edgeful.com" target="_blank" rel="noopener" class="text-neutral-400 hover:text-neutral-300 transition-colors">edgeful.com</a> — historic data screener, initial balance (60min IB) and ORB (30min) standard and retracement reports. NQ and ES futures, RTH sessions. 12/15/25 - 06/12/26. 127 sessions.</p>
     <p class="text-xs text-neutral-600 lowercase">generated 06/13/26</p>
   </div>
 </footer>
@@ -893,7 +893,7 @@
   new Chart(document.getElementById('reversalComparisonChart'), {
     type: 'bar',
     data: {
-      labels: ['NQ 30min', 'NQ 45min', 'NQ 60min', 'ES 30min', 'ES 45min', 'ES 60min'],
+      labels: ['NQ ORB 30min', 'NQ 45min', 'NQ IB 60min', 'ES ORB 30min', 'ES 45min', 'ES IB 60min'],
       datasets: [
         {
           label: 'IB low first → IB high breaks (fade bearish open)',
@@ -983,7 +983,7 @@
   new Chart(document.getElementById('esNqComparisonChart'), {
     type: 'bar',
     data: {
-      labels: ['IB low first\n(fade bearish)', 'IB high first\n(fade bullish)'],
+      labels: ['ORB low first\n(fade bearish open)', 'ORB high first\n(fade bullish open)'],
       datasets: [
         {
           label: 'NQ',
