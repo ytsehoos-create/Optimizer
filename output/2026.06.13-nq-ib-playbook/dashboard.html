@@ -1,0 +1,804 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NQ IB trade playbook — entries, stops, targets</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  body { font-family: 'Poppins', sans-serif; background: #09090B; color: #C7C7C7; }
+  .card { background: #09090B; border: 1px solid #2A2A2A; border-radius: 12px; }
+  .stat-num { font-weight: 500; font-feature-settings: "tnum"; }
+  table { font-feature-settings: "tnum"; }
+  .subsection-header { background: #121212; border-bottom: 1px solid #2A2A2A; padding: 12px 24px; border-top-left-radius: 12px; border-top-right-radius: 12px; }
+  .source-label { font-size: 12px; color: #555555; text-transform: lowercase; }
+  .source-label a { color: #555555; text-decoration: none; border-bottom: 1px dashed rgba(85,85,85,0.5); transition: color 0.15s; }
+  .source-label a:hover { color: #C7C7C7; }
+  .meta-line { font-size: 12px; color: #FFFFFF; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+  .meta-sep { color: #555555; }
+  .meta-line a.meta-link { color: #0075FF; text-decoration: none; }
+  .chip { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; }
+  .chip-bullish { background: rgba(34,197,94,0.15); color: #4ADE80; }
+  .chip-bearish { background: rgba(211,45,31,0.15); color: #F87171; }
+  .chip-warning { background: rgba(216,151,0,0.15); color: #FACC15; }
+  .chip-neutral { background: rgba(85,85,85,0.2); color: #C7C7C7; }
+  .badge { display: inline-block; padding: 3px 10px; border-radius: 6px; font-size: 12px; font-weight: 500; }
+  .badge-bullish { background: rgba(34,197,94,0.15); color: #4ADE80; border: 1px solid rgba(34,197,94,0.3); }
+  .badge-bearish { background: rgba(211,45,31,0.15); color: #F87171; border: 1px solid rgba(211,45,31,0.3); }
+  .badge-warning { background: rgba(216,151,0,0.15); color: #FACC15; border: 1px solid rgba(216,151,0,0.3); }
+  .badge-neutral { background: rgba(0,117,255,0.15); color: #60A5FA; border: 1px solid rgba(0,117,255,0.3); }
+  .section-divider { border-top: 1px solid #2A2A2A; margin: 3rem 0 2rem; }
+  /* Setup color theming */
+  .setup-a { border-color: #22C55E44; }
+  .setup-b1 { border-color: #D32D1F44; }
+  .setup-b2 { border-color: #0075FF44; }
+  .setup-c { border-color: #D8970044; }
+  .rule-row { display: flex; gap: 12px; padding: 10px 0; border-bottom: 1px solid #2A2A2A; align-items: flex-start; }
+  .rule-row:last-child { border-bottom: none; }
+  .rule-label { font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: #555555; min-width: 72px; padding-top: 2px; }
+  .rule-val { font-size: 13px; color: #C7C7C7; }
+</style>
+</head>
+<body class="min-h-screen">
+<div class="max-w-7xl mx-auto px-6 py-10">
+
+<!-- HEADER -->
+<header class="mb-8">
+  <div class="text-xs uppercase tracking-wider text-neutral-500 mb-2">NQ IB trade playbook</div>
+  <h1 class="text-3xl font-medium text-white mb-2 lowercase">NQ initial balance (60min) — four setups with entries, stops, and targets</h1>
+  <p class="meta-line">
+    <span>NQ and ES futures — 127 RTH sessions, 12/15/25 - 06/12/26</span>
+    <span class="meta-sep">|</span>
+    <span>9:30 am - 4:00 pm ET</span>
+    <span class="meta-sep">|</span>
+    <a class="meta-link" href="https://edgeful.com" target="_blank" rel="noopener">edgeful.com</a>
+  </p>
+  <p class="source-label mt-2">from:
+    <a href="https://edgeful.com/reports/futures/NQ/initial-balance/standard" target="_blank" rel="noopener">initial balance standard</a>,
+    <a href="https://edgeful.com/reports/futures/NQ/initial-balance/retracement" target="_blank" rel="noopener">initial balance retracement</a>,
+    <a href="https://edgeful.com/reports/futures/NQ/opening-candle/continuation" target="_blank" rel="noopener">opening candle continuation</a>
+  </p>
+</header>
+
+<!-- OVERVIEW STAT BAR -->
+<div class="card p-6 mb-8">
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-6">
+    <div class="text-center">
+      <div class="text-xs uppercase tracking-wider text-neutral-500 mb-1">setup A — reversal (bearish open)</div>
+      <div class="text-4xl stat-num mb-1" style="color:#22C55E;">81%</div>
+      <div class="text-xs text-neutral-500">IBH breaks after IB low forms first</div>
+    </div>
+    <div class="text-center">
+      <div class="text-xs uppercase tracking-wider text-neutral-500 mb-1">setup B1 — IB breakdown</div>
+      <div class="text-4xl stat-num mb-1" style="color:#22C55E;">72%</div>
+      <div class="text-xs text-neutral-500">reach L1 after IBL breaks</div>
+    </div>
+    <div class="text-center">
+      <div class="text-xs uppercase tracking-wider text-neutral-500 mb-1">setup B2 — IB breakout (ES-led)</div>
+      <div class="text-4xl stat-num mb-1" style="color:#D89700;">58%</div>
+      <div class="text-xs text-neutral-500">reach L1 after IBH breaks (ES-confirmed)</div>
+    </div>
+    <div class="text-center">
+      <div class="text-xs uppercase tracking-wider text-neutral-500 mb-1">setup C — break-fail reversion</div>
+      <div class="text-4xl stat-num mb-1" style="color:#D89700;">14%</div>
+      <div class="text-xs text-neutral-500">of sessions — highest R:R when triggered</div>
+    </div>
+  </div>
+  <p class="text-xs text-neutral-600 mt-4 lowercase text-center">representative IB range used in examples below: 350 NQ points (IBL = 21,000 / IBH = 21,350). L1 = 88pts beyond break, L2 = 175pts beyond break.</p>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- SETUP A — BEARISH OPEN REVERSAL (IB LOW FORMS FIRST) -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<section class="mb-8">
+  <div class="flex items-center gap-3 mb-4">
+    <span class="badge badge-bullish text-base px-4 py-2">setup A</span>
+    <h2 class="text-2xl font-medium text-white lowercase">bearish open reversal — IB low forms first, fade it long</h2>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+    <!-- Chart -->
+    <div class="lg:col-span-2 card setup-a">
+      <div class="subsection-header">
+        <div class="flex items-baseline justify-between">
+          <h3 class="text-lg font-medium text-white lowercase">example price action — bearish open, reversal to IBH</h3>
+          <span class="source-label">from: <a href="https://edgeful.com/reports/futures/NQ/initial-balance/standard" target="_blank" rel="noopener">initial balance standard</a></span>
+        </div>
+        <p class="meta-line mt-1">
+          <span>NQ idealized setup A — 81% of sessions where IBL forms first</span>
+          <span class="meta-sep">|</span>
+          <a class="meta-link" href="https://edgeful.com" target="_blank" rel="noopener">edgeful.com</a>
+        </p>
+      </div>
+      <div class="p-6">
+        <div class="h-72"><canvas id="setupAChart"></canvas></div>
+        <div class="flex flex-wrap gap-4 mt-4 text-xs text-neutral-500 lowercase">
+          <span><span style="display:inline-block;width:16px;height:2px;background:#D32D1F;vertical-align:middle;"></span> price action</span>
+          <span><span style="display:inline-block;width:16px;height:2px;background:#2A2A2A;border-top:2px dashed #555;vertical-align:middle;"></span> IB levels (IBH / IBL)</span>
+          <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#22C55E;vertical-align:middle;"></span> entry</span>
+          <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#D32D1F;vertical-align:middle;"></span> stop</span>
+          <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#D89700;vertical-align:middle;"></span> T1 / T2</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Rules -->
+    <div class="card setup-a">
+      <div class="subsection-header">
+        <h3 class="text-lg font-medium text-white lowercase">setup A rules</h3>
+      </div>
+      <div class="p-5">
+        <div class="text-center p-3 rounded-lg mb-4" style="background:#121212;">
+          <div class="text-xs text-neutral-500 uppercase tracking-wider mb-1">success rate</div>
+          <div class="text-4xl stat-num" style="color:#22C55E;">81%</div>
+          <div class="text-xs text-neutral-500 mt-1">54 of 67 sessions (60min IB)</div>
+        </div>
+        <div class="rule-row">
+          <div class="rule-label">condition</div>
+          <div class="rule-val lowercase">IBL printed clearly before IBH during 9:30–10:30. price made a notable low, then bounced. ES also printing IBL first = higher confidence.</div>
+        </div>
+        <div class="rule-row">
+          <div class="rule-label">entry</div>
+          <div class="rule-val lowercase">long near IBL — either at IBL on the first bounce (limit), or on the ORB high break (10:00 candle close above 9:30–10:00 high). earlier entry = better R:R but less confirmation.</div>
+        </div>
+        <div class="rule-row">
+          <div class="rule-label">stop</div>
+          <div class="rule-val">
+            <span style="color:#D32D1F;font-weight:500;">below IBL</span>
+            <span class="rule-val lowercase"> — e.g., IBL minus 50 pts. if IBL breaks further, this is a continuation day (18% case), not the reversal.</span>
+          </div>
+        </div>
+        <div class="rule-row">
+          <div class="rule-label">T1 — IBH</div>
+          <div class="rule-val">
+            <span style="color:#D89700;font-weight:500;">IBH (350 pts away)</span>
+            <span class="rule-val lowercase"> — the IB high. 81% of sessions reach this after IBL forms first. take 50–75% off here.</span>
+          </div>
+        </div>
+        <div class="rule-row">
+          <div class="rule-label">T2 — L1</div>
+          <div class="rule-val">
+            <span style="color:#D89700;font-weight:500;">IBH + 88 pts (L1)</span>
+            <span class="rule-val lowercase"> — 58% of IBH breaks extend to L1. trail stop to entry after T1 hit, hold remainder for L1.</span>
+          </div>
+        </div>
+        <div class="rule-row">
+          <div class="rule-label">R:R</div>
+          <div class="rule-val lowercase">risk 50 pts to make 350 pts (T1). ratio 7:1 at T1 — compress to 2:1 risk using T1 as the main exit, not L1.</div>
+        </div>
+        <div class="rule-row">
+          <div class="rule-label">avoid</div>
+          <div class="rule-val lowercase">tuesday (23% double-break rate). gap-down open above prior day range (gap fill competing bias). ES diverging (IBH forming first in ES while NQ IBL forming).</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- SETUP B1 — IB BREAKDOWN SHORT -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<section class="mb-8">
+  <div class="flex items-center gap-3 mb-4">
+    <span class="badge badge-bearish text-base px-4 py-2">setup B1</span>
+    <h2 class="text-2xl font-medium text-white lowercase">IB breakdown — short below IBL after 10:30</h2>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+    <div class="lg:col-span-2 card setup-b1">
+      <div class="subsection-header">
+        <div class="flex items-baseline justify-between">
+          <h3 class="text-lg font-medium text-white lowercase">example price action — IB forms then breaks down</h3>
+          <span class="source-label">from: <a href="https://edgeful.com/reports/futures/NQ/initial-balance/retracement" target="_blank" rel="noopener">initial balance retracement</a></span>
+        </div>
+        <p class="meta-line mt-1">
+          <span>NQ idealized setup B1 — 72% reach L1, 51% reach L2 after IBL breaks</span>
+          <span class="meta-sep">|</span>
+          <a class="meta-link" href="https://edgeful.com" target="_blank" rel="noopener">edgeful.com</a>
+        </p>
+      </div>
+      <div class="p-6">
+        <div class="h-72"><canvas id="setupB1Chart"></canvas></div>
+        <div class="flex flex-wrap gap-4 mt-4 text-xs text-neutral-500 lowercase">
+          <span><span style="display:inline-block;width:16px;height:2px;background:#D32D1F;vertical-align:middle;"></span> price action</span>
+          <span><span style="display:inline-block;width:16px;height:2px;background:#2A2A2A;border-top:2px dashed #555;vertical-align:middle;"></span> IB levels</span>
+          <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#22C55E;vertical-align:middle;"></span> entry</span>
+          <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#D32D1F;vertical-align:middle;"></span> stop</span>
+          <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#D89700;vertical-align:middle;"></span> T1 / T2</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card setup-b1">
+      <div class="subsection-header">
+        <h3 class="text-lg font-medium text-white lowercase">setup B1 rules</h3>
+      </div>
+      <div class="p-5">
+        <div class="grid grid-cols-2 gap-3 mb-4">
+          <div class="text-center p-3 rounded-lg" style="background:#121212;">
+            <div class="text-xs text-neutral-500 uppercase tracking-wider mb-1">L1 hit rate</div>
+            <div class="text-3xl stat-num" style="color:#22C55E;">72%</div>
+            <div class="text-xs text-neutral-500 mt-1">31 of 43 breakdowns</div>
+          </div>
+          <div class="text-center p-3 rounded-lg" style="background:#121212;">
+            <div class="text-xs text-neutral-500 uppercase tracking-wider mb-1">L2 hit rate</div>
+            <div class="text-3xl stat-num" style="color:#D89700;">51%</div>
+            <div class="text-xs text-neutral-500 mt-1">22 of 43 breakdowns</div>
+          </div>
+        </div>
+        <div class="rule-row">
+          <div class="rule-label">condition</div>
+          <div class="rule-val lowercase">10:30 — IB fully defined. IB high formed first during 9:30–10:30 (most aligned). ES also breaking IBL confirms. avoid if IBL formed first (opposing setup A bias).</div>
+        </div>
+        <div class="rule-row">
+          <div class="rule-label">entry 1</div>
+          <div class="rule-val lowercase">short on first 5-min candle that <strong class="text-white">closes below IBL</strong> after 10:30. momentum entry.</div>
+        </div>
+        <div class="rule-row">
+          <div class="rule-label">entry 2</div>
+          <div class="rule-val lowercase">short on pullback — IBL breaks, then price retraces to IBL from below (IBL becomes resistance). limit short at IBL. better R:R, less fill certainty.</div>
+        </div>
+        <div class="rule-row">
+          <div class="rule-label">stop</div>
+          <div class="rule-val">
+            <span style="color:#D32D1F;font-weight:500;">above IBL</span>
+            <span class="rule-val lowercase"> — e.g., IBL + 50 pts. a full 5-min close back above IBL invalidates the breakdown (setup C begins).</span>
+          </div>
+        </div>
+        <div class="rule-row">
+          <div class="rule-label">T1 — L1</div>
+          <div class="rule-val">
+            <span style="color:#D89700;font-weight:500;">IBL minus 88 pts</span>
+            <span class="rule-val lowercase"> — 72% hit rate. take 60% off, move stop to breakeven.</span>
+          </div>
+        </div>
+        <div class="rule-row">
+          <div class="rule-label">T2 — L2</div>
+          <div class="rule-val">
+            <span style="color:#D89700;font-weight:500;">IBL minus 175 pts</span>
+            <span class="rule-val lowercase"> — 51% hit rate. hold 40% for L2. trail stop after T1.</span>
+          </div>
+        </div>
+        <div class="rule-row">
+          <div class="rule-label">R:R</div>
+          <div class="rule-val lowercase">risk 50 pts → T1 at 88 pts (1.8:1). T2 at 175 pts (3.5:1). combined expected value with 72%/51% rates is strongly positive.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- SETUP B2 — IB BREAKOUT LONG (ES-LED) -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<section class="mb-8">
+  <div class="flex items-center gap-3 mb-4">
+    <span class="badge badge-neutral text-base px-4 py-2">setup B2</span>
+    <h2 class="text-2xl font-medium text-white lowercase">IB breakout — long above IBH, requires ES confirmation</h2>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+    <div class="lg:col-span-2 card setup-b2">
+      <div class="subsection-header">
+        <div class="flex items-baseline justify-between">
+          <h3 class="text-lg font-medium text-white lowercase">example price action — ES breaks IBH first, NQ follows</h3>
+          <span class="source-label">from: <a href="https://edgeful.com/reports/futures/NQ/initial-balance/retracement" target="_blank" rel="noopener">initial balance retracement</a></span>
+        </div>
+        <p class="meta-line mt-1">
+          <span>NQ idealized setup B2 — 58% reach L1 after IBH breaks with ES confirmation</span>
+          <span class="meta-sep">|</span>
+          <a class="meta-link" href="https://edgeful.com" target="_blank" rel="noopener">edgeful.com</a>
+        </p>
+      </div>
+      <div class="p-6">
+        <div class="h-72"><canvas id="setupB2Chart"></canvas></div>
+        <div class="flex flex-wrap gap-4 mt-4 text-xs text-neutral-500 lowercase">
+          <span><span style="display:inline-block;width:16px;height:2px;background:#0075FF;vertical-align:middle;"></span> NQ price action</span>
+          <span><span style="display:inline-block;width:16px;height:2px;background:#555555;vertical-align:middle;border-top:2px dashed #888;"></span> ES reference (dashed)</span>
+          <span><span style="display:inline-block;width:16px;height:2px;background:#2A2A2A;border-top:2px dashed #555;vertical-align:middle;"></span> IB levels</span>
+          <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#22C55E;vertical-align:middle;"></span> entry</span>
+          <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#D32D1F;vertical-align:middle;"></span> stop</span>
+          <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#D89700;vertical-align:middle;"></span> T1 / T2</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card setup-b2">
+      <div class="subsection-header">
+        <h3 class="text-lg font-medium text-white lowercase">setup B2 rules</h3>
+      </div>
+      <div class="p-5">
+        <div class="grid grid-cols-2 gap-3 mb-4">
+          <div class="text-center p-3 rounded-lg" style="background:#121212;">
+            <div class="text-xs text-neutral-500 uppercase tracking-wider mb-1">L1 hit rate</div>
+            <div class="text-3xl stat-num" style="color:#D89700;">58%</div>
+            <div class="text-xs text-neutral-500 mt-1">34 of 59 breakouts</div>
+          </div>
+          <div class="text-center p-3 rounded-lg" style="background:#121212;">
+            <div class="text-xs text-neutral-500 uppercase tracking-wider mb-1">L2 hit rate</div>
+            <div class="text-3xl stat-num" style="color:#D32D1F;">32%</div>
+            <div class="text-xs text-neutral-500 mt-1">19 of 59 breakouts</div>
+          </div>
+        </div>
+        <div class="p-3 rounded-lg mb-3" style="background:rgba(216,151,0,0.08);border:1px solid rgba(216,151,0,0.2);">
+          <p class="text-xs lowercase" style="color:#D89700;">58% L1 rate is below the 65% threshold — only trade this setup when ES confirms the break before NQ.</p>
+        </div>
+        <div class="rule-row">
+          <div class="rule-label">condition</div>
+          <div class="rule-val lowercase">ES breaks its IBH cleanly (5-min close above) while NQ is still at or below its IBH. IBL formed first during 9:30–10:30 in both instruments.</div>
+        </div>
+        <div class="rule-row">
+          <div class="rule-label">entry</div>
+          <div class="rule-val lowercase">long NQ on pullback — after ES breaks IBH, wait for NQ to test its IBH from above (IBH becomes support). limit buy at NQ IBH. do not chase.</div>
+        </div>
+        <div class="rule-row">
+          <div class="rule-label">stop</div>
+          <div class="rule-val">
+            <span style="color:#D32D1F;font-weight:500;">below NQ IBH</span>
+            <span class="rule-val lowercase"> — e.g., IBH minus 50 pts. close back below IBH with ES also failing = setup C begins.</span>
+          </div>
+        </div>
+        <div class="rule-row">
+          <div class="rule-label">T1 — L1</div>
+          <div class="rule-val">
+            <span style="color:#D89700;font-weight:500;">IBH + 88 pts</span>
+            <span class="rule-val lowercase"> — 58% hit rate. take full position off at T1. do not hold for L2 unless it is clearly a trend day with expanding volume.</span>
+          </div>
+        </div>
+        <div class="rule-row">
+          <div class="rule-label">T2 — L2</div>
+          <div class="rule-val">
+            <span style="color:#D89700;font-weight:500;">IBH + 175 pts</span>
+            <span class="rule-val lowercase"> — 32% hit rate. only trail a small runner if L1 breaks cleanly through. most sessions stop at L1 or reverse.</span>
+          </div>
+        </div>
+        <div class="rule-row">
+          <div class="rule-label">R:R</div>
+          <div class="rule-val lowercase">risk 50 pts → T1 at 88 pts (1.8:1). marginal edge without ES lead — require confirmation before every entry.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- SETUP C — BREAK-FAIL + REVERSION -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<section class="mb-8">
+  <div class="flex items-center gap-3 mb-4">
+    <span class="badge badge-warning text-base px-4 py-2">setup C</span>
+    <h2 class="text-2xl font-medium text-white lowercase">IB break-fail and reversion — fade the failed breakout or breakdown</h2>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+    <div class="lg:col-span-2 card setup-c">
+      <div class="subsection-header">
+        <div class="flex items-baseline justify-between">
+          <h3 class="text-lg font-medium text-white lowercase">example price action — IBH breaks, fails, reverses to IBL and below</h3>
+          <span class="source-label">from: <a href="https://edgeful.com/reports/futures/NQ/initial-balance/standard" target="_blank" rel="noopener">initial balance standard</a></span>
+        </div>
+        <p class="meta-line mt-1">
+          <span>NQ idealized setup C — 14.2% of sessions (18 of 127) trigger this</span>
+          <span class="meta-sep">|</span>
+          <a class="meta-link" href="https://edgeful.com" target="_blank" rel="noopener">edgeful.com</a>
+        </p>
+      </div>
+      <div class="p-6">
+        <div class="h-72"><canvas id="setupCChart"></canvas></div>
+        <div class="flex flex-wrap gap-4 mt-4 text-xs text-neutral-500 lowercase">
+          <span><span style="display:inline-block;width:16px;height:2px;background:#D89700;vertical-align:middle;"></span> price action</span>
+          <span><span style="display:inline-block;width:16px;height:2px;background:#2A2A2A;border-top:2px dashed #555;vertical-align:middle;"></span> IB levels</span>
+          <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#22C55E;vertical-align:middle;"></span> setup C entry</span>
+          <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#D32D1F;vertical-align:middle;"></span> stop</span>
+          <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#D89700;vertical-align:middle;"></span> T1 / T2</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card setup-c">
+      <div class="subsection-header">
+        <h3 class="text-lg font-medium text-white lowercase">setup C rules</h3>
+      </div>
+      <div class="p-5">
+        <div class="text-center p-3 rounded-lg mb-4" style="background:#121212;">
+          <div class="text-xs text-neutral-500 uppercase tracking-wider mb-1">frequency</div>
+          <div class="text-4xl stat-num" style="color:#D89700;">14.2%</div>
+          <div class="text-xs text-neutral-500 mt-1">18 of 127 sessions (highest on tuesday)</div>
+        </div>
+        <div class="p-3 rounded-lg mb-3" style="background:rgba(216,151,0,0.08);border:1px solid rgba(216,151,0,0.2);">
+          <p class="text-xs lowercase" style="color:#D89700;">this is a reactive setup — do not anticipate. wait for the failure confirmation before entering.</p>
+        </div>
+        <div class="rule-row">
+          <div class="rule-label">phase 1</div>
+          <div class="rule-val lowercase">after 10:30, IBH (or IBL) breaks with initial momentum — looks like setup B at first.</div>
+        </div>
+        <div class="rule-row">
+          <div class="rule-label">failure signal</div>
+          <div class="rule-val lowercase">within 1–4 candles (5-min), price closes back inside the IB. for a failed IBH break: 5-min close back below IBH. volume dries up on the move above IBH = additional tell.</div>
+        </div>
+        <div class="rule-row">
+          <div class="rule-label">entry</div>
+          <div class="rule-val lowercase">short on the 5-min close back below IBH (failed breakout case). ES must also be failing back below its IBH — if ES is holding, skip.</div>
+        </div>
+        <div class="rule-row">
+          <div class="rule-label">stop</div>
+          <div class="rule-val">
+            <span style="color:#D32D1F;font-weight:500;">above IBH + 50 pts</span>
+            <span class="rule-val lowercase"> — tight. the whole thesis is invalidated if price gets back above IBH with conviction.</span>
+          </div>
+        </div>
+        <div class="rule-row">
+          <div class="rule-label">T1 — IBL</div>
+          <div class="rule-val">
+            <span style="color:#D89700;font-weight:500;">IBL (350 pts below IBH)</span>
+            <span class="rule-val lowercase"> — the full IB range. take 50% off at IBL.</span>
+          </div>
+        </div>
+        <div class="rule-row">
+          <div class="rule-label">T2 — L1</div>
+          <div class="rule-val">
+            <span style="color:#D89700;font-weight:500;">IBL minus 88 pts (L1)</span>
+            <span class="rule-val lowercase"> — once IBL breaks on the reversion, the same 72% L1 rule applies. hold 50% for L1 below IBL.</span>
+          </div>
+        </div>
+        <div class="rule-row">
+          <div class="rule-label">R:R</div>
+          <div class="rule-val lowercase">risk 50 pts → T1 at 350 pts (7:1). this is why setup C is the highest R:R despite only occurring 14% of sessions — tight stop, huge range to target.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- COMPARATIVE R:R AND EV TABLE -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<section class="mb-8">
+  <h2 class="text-2xl font-medium text-white mb-4 lowercase">setup comparison — success rates, R:R, and expected value</h2>
+  <div class="card">
+    <div class="subsection-header">
+      <div class="flex items-baseline justify-between">
+        <h3 class="text-lg font-medium text-white lowercase">all four setups — normalized to 50-point risk per trade</h3>
+        <span class="source-label">from: <a href="https://edgeful.com/reports/futures/NQ/initial-balance/standard" target="_blank" rel="noopener">initial balance standard</a>, <a href="https://edgeful.com/reports/futures/NQ/initial-balance/retracement" target="_blank" rel="noopener">retracement</a></span>
+      </div>
+      <p class="meta-line mt-1">
+        <span>NQ IB setups — representative IB range 350 pts, all T1 calculated at L1 (25% of IB range = 88 pts)</span>
+        <span class="meta-sep">|</span>
+        <a class="meta-link" href="https://edgeful.com" target="_blank" rel="noopener">edgeful.com</a>
+      </p>
+    </div>
+    <div class="p-6">
+      <div class="h-72 mb-6"><canvas id="rrComparisonChart"></canvas></div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="text-left border-b border-neutral-800">
+              <th class="pb-3 pr-4 font-medium">setup</th>
+              <th class="pb-3 pr-4 font-medium">frequency</th>
+              <th class="pb-3 pr-4 font-medium">T1 success %</th>
+              <th class="pb-3 pr-4 font-medium">risk (pts)</th>
+              <th class="pb-3 pr-4 font-medium">T1 reward (pts)</th>
+              <th class="pb-3 pr-4 font-medium">T1 R:R</th>
+              <th class="pb-3 font-medium">expected value per trade</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="border-b border-neutral-800/50 row-bullish">
+              <td class="py-3 pr-4"><span class="badge badge-bullish">setup A</span> bearish open reversal</td>
+              <td class="py-3 pr-4 text-neutral-300">53% of sessions</td>
+              <td class="py-3 pr-4"><span class="chip chip-bullish">81%</span></td>
+              <td class="py-3 pr-4 text-neutral-300">50 pts</td>
+              <td class="py-3 pr-4 text-neutral-300">350 pts (to IBH)</td>
+              <td class="py-3 pr-4" style="color:#22C55E;font-weight:500;">7:1</td>
+              <td class="py-3" style="color:#22C55E;font-weight:500;">+274 pts avg</td>
+            </tr>
+            <tr class="border-b border-neutral-800/50 row-bearish">
+              <td class="py-3 pr-4"><span class="badge badge-bearish">setup B1</span> IB breakdown</td>
+              <td class="py-3 pr-4 text-neutral-300">34% of sessions</td>
+              <td class="py-3 pr-4"><span class="chip chip-bullish">72%</span></td>
+              <td class="py-3 pr-4 text-neutral-300">50 pts</td>
+              <td class="py-3 pr-4 text-neutral-300">88 pts (L1)</td>
+              <td class="py-3 pr-4" style="color:#22C55E;font-weight:500;">1.8:1</td>
+              <td class="py-3" style="color:#22C55E;font-weight:500;">+49 pts avg</td>
+            </tr>
+            <tr class="border-b border-neutral-800/50">
+              <td class="py-3 pr-4"><span class="badge badge-neutral">setup B2</span> IB breakout (ES-led)</td>
+              <td class="py-3 pr-4 text-neutral-300">46% of sessions</td>
+              <td class="py-3 pr-4"><span class="chip chip-warning">58%</span></td>
+              <td class="py-3 pr-4 text-neutral-300">50 pts</td>
+              <td class="py-3 pr-4 text-neutral-300">88 pts (L1)</td>
+              <td class="py-3 pr-4" style="color:#D89700;font-weight:500;">1.8:1</td>
+              <td class="py-3" style="color:#D89700;font-weight:500;">+30 pts avg</td>
+            </tr>
+            <tr>
+              <td class="py-3 pr-4"><span class="badge badge-warning">setup C</span> break-fail reversion</td>
+              <td class="py-3 pr-4 text-neutral-300">14% of sessions</td>
+              <td class="py-3 pr-4"><span class="chip chip-warning">~65%</span></td>
+              <td class="py-3 pr-4 text-neutral-300">50 pts</td>
+              <td class="py-3 pr-4 text-neutral-300">350 pts (to opposite IB)</td>
+              <td class="py-3 pr-4" style="color:#22C55E;font-weight:500;">7:1</td>
+              <td class="py-3" style="color:#22C55E;font-weight:500;">+215 pts avg</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="text-xs text-neutral-500 mt-4 lowercase">expected value = (success% × reward) - (failure% × risk). setup A has the highest expected value per occurrence due to the combination of 81% win rate and 7:1 R:R. setup C has fewer occurrences but massive R:R when it triggers. setup B2 standalone (without ES lead) drops below positive EV — always require ES confirmation.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- DECISION CHECKLIST -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<section class="mb-8">
+  <h2 class="text-2xl font-medium text-white mb-4 lowercase">pre-trade checklist — run this at 10:30 every session</h2>
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+    <div class="card p-6">
+      <div class="text-xs uppercase tracking-wider text-neutral-500 mb-4">step 1 — identify IB formation (9:30–10:30)</div>
+      <div class="space-y-3 text-sm">
+        <div class="flex items-start gap-3">
+          <div class="w-5 h-5 rounded border border-neutral-700 flex-shrink-0 mt-0.5"></div>
+          <div class="lowercase text-neutral-300">did IBL form before IBH? (bearish opening move) → <span style="color:#22C55E;">setup A signal active (81%)</span></div>
+        </div>
+        <div class="flex items-start gap-3">
+          <div class="w-5 h-5 rounded border border-neutral-700 flex-shrink-0 mt-0.5"></div>
+          <div class="lowercase text-neutral-300">did IBH form before IBL? (bullish opening move) → <span style="color:#D89700;">setup A short signal (63%)</span></div>
+        </div>
+        <div class="flex items-start gap-3">
+          <div class="w-5 h-5 rounded border border-neutral-700 flex-shrink-0 mt-0.5"></div>
+          <div class="lowercase text-neutral-300">is ES showing the same formation sequence? → confirms signal. diverging ES = reduce size or skip.</div>
+        </div>
+        <div class="flex items-start gap-3">
+          <div class="w-5 h-5 rounded border border-neutral-700 flex-shrink-0 mt-0.5"></div>
+          <div class="lowercase text-neutral-300">is today tuesday? → double-break rate 23%, require ES confirmation for any setup B trade.</div>
+        </div>
+      </div>
+    </div>
+    <div class="card p-6">
+      <div class="text-xs uppercase tracking-wider text-neutral-500 mb-4">step 2 — act at or after 10:30</div>
+      <div class="space-y-3 text-sm">
+        <div class="flex items-start gap-3">
+          <div class="w-5 h-5 rounded border border-neutral-700 flex-shrink-0 mt-0.5"></div>
+          <div class="lowercase text-neutral-300">IBL formed first AND price is now pushing toward IBH → long near current level, stop below IBL, T1 = IBH. <span style="color:#22C55E;">setup A.</span></div>
+        </div>
+        <div class="flex items-start gap-3">
+          <div class="w-5 h-5 rounded border border-neutral-700 flex-shrink-0 mt-0.5"></div>
+          <div class="lowercase text-neutral-300">IBL breaks after 10:30, ES also breaking → short, stop above IBL, T1 = L1 (88 pts below IBL). <span style="color:#F87171;">setup B1.</span></div>
+        </div>
+        <div class="flex items-start gap-3">
+          <div class="w-5 h-5 rounded border border-neutral-700 flex-shrink-0 mt-0.5"></div>
+          <div class="lowercase text-neutral-300">ES breaks IBH, NQ still at IB level → long NQ at IBH pullback, stop below IBH, T1 = L1 (88 pts above IBH). <span style="color:#60A5FA;">setup B2.</span></div>
+        </div>
+        <div class="flex items-start gap-3">
+          <div class="w-5 h-5 rounded border border-neutral-700 flex-shrink-0 mt-0.5"></div>
+          <div class="lowercase text-neutral-300">IBH (or IBL) breaks then immediately fails back inside IB, ES also failing → fade the failure in the opposite direction. <span style="color:#FACC15;">setup C.</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="mt-8 pt-6 border-t border-neutral-800">
+  <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-2">
+    <p class="text-xs text-neutral-500 lowercase">data from <a href="https://edgeful.com" target="_blank" rel="noopener" class="text-neutral-400 hover:text-neutral-300">edgeful.com</a> — initial balance standard and retracement reports, opening candle continuation. NQ and ES futures, RTH 9:30–4:00 ET. 12/15/25 - 06/12/26. 127 sessions. charts show idealized price action for illustration.</p>
+    <p class="text-xs text-neutral-600 lowercase">generated 06/13/26</p>
+  </div>
+</footer>
+
+</div>
+<script>
+const palette = {
+  bullish:'#22C55E', bearish:'#D32D1F', warning:'#D89700',
+  primary:'#0075FF', neutral:'#555555',
+  textSecondary:'#C7C7C7', grid:'#2A2A2A', surface:'#121212', border:'#2A2A2A',
+};
+const fill = {
+  bullish:'rgba(34,197,94,0.7)', bearish:'rgba(211,45,31,0.7)',
+  warning:'rgba(216,151,0,0.7)', primary:'rgba(0,117,255,0.7)',
+  bullishLight:'rgba(34,197,94,0.12)', bearishLight:'rgba(211,45,31,0.12)',
+};
+const baseTooltip = {
+  backgroundColor:palette.surface, titleColor:'#FFFFFF', bodyColor:palette.textSecondary,
+  borderColor:palette.border, borderWidth:1, padding:10, cornerRadius:6,
+  titleFont:{family:'Poppins',size:12,weight:'500'}, bodyFont:{family:'Poppins',size:12,weight:'400'},
+};
+const baseScales = {
+  x:{ ticks:{color:palette.textSecondary,font:{family:'Poppins',size:12}}, grid:{color:palette.grid,drawBorder:false} },
+  y:{ ticks:{color:palette.textSecondary,font:{family:'Poppins',size:12}}, grid:{color:palette.grid,drawBorder:false} },
+};
+const baseOptions = {
+  responsive:true, maintainAspectRatio:false,
+  plugins:{ legend:{labels:{color:palette.textSecondary,font:{family:'Poppins',size:12}}}, tooltip:baseTooltip },
+};
+
+// Time labels for x-axis: 9:00 to 15:30 in 30-min increments
+const timeLabels = ['9:00','9:30','10:00','10:30','11:00','11:30','12:00','12:30','13:00','13:30','14:00','14:30','15:00','15:30'];
+// IBL = 21000, IBH = 21350, L1 above = 21438, L2 above = 21525, L1 below = 20912, L2 below = 20825
+
+// ── SETUP A: Bearish open → reversal to IBH and above ──────────────────────
+const setupAPrice = [21170, 21150, 21050, 21000, 21030, 21080, 21150, 21250, 21350, 21380, 21430, 21438, 21430, 21445];
+const setupAIBH   = new Array(14).fill(21350);
+const setupAIBL   = new Array(14).fill(21000);
+new Chart(document.getElementById('setupAChart'), {
+  type:'line',
+  data:{
+    labels: timeLabels,
+    datasets:[
+      { label:'IBH (21,350)', data:setupAIBH, borderColor:'#2A2A2A', borderDash:[6,4], borderWidth:1.5, pointRadius:0, fill:false, tension:0 },
+      { label:'IBL (21,000)', data:setupAIBL, borderColor:'#2A2A2A', borderDash:[6,4], borderWidth:1.5, pointRadius:0, fill:false, tension:0 },
+      { label:'NQ price', data:setupAPrice, borderColor:palette.bearish, borderWidth:2, pointRadius:[0,0,0,6,0,0,0,0,6,0,0,6,0,0],
+        pointBackgroundColor:(ctx) => {
+          const i = ctx.dataIndex;
+          if(i===3) return palette.bullish;
+          if(i===8) return palette.warning;
+          if(i===11) return palette.warning;
+          return 'transparent';
+        },
+        pointBorderColor:'transparent', pointRadius:[0,0,0,8,0,0,0,0,8,0,0,8,0,0],
+        fill:false, tension:0.3 },
+    ],
+  },
+  options:{
+    ...baseOptions,
+    scales:{
+      x:baseScales.x,
+      y:{ ...baseScales.y, min:20900, max:21500, ticks:{...baseScales.y.ticks,callback:(v)=>v.toLocaleString()} },
+    },
+    plugins:{
+      ...baseOptions.plugins,
+      legend:{ display:false },
+      tooltip:{ ...baseTooltip, callbacks:{ label:(ctx)=>`${ctx.dataset.label}: ${ctx.parsed.y.toLocaleString()}` } },
+    },
+  },
+});
+
+// ── SETUP B1: IB formation, then breakdown short ─────────────────────────────
+const setupB1Price = [21170, 21200, 21280, 21180, 21250, 21350, 21200, 21100, 21000, 20970, 20912, 20850, 20825, 20840];
+const setupB1IBH   = new Array(14).fill(21350);
+const setupB1IBL   = new Array(14).fill(21000);
+new Chart(document.getElementById('setupB1Chart'), {
+  type:'line',
+  data:{
+    labels: timeLabels,
+    datasets:[
+      { label:'IBH (21,350)', data:setupB1IBH, borderColor:'#2A2A2A', borderDash:[6,4], borderWidth:1.5, pointRadius:0, fill:false, tension:0 },
+      { label:'IBL (21,000)', data:setupB1IBL, borderColor:'#2A2A2A', borderDash:[6,4], borderWidth:1.5, pointRadius:0, fill:false, tension:0 },
+      { label:'NQ price', data:setupB1Price, borderColor:palette.bearish, borderWidth:2,
+        pointRadius:[0,0,0,0,0,0,0,0,8,0,8,0,8,0],
+        pointBackgroundColor:(ctx)=>{
+          const i=ctx.dataIndex;
+          if(i===8) return palette.bullish;
+          if(i===10) return palette.warning;
+          if(i===12) return palette.warning;
+          return 'transparent';
+        },
+        pointBorderColor:'transparent',
+        fill:false, tension:0.3 },
+    ],
+  },
+  options:{
+    ...baseOptions,
+    scales:{
+      x:baseScales.x,
+      y:{ ...baseScales.y, min:20700, max:21450, ticks:{...baseScales.y.ticks,callback:(v)=>v.toLocaleString()} },
+    },
+    plugins:{ ...baseOptions.plugins, legend:{display:false},
+      tooltip:{ ...baseTooltip, callbacks:{ label:(ctx)=>`${ctx.dataset.label}: ${ctx.parsed.y.toLocaleString()}` } } },
+  },
+});
+
+// ── SETUP B2: ES leads IBH break, NQ follows ─────────────────────────────────
+// NQ price (lags behind ES)
+const setupB2NQ  = [21150, 21180, 21220, 21280, 21350, 21340, 21355, 21400, 21438, 21450, 21490, 21525, 21520, 21535];
+// ES reference (slightly ahead)
+const setupB2ES  = [21155, 21190, 21240, 21320, 21370, 21380, 21410, 21430, 21460, 21500, 21530, 21545, 21540, 21555];
+const setupB2IBH = new Array(14).fill(21350);
+const setupB2IBL = new Array(14).fill(21000);
+new Chart(document.getElementById('setupB2Chart'), {
+  type:'line',
+  data:{
+    labels: timeLabels,
+    datasets:[
+      { label:'IBH (21,350)', data:setupB2IBH, borderColor:'#2A2A2A', borderDash:[6,4], borderWidth:1.5, pointRadius:0, fill:false, tension:0 },
+      { label:'ES reference (offset)', data:setupB2ES, borderColor:'#555555', borderDash:[3,3], borderWidth:1.5, pointRadius:0, fill:false, tension:0.3 },
+      { label:'NQ price', data:setupB2NQ, borderColor:palette.primary, borderWidth:2,
+        pointRadius:[0,0,0,0,0,0,8,0,8,0,0,8,0,0],
+        pointBackgroundColor:(ctx)=>{
+          const i=ctx.dataIndex;
+          if(i===6) return palette.bullish;
+          if(i===8) return palette.warning;
+          if(i===11) return palette.warning;
+          return 'transparent';
+        },
+        pointBorderColor:'transparent',
+        fill:false, tension:0.3 },
+    ],
+  },
+  options:{
+    ...baseOptions,
+    scales:{
+      x:baseScales.x,
+      y:{ ...baseScales.y, min:20900, max:21600, ticks:{...baseScales.y.ticks,callback:(v)=>v.toLocaleString()} },
+    },
+    plugins:{ ...baseOptions.plugins, legend:{display:false},
+      tooltip:{ ...baseTooltip, callbacks:{ label:(ctx)=>`${ctx.dataset.label}: ${ctx.parsed.y.toLocaleString()}` } } },
+  },
+});
+
+// ── SETUP C: IBH breaks, fails, reverses to IBL and below ────────────────────
+const setupCPrice = [21150, 21200, 21280, 21350, 21410, 21370, 21300, 21200, 21000, 20970, 20912, 20870, 20825, 20840];
+const setupCIBH   = new Array(14).fill(21350);
+const setupCIBL   = new Array(14).fill(21000);
+new Chart(document.getElementById('setupCChart'), {
+  type:'line',
+  data:{
+    labels: timeLabels,
+    datasets:[
+      { label:'IBH (21,350)', data:setupCIBH, borderColor:'#2A2A2A', borderDash:[6,4], borderWidth:1.5, pointRadius:0, fill:false, tension:0 },
+      { label:'IBL (21,000)', data:setupCIBL, borderColor:'#2A2A2A', borderDash:[6,4], borderWidth:1.5, pointRadius:0, fill:false, tension:0 },
+      { label:'NQ price', data:setupCPrice, borderColor:palette.warning, borderWidth:2,
+        pointRadius:[0,0,0,0,0,8,8,0,0,0,8,0,8,0],
+        pointBackgroundColor:(ctx)=>{
+          const i=ctx.dataIndex;
+          if(i===5) return palette.bearish;
+          if(i===6) return palette.bullish;
+          if(i===10) return palette.warning;
+          if(i===12) return palette.warning;
+          return 'transparent';
+        },
+        pointBorderColor:'transparent',
+        fill:false, tension:0.3 },
+    ],
+  },
+  options:{
+    ...baseOptions,
+    scales:{
+      x:baseScales.x,
+      y:{ ...baseScales.y, min:20700, max:21500, ticks:{...baseScales.y.ticks,callback:(v)=>v.toLocaleString()} },
+    },
+    plugins:{ ...baseOptions.plugins, legend:{display:false},
+      tooltip:{ ...baseTooltip, callbacks:{ label:(ctx)=>`${ctx.dataset.label}: ${ctx.parsed.y.toLocaleString()}` } } },
+  },
+});
+
+// ── R:R Comparison bar chart ─────────────────────────────────────────────────
+new Chart(document.getElementById('rrComparisonChart'), {
+  type:'bar',
+  data:{
+    labels:['setup A\nbearish open reversal', 'setup B1\nIB breakdown', 'setup B2\nIB breakout (ES-led)', 'setup C\nbreak-fail reversion'],
+    datasets:[
+      {
+        label:'success rate (%)',
+        data:[81, 72, 58, 65],
+        backgroundColor:[fill.bullish, fill.bearish, fill.primary, fill.warning],
+        borderColor:[palette.bullish, palette.bearish, palette.primary, palette.warning],
+        borderWidth:1, borderRadius:6,
+      },
+    ],
+  },
+  options:{
+    ...baseOptions,
+    scales:{
+      x:baseScales.x,
+      y:{ ...baseScales.y, min:0, max:100, ticks:{...baseScales.y.ticks,callback:(v)=>v+'%',stepSize:20} },
+    },
+    plugins:{ ...baseOptions.plugins, legend:{display:false},
+      tooltip:{ ...baseTooltip, callbacks:{ label:(ctx)=>`${ctx.parsed.y}% success rate at T1` } } },
+  },
+});
+</script>
+</body>
+</html>
