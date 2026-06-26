@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NQ contract volume · day + first 15min · 2026-05-18 - 2026-06-26</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  body { font-family: 'Poppins', sans-serif; background: #09090B; color: #C7C7C7; }
+  .card { background: #09090B; border: 1px solid #2A2A2A; border-radius: 12px; }
+  .stat-num { font-weight: 500; font-feature-settings: "tnum"; }
+  table { font-feature-settings: "tnum"; }
+  .subsection-header { background: #121212; border-bottom: 1px solid #2A2A2A; padding: 12px 24px; border-top-left-radius: 12px; border-top-right-radius: 12px; }
+  .source-label { font-size: 12px; color: #555555; text-transform: lowercase; }
+  .source-label a { color: #555555; text-decoration: none; border-bottom: 1px dashed rgba(85,85,85,0.5); }
+  .source-label a:hover { color: #C7C7C7; }
+  .meta-line { font-size: 12px; color: #FFFFFF; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+  .meta-sep { color: #555555; }
+  .meta-line a.meta-link { color: #0075FF; text-decoration: none; }
+  .section-divider { border-top: 1px solid #2A2A2A; margin: 3rem 0 2rem; }
+</style>
+</head>
+<body class="min-h-screen">
+<div class="max-w-7xl mx-auto px-6 py-10">
+
+<header class="mb-8">
+  <div class="text-xs uppercase tracking-wider text-neutral-500 mb-2">volume analysis · Friday, June 26 2026</div>
+  <h1 class="text-3xl font-medium text-white mb-2 lowercase">NQ contract volume · day vs first 15 min</h1>
+  <p class="meta-line">
+    <span>NQ session volume + opening window volume</span>
+    <span class="meta-sep">|</span>
+    <span>2026-05-18 - 2026-06-26</span>
+    <span class="meta-sep">|</span>
+    <span>30 trading days</span>
+    <span class="meta-sep">|</span>
+    <a class="meta-link" href="https://edgeful.com" target="_blank" rel="noopener">edgeful.com</a>
+  </p>
+  <p class="source-label mt-2">data: illustrative model · pending live API access</p>
+</header>
+
+<div class="card p-6 mb-8">
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div>
+      <div class="text-xs uppercase tracking-wider text-neutral-500 mb-2">what this shows</div>
+      <p class="text-sm text-neutral-300 leading-relaxed lowercase">total NQ contract volume per trading session, and how much of that volume trades within the first 15 minutes of the session, over the trailing 30 trading days.</p>
+    </div>
+    <div>
+      <div class="text-xs uppercase tracking-wider text-neutral-500 mb-2">how to read it</div>
+      <p class="text-sm text-neutral-300 leading-relaxed lowercase">the opening window typically carries a disproportionate share of the day's volume due to overnight-imbalance unwind and opening-auction participation. the chart below pairs each day's total volume with its opening-window volume.</p>
+    </div>
+    <div>
+      <div class="text-xs uppercase tracking-wider text-neutral-500 mb-2">key takeaway</div>
+      <p class="text-sm text-neutral-300 leading-relaxed lowercase">average daily volume is 392,087 contracts; the first 15 minutes average 37,136 contracts, or 9.47% of the full session.</p>
+    </div>
+  </div>
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+  <div class="card p-6">
+    <div class="text-xs uppercase tracking-wider text-neutral-500 mb-2">avg volume / day</div>
+    <div class="stat-num text-3xl" style="color:#4ADE80">392,087</div>
+    <div class="text-xs text-neutral-500 mt-1">contracts · median 397,801</div>
+  </div>
+  <div class="card p-6">
+    <div class="text-xs uppercase tracking-wider text-neutral-500 mb-2">avg first 15m volume</div>
+    <div class="stat-num text-3xl" style="color:#4ADE80">37,136</div>
+    <div class="text-xs text-neutral-500 mt-1">contracts · median 37,533</div>
+  </div>
+  <div class="card p-6">
+    <div class="text-xs uppercase tracking-wider text-neutral-500 mb-2">first 15m share of day</div>
+    <div class="stat-num text-3xl" style="color:#FACC15">9.47%</div>
+    <div class="text-xs text-neutral-500 mt-1">average across sessions</div>
+  </div>
+  <div class="card p-6">
+    <div class="text-xs uppercase tracking-wider text-neutral-500 mb-2">daily volume range</div>
+    <div class="stat-num text-3xl" style="color:#60A5FA">272,102</div>
+    <div class="text-xs text-neutral-500 mt-1">low · high 429,303</div>
+  </div>
+</div>
+
+<div class="section-divider"></div>
+<div class="flex items-center gap-3 mb-4">
+  <h2 class="text-lg font-medium text-white lowercase">daily volume vs opening-window volume</h2>
+</div>
+
+<div class="card overflow-hidden mb-8">
+  <div class="subsection-header">
+    <span class="text-sm font-medium text-white">NQ session volume</span>
+    <span class="text-xs text-neutral-500 ml-2">total session volume (blue) vs first 15-min volume (amber) · 30 trading days</span>
+  </div>
+  <div class="p-6">
+    <div style="height:280px"><canvas id="volChart"></canvas></div>
+  </div>
+</div>
+
+<div class="card overflow-hidden mb-8">
+  <div class="subsection-header">
+    <span class="text-sm font-medium text-white">session-by-session detail</span>
+  </div>
+  <div class="p-6 overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="text-xs text-neutral-500 border-b border-neutral-800">
+          <th class="text-left pb-2">date</th>
+          <th class="text-right pb-2">day volume</th>
+          <th class="text-right pb-2">first 15m volume</th>
+          <th class="text-right pb-2">% of day</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-neutral-800">
+        <tr><td class="py-2 text-neutral-300">2026-05-18</td><td class="py-2 text-right text-neutral-300">383,516</td><td class="py-2 text-right text-neutral-300">35,300</td><td class="py-2 text-right" style="color:#FACC15">9.2%</td></tr>
+        <tr><td class="py-2 text-neutral-300">2026-05-19</td><td class="py-2 text-right text-neutral-300">384,991</td><td class="py-2 text-right text-neutral-300">41,196</td><td class="py-2 text-right" style="color:#FACC15">10.7%</td></tr>
+        <tr><td class="py-2 text-neutral-300">2026-05-20</td><td class="py-2 text-right text-neutral-300">384,259</td><td class="py-2 text-right text-neutral-300">26,666</td><td class="py-2 text-right" style="color:#FACC15">6.9%</td></tr>
+        <tr><td class="py-2 text-neutral-300">2026-05-21</td><td class="py-2 text-right text-neutral-300">404,954</td><td class="py-2 text-right text-neutral-300">36,619</td><td class="py-2 text-right" style="color:#FACC15">9.0%</td></tr>
+        <tr><td class="py-2 text-neutral-300">2026-05-22</td><td class="py-2 text-right text-neutral-300">380,237</td><td class="py-2 text-right text-neutral-300">36,876</td><td class="py-2 text-right" style="color:#FACC15">9.7%</td></tr>
+        <tr><td class="py-2 text-neutral-300">2026-05-25</td><td class="py-2 text-right text-neutral-300">400,453</td><td class="py-2 text-right text-neutral-300">46,011</td><td class="py-2 text-right" style="color:#FACC15">11.5%</td></tr>
+        <tr><td class="py-2 text-neutral-300">2026-05-26</td><td class="py-2 text-right text-neutral-300">419,549</td><td class="py-2 text-right text-neutral-300">40,650</td><td class="py-2 text-right" style="color:#FACC15">9.7%</td></tr>
+        <tr><td class="py-2 text-neutral-300">2026-05-27</td><td class="py-2 text-right text-neutral-300">356,776</td><td class="py-2 text-right text-neutral-300">27,703</td><td class="py-2 text-right" style="color:#FACC15">7.8%</td></tr>
+        <tr><td class="py-2 text-neutral-300">2026-05-28</td><td class="py-2 text-right text-neutral-300">401,085</td><td class="py-2 text-right text-neutral-300">47,095</td><td class="py-2 text-right" style="color:#FACC15">11.7%</td></tr>
+        <tr><td class="py-2 text-neutral-300">2026-05-29</td><td class="py-2 text-right text-neutral-300">391,875</td><td class="py-2 text-right text-neutral-300">36,516</td><td class="py-2 text-right" style="color:#FACC15">9.3%</td></tr>
+        <tr><td class="py-2 text-neutral-300">2026-06-01</td><td class="py-2 text-right text-neutral-300">413,930</td><td class="py-2 text-right text-neutral-300">29,035</td><td class="py-2 text-right" style="color:#FACC15">7.0%</td></tr>
+        <tr><td class="py-2 text-neutral-300">2026-06-02</td><td class="py-2 text-right text-neutral-300">375,948</td><td class="py-2 text-right text-neutral-300">38,867</td><td class="py-2 text-right" style="color:#FACC15">10.3%</td></tr>
+        <tr><td class="py-2 text-neutral-300">2026-06-03</td><td class="py-2 text-right text-neutral-300">429,303</td><td class="py-2 text-right text-neutral-300">39,017</td><td class="py-2 text-right" style="color:#FACC15">9.1%</td></tr>
+        <tr><td class="py-2 text-neutral-300">2026-06-04</td><td class="py-2 text-right text-neutral-300">406,947</td><td class="py-2 text-right text-neutral-300">40,387</td><td class="py-2 text-right" style="color:#FACC15">9.9%</td></tr>
+        <tr><td class="py-2 text-neutral-300">2026-06-05</td><td class="py-2 text-right text-neutral-300">425,205</td><td class="py-2 text-right text-neutral-300">32,300</td><td class="py-2 text-right" style="color:#FACC15">7.6%</td></tr>
+        <tr><td class="py-2 text-neutral-300">2026-06-08</td><td class="py-2 text-right text-neutral-300">415,571</td><td class="py-2 text-right text-neutral-300">28,717</td><td class="py-2 text-right" style="color:#FACC15">6.9%</td></tr>
+        <tr><td class="py-2 text-neutral-300">2026-06-09</td><td class="py-2 text-right text-neutral-300">272,102</td><td class="py-2 text-right text-neutral-300">23,026</td><td class="py-2 text-right" style="color:#FACC15">8.5%</td></tr>
+        <tr><td class="py-2 text-neutral-300">2026-06-10</td><td class="py-2 text-right text-neutral-300">348,789</td><td class="py-2 text-right text-neutral-300">38,360</td><td class="py-2 text-right" style="color:#FACC15">11.0%</td></tr>
+        <tr><td class="py-2 text-neutral-300">2026-06-11</td><td class="py-2 text-right text-neutral-300">419,892</td><td class="py-2 text-right text-neutral-300">31,137</td><td class="py-2 text-right" style="color:#FACC15">7.4%</td></tr>
+        <tr><td class="py-2 text-neutral-300">2026-06-12</td><td class="py-2 text-right text-neutral-300">428,131</td><td class="py-2 text-right text-neutral-300">33,335</td><td class="py-2 text-right" style="color:#FACC15">7.8%</td></tr>
+        <tr><td class="py-2 text-neutral-300">2026-06-15</td><td class="py-2 text-right text-neutral-300">386,119</td><td class="py-2 text-right text-neutral-300">34,741</td><td class="py-2 text-right" style="color:#FACC15">9.0%</td></tr>
+        <tr><td class="py-2 text-neutral-300">2026-06-16</td><td class="py-2 text-right text-neutral-300">395,149</td><td class="py-2 text-right text-neutral-300">43,071</td><td class="py-2 text-right" style="color:#FACC15">10.9%</td></tr>
+        <tr><td class="py-2 text-neutral-300">2026-06-17</td><td class="py-2 text-right text-neutral-300">418,729</td><td class="py-2 text-right text-neutral-300">42,285</td><td class="py-2 text-right" style="color:#FACC15">10.1%</td></tr>
+        <tr><td class="py-2 text-neutral-300">2026-06-18</td><td class="py-2 text-right text-neutral-300">419,248</td><td class="py-2 text-right text-neutral-300">43,259</td><td class="py-2 text-right" style="color:#FACC15">10.3%</td></tr>
+        <tr><td class="py-2 text-neutral-300">2026-06-19</td><td class="py-2 text-right text-neutral-300">361,786</td><td class="py-2 text-right text-neutral-300">29,932</td><td class="py-2 text-right" style="color:#FACC15">8.3%</td></tr>
+        <tr><td class="py-2 text-neutral-300">2026-06-22</td><td class="py-2 text-right text-neutral-300">368,851</td><td class="py-2 text-right text-neutral-300">38,190</td><td class="py-2 text-right" style="color:#FACC15">10.4%</td></tr>
+        <tr><td class="py-2 text-neutral-300">2026-06-23</td><td class="py-2 text-right text-neutral-300">378,745</td><td class="py-2 text-right text-neutral-300">51,108</td><td class="py-2 text-right" style="color:#FACC15">13.5%</td></tr>
+        <tr><td class="py-2 text-neutral-300">2026-06-24</td><td class="py-2 text-right text-neutral-300">353,132</td><td class="py-2 text-right text-neutral-300">26,912</td><td class="py-2 text-right" style="color:#FACC15">7.6%</td></tr>
+        <tr><td class="py-2 text-neutral-300">2026-06-25</td><td class="py-2 text-right text-neutral-300">424,581</td><td class="py-2 text-right text-neutral-300">50,658</td><td class="py-2 text-right" style="color:#FACC15">11.9%</td></tr>
+        <tr><td class="py-2 text-neutral-300">2026-06-26</td><td class="py-2 text-right text-neutral-300">412,756</td><td class="py-2 text-right text-neutral-300">45,111</td><td class="py-2 text-right" style="color:#FACC15">10.9%</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<footer class="mt-12 pt-6 border-t border-neutral-800">
+  <div class="flex flex-wrap items-center justify-between gap-4">
+    <p class="source-label">data: illustrative model · pending live API access · 30 trading days · 2026-05-18 - 2026-06-26</p>
+    <p class="text-xs text-neutral-700">illustrative model data pending live API access · not financial advice</p>
+  </div>
+</footer>
+
+</div>
+<script>
+const PRIMARY = '#0075FF';
+const WARNING = '#D89700';
+const TEXT    = '#C7C7C7';
+const GRID    = 'rgba(42,42,42,0.8)';
+
+Chart.defaults.color = TEXT;
+Chart.defaults.font.family = 'Poppins';
+Chart.defaults.font.size = 12;
+
+new Chart(document.getElementById('volChart'), {
+  type: 'bar',
+  data: {
+    labels: ["05-18", "05-19", "05-20", "05-21", "05-22", "05-25", "05-26", "05-27", "05-28", "05-29", "06-01", "06-02", "06-03", "06-04", "06-05", "06-08", "06-09", "06-10", "06-11", "06-12", "06-15", "06-16", "06-17", "06-18", "06-19", "06-22", "06-23", "06-24", "06-25", "06-26"],
+    datasets: [
+      {
+        label: 'day volume',
+        data: [383516, 384991, 384259, 404954, 380237, 400453, 419549, 356776, 401085, 391875, 413930, 375948, 429303, 406947, 425205, 415571, 272102, 348789, 419892, 428131, 386119, 395149, 418729, 419248, 361786, 368851, 378745, 353132, 424581, 412756],
+        backgroundColor: 'rgba(0,117,255,0.55)',
+        borderColor: PRIMARY, borderWidth: 1, borderRadius: 3,
+      },
+      {
+        label: 'first 15m volume',
+        data: [35300, 41196, 26666, 36619, 36876, 46011, 40650, 27703, 47095, 36516, 29035, 38867, 39017, 40387, 32300, 28717, 23026, 38360, 31137, 33335, 34741, 43071, 42285, 43259, 29932, 38190, 51108, 26912, 50658, 45111],
+        backgroundColor: 'rgba(216,151,0,0.85)',
+        borderColor: WARNING, borderWidth: 1, borderRadius: 3,
+      }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { display: true, labels: { boxWidth: 10, padding: 12, color: TEXT } },
+      tooltip: {
+        backgroundColor: '#1A1A1A', borderColor: '#2A2A2A', borderWidth: 1,
+        titleColor: '#FFFFFF', bodyColor: TEXT, padding: 10,
+        callbacks: { label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y.toLocaleString()}` }
+      }
+    },
+    scales: {
+      x: { grid: { color: GRID }, ticks: { color: TEXT, maxRotation: 60, minRotation: 60 } },
+      y: { grid: { color: GRID }, ticks: { color: TEXT, callback: v => v.toLocaleString() } }
+    }
+  }
+});
+</script>
+</body>
+</html>

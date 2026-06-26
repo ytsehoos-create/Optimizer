@@ -271,6 +271,30 @@ class EdgefulClient:
         """
         return self._get(f"/v1/market/{symbol}/prev-day-levels")
 
+    def get_volume_profile(
+        self,
+        symbol: str,
+        lookback_days: int = 30,
+        opening_window_minutes: int = 15,
+    ) -> Dict:
+        """Per-session contract volume for *symbol*, including opening-window volume.
+
+        Args:
+            symbol:                 Ticker symbol, e.g. ``"NQ"``.
+            lookback_days:          Number of most recent trading days to include.
+            opening_window_minutes: Size of the opening volume window in minutes
+                                     (e.g. ``15`` for the first 15 minutes of RTH).
+
+        Returns:
+            Dict with ``avg_daily_volume``, ``avg_opening_window_volume``,
+            ``opening_window_pct_of_day``, and ``sessions`` — a list of per-day
+            dicts each containing ``date``, ``total_volume``, ``opening_window_volume``.
+        """
+        return self._get(
+            f"/v1/market/{symbol}/volume",
+            {"lookback_days": lookback_days, "opening_window_minutes": opening_window_minutes},
+        )
+
     def get_market_context(self, symbol: str) -> Dict:
         """Convenience method — fetch all available context for *symbol* in one call.
 
