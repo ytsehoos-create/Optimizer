@@ -266,13 +266,19 @@ if canEvaluate and not na(breakDir) and not triggered
             label.new(bar_index, low, "LONG FADE", style = label.style_label_up,
                  color = color.green, textcolor = color.white, size = size.small)
 
-// If oneTradePerSession is off, re-arm for another fade in the same
-// breakDir once the current trade closes (stop/target hit) and the session
-// is still open — otherwise `triggered` staying true forever blocked
-// re-entry regardless of this input, which is why toggling it did nothing.
+// If oneTradePerSession is off, go back to scanning for a fresh breakout
+// (either direction, beyond the original ORB High/Low) once the current
+// trade closes (stop or target hit) and the session is still open. Only
+// resetting `triggered` (and keeping the old breakDir/breakoutExtreme) was
+// too narrow — it required price to make an even more extreme new high/low
+// than the first breakout before crossing back, which real data may rarely
+// do, making the toggle look like it had no effect. A full re-scan is more
+// likely to actually produce a second trade when the setup recurs.
 positionJustClosed = strategy.position_size == 0 and strategy.position_size[1] != 0
 if positionJustClosed and not i_oneTradePerSession and not flattenedThisSession and not sessionSkipped
-    triggered := false
+    breakDir        := na
+    breakoutExtreme := na
+    triggered       := false
 
 // ── Plots ────────────────────────────────────────────────────────────────
 p_orbHigh = plot(orbHigh, title = "ORB High", style = plot.style_linebr, color = color.new(color.teal, 0), linewidth = 1)
