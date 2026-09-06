@@ -37,13 +37,16 @@ strategy(
      pyramiding               = 0,
      calc_on_every_tick       = false,
      process_orders_on_close  = false,
-     // commission_type must be a compile-time constant in Pine — it can't be
-     // wrapped in input.string() — so it's fixed here rather than user-toggled.
-     // Change to strategy.commission.percent or .cash_per_order if you need a
-     // different commission model; commission_value below stays configurable.
+     // commission_type / commission_value / slippage must ALL be compile-time
+     // constants in Pine — strategy() rejects input.*() values for any of
+     // them ("const float/int expected, input float/int used"). So these are
+     // realistic defaults hardcoded here, not user-adjustable from the
+     // Inputs tab. Edit the literals below directly for your instrument/
+     // broker: commission_value is in $ per contract (cash_per_contract),
+     // slippage is in ticks.
      commission_type          = strategy.commission.cash_per_contract,
-     commission_value         = input.float(defval = 0.0, title = "Commission Value ($ per contract)", minval = 0, group = "Backtest Realism"),
-     slippage                 = input.int(defval = 1, title = "Slippage (ticks)", minval = 0, group = "Backtest Realism"))
+     commission_value         = 2.5,
+     slippage                 = 1)
 
 // ── Inputs ───────────────────────────────────────────────────────────────
 // Note: the `group` (and `title`/`tooltip`/`options`) argument of input.*()
