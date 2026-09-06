@@ -3,8 +3,10 @@
 // ORB Breakout Fade — VWAP Reclaim Trigger
 // ============================================================================
 // Fades the first Opening Range Breakout of the session. Does NOT enter on the
-// breakout itself — waits for a 1-min CLOSE back across session VWAP against
-// the breakout direction, then fades toward the opposite side of the ORB.
+// breakout itself — waits for a 1-min CLOSE past the FAR-side VWAP standard-
+// deviation band (vwapBandMult SDs from session VWAP, "band 1" at the 1.0
+// default) against the breakout direction, then fades toward the opposite
+// side of the ORB.
 // Stop sits at the breakout leg's extreme (new HOD/LOD made during the break),
 // target is the opposite ORB boundary. Coded as a strategy() (backtestable),
 // not an indicator().
@@ -68,6 +70,11 @@ i_sessionEndTime = input.string(defval = "1610", title = "Session End / Flatten 
 
 i_oneTradePerSession = input.bool(defval = true, title = "One Trade Per Session", group = "Trade Rules")
 i_stopBufferTicks    = input.float(defval = 0.0, title = "Stop Buffer (ticks beyond breakout extreme)", minval = 0.0, group = "Trade Rules")
+// Entry trigger requires a close beyond the FAR-side VWAP band (the band on
+// the opposite side of VWAP from the breakout), not just a close across
+// VWAP itself — e.g. an UP break (short fade) needs a close below the
+// lower band, not merely below VWAP. 1.0 = the first-SD band ("band 1").
+i_vwapBandMult       = input.float(defval = 1.0, title = "VWAP Band Multiplier (SD) for Entry Trigger", minval = 0.1, group = "Trade Rules")
 i_enableLongFades    = input.bool(defval = true, title = "Enable Long Fades (fade DOWN breaks)", group = "Trade Rules")
 i_enableShortFades   = input.bool(defval = true, title = "Enable Short Fades (fade UP breaks)", group = "Trade Rules")
 i_qty                = input.int(defval = 1, title = "Contracts per Trade", minval = 1, group = "Trade Rules")
@@ -143,6 +150,7 @@ var bool  sessionSkipped    = false
 var bool  tradedThisSession = false
 var bool  flattenedThisSession = false
 var float vwapCumPV         = 0.0
+var float vwapCumPV2        = 0.0
 var float vwapCumVol        = 0.0
 var float sessionVWAP       = na
 var float stopLevel         = na
@@ -158,6 +166,7 @@ if newSession
     stopLevel            := na
     targetLevel          := na
     vwapCumPV            := 0.0
+    vwapCumPV2           := 0.0
     vwapCumVol           := 0.0
     sessionVWAP          := na
     orbHigh              := na
@@ -179,11 +188,18 @@ if orbWindowEnd
     if (orbHigh - orbLow) <= 0
         sessionSkipped := true
 
-// ── Session VWAP (typical price, running since the anchor bar) ─────────
+// ── Session VWAP + standard-deviation bands (running since the anchor bar) ─
 tp = hlc3
 vwapCumPV  += tp * volume
+vwapCumPV2 += tp * tp * volume
 vwapCumVol += volume
 sessionVWAP := vwapCumVol > 0 ? vwapCumPV / vwapCumVol : na
+
+// Volume-weighted variance of typical price around VWAP: E[tp^2] - E[tp]^2.
+vwapVariance = vwapCumVol > 0 ? math.max(vwapCumPV2 / vwapCumVol - sessionVWAP * sessionVWAP, 0.0) : na
+vwapStdev    = na(vwapVariance) ? na : math.sqrt(vwapVariance)
+vwapUpperBand = na(vwapStdev) ? na : sessionVWAP + i_vwapBandMult * vwapStdev
+vwapLowerBand = na(vwapStdev) ? na : sessionVWAP - i_vwapBandMult * vwapStdev
 
 // ── End-of-session flatten (checked every bar, before new entries) ─────
 if pastSessionEnd and not flattenedThisSession
@@ -223,8 +239,11 @@ if canEvaluate and na(breakDir)
 if canEvaluate and not na(breakDir) and not triggered
     breakoutExtreme := breakDir == "UP" ? math.max(breakoutExtreme, high) : math.min(breakoutExtreme, low)
 
-    doLong  = breakDir == "DOWN" and i_enableLongFades and close > sessionVWAP
-    doShort = breakDir == "UP" and i_enableShortFades and close < sessionVWAP
+    // Trigger needs a close past the FAR-side band, not just past VWAP
+    // itself: an UP break (short fade) needs close < lower band; a DOWN
+    // break (long fade) needs close > upper band.
+    doLong  = breakDir == "DOWN" and i_enableLongFades and close > vwapUpperBand
+    doShort = breakDir == "UP" and i_enableShortFades and close < vwapLowerBand
 
     if doShort
         stopLevel   := math.round_to_mintick(breakoutExtreme + i_stopBufferTicks * syminfo.mintick)
@@ -256,9 +275,12 @@ if positionJustClosed and not i_oneTradePerSession and not flattenedThisSession 
     triggered := false
 
 // ── Plots ────────────────────────────────────────────────────────────────
-plot(orbHigh, title = "ORB High", style = plot.style_linebr, color = color.new(color.teal, 0), linewidth = 1)
-plot(orbLow, title = "ORB Low", style = plot.style_linebr, color = color.new(color.maroon, 0), linewidth = 1)
+p_orbHigh = plot(orbHigh, title = "ORB High", style = plot.style_linebr, color = color.new(color.teal, 0), linewidth = 1)
+p_orbLow  = plot(orbLow, title = "ORB Low", style = plot.style_linebr, color = color.new(color.maroon, 0), linewidth = 1)
+fill(p_orbHigh, p_orbLow, color = color.new(color.teal, 88), title = "ORB Range")
 plot(sessionVWAP, title = "Session VWAP", color = color.new(color.blue, 0), linewidth = 1)
+plot(vwapUpperBand, title = "VWAP Upper Band", style = plot.style_linebr, color = color.new(color.purple, 30), linewidth = 1)
+plot(vwapLowerBand, title = "VWAP Lower Band", style = plot.style_linebr, color = color.new(color.purple, 30), linewidth = 1)
 plot(strategy.position_size != 0 ? stopLevel : na, title = "Stop", style = plot.style_linebr, color = color.new(color.red, 0), linewidth = 1)
 plot(strategy.position_size != 0 ? targetLevel : na, title = "Target", style = plot.style_linebr, color = color.new(color.green, 0), linewidth = 1)
 
@@ -269,7 +291,7 @@ if barstate.islast and timeframe.period != "1"
          color = color.red, textcolor = color.white, size = size.normal)
 
 // ── Debug table ──────────────────────────────────────────────────────────
-var table dbg = table.new(position.top_right, 2, 8, border_width = 1, border_color = color.gray)
+var table dbg = table.new(position.top_right, 2, 10, border_width = 1, border_color = color.gray)
 if i_showDebugTable and barstate.islast
     table.cell(dbg, 0, 0, "ORB VWAP Fade", text_color = color.white, bgcolor = color.new(color.gray, 60))
     table.cell(dbg, 1, 0, "", bgcolor = color.new(color.gray, 60))
@@ -283,7 +305,11 @@ if i_showDebugTable and barstate.islast
     table.cell(dbg, 1, 4, na(breakoutExtreme) ? "—" : str.tostring(breakoutExtreme, format.mintick), text_color = color.white)
     table.cell(dbg, 0, 5, "Session VWAP", text_color = color.white)
     table.cell(dbg, 1, 5, na(sessionVWAP) ? "—" : str.tostring(sessionVWAP, format.mintick), text_color = color.white)
-    table.cell(dbg, 0, 6, "Session Skipped", text_color = color.white)
-    table.cell(dbg, 1, 6, sessionSkipped ? "yes" : "no", text_color = color.white)
-    table.cell(dbg, 0, 7, "Traded This Session", text_color = color.white)
-    table.cell(dbg, 1, 7, tradedThisSession ? "yes" : "no", text_color = color.white)
+    table.cell(dbg, 0, 6, "VWAP Upper Band", text_color = color.white)
+    table.cell(dbg, 1, 6, na(vwapUpperBand) ? "—" : str.tostring(vwapUpperBand, format.mintick), text_color = color.white)
+    table.cell(dbg, 0, 7, "VWAP Lower Band", text_color = color.white)
+    table.cell(dbg, 1, 7, na(vwapLowerBand) ? "—" : str.tostring(vwapLowerBand, format.mintick), text_color = color.white)
+    table.cell(dbg, 0, 8, "Session Skipped", text_color = color.white)
+    table.cell(dbg, 1, 8, sessionSkipped ? "yes" : "no", text_color = color.white)
+    table.cell(dbg, 0, 9, "Traded This Session", text_color = color.white)
+    table.cell(dbg, 1, 9, tradedThisSession ? "yes" : "no", text_color = color.white)
