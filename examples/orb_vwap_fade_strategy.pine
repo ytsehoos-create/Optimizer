@@ -1,0 +1,256 @@
+//@version=5
+// ============================================================================
+// ORB Breakout Fade — VWAP Reclaim Trigger
+// ============================================================================
+// Fades the first Opening Range Breakout of the session. Does NOT enter on the
+// breakout itself — waits for a 1-min CLOSE back across session VWAP against
+// the breakout direction, then fades toward the opposite side of the ORB.
+// Stop sits at the breakout leg's extreme (new HOD/LOD made during the break),
+// target is the opposite ORB boundary.
+//
+// Assumptions / open items (see spec §9 — confirm before trusting results):
+//   - Designed to run on the 1-minute chart. All logic below assumes 1-min bars.
+//   - Works on both RTH-only and continuous (Globex) data: the "session" this
+//     script resets on is defined by `vwapAnchorTime` (not the calendar date),
+//     so a 09:30 anchor behaves like an RTH reset and an 18:00 anchor behaves
+//     like a Globex/ETH reset. Set vwapAnchorTime accordingly for the data
+//     you've loaded.
+//   - Fill mechanics: calc_on_every_tick=false and process_orders_on_close=false
+//     below, so an entry condition confirmed on bar N's close fills at bar
+//     N+1's open (standard strategy.entry behavior). If you want the entry
+//     modeled at the same bar's close instead, that requires enabling
+//     calc_on_every_tick and reworking the trigger check — flagging this here
+//     rather than silently picking one, per spec §8/§9, since it materially
+//     changes backtest expectancy.
+//   - stopBufferTicks is converted to price using syminfo.mintick, so confirm
+//     the chart's symbol has the correct tick size for the instrument tested.
+// ============================================================================
+
+strategy("ORB Breakout Fade — VWAP Reclaim",
+     shorttitle           = "ORB-VWAP-Fade",
+     overlay              = true,
+     initial_capital      = 25000,
+     default_qty_type     = strategy.fixed,
+     default_qty_value    = 1,
+     pyramiding           = 0,
+     calc_on_every_tick   = false,
+     process_orders_on_close = false,
+     commission_type      = input.string(strategy.commission.cash_per_contract, "Commission Type",
+                                  options = [strategy.commission.percent, strategy.commission.cash_per_contract, strategy.commission.cash_per_order],
+                                  group = "Backtest Realism"),
+     commission_value     = input.float(0.0, "Commission Value (% for Percent, $ otherwise)", minval = 0, group = "Backtest Realism"),
+     slippage              = input.int(1, "Slippage (ticks)", minval = 0, group = "Backtest Realism"))
+
+// ── Inputs ───────────────────────────────────────────────────────────────
+grpSession = "Session & ORB"
+i_orbStartTime   = input.string("0930", "ORB Start Time (HHMM, exchange time)", group = grpSession)
+i_orbDurationMin = input.int(5, "ORB Duration (minutes)", minval = 1, maxval = 120, group = grpSession, tooltip = "Also test 15 as an alt config")
+i_vwapAnchorSame = input.bool(true, "VWAP Anchor Time = ORB Start Time", group = grpSession)
+i_vwapAnchorTime = input.string("0930", "VWAP Anchor Time (HHMM, used if above is false)", group = grpSession)
+i_sessionTZ      = input.string("America/New_York", "Session Time Zone", group = grpSession)
+i_sessionEndTime = input.string("1610", "Session End / Flatten Time (HHMM)", group = grpSession)
+
+grpRules = "Trade Rules"
+i_oneTradePerSession = input.bool(true, "One Trade Per Session", group = grpRules)
+i_stopBufferTicks    = input.float(0, "Stop Buffer (ticks beyond breakout extreme)", minval = 0, group = grpRules)
+i_enableLongFades    = input.bool(true, "Enable Long Fades (fade DOWN breaks)", group = grpRules)
+i_enableShortFades   = input.bool(true, "Enable Short Fades (fade UP breaks)", group = grpRules)
+i_qty                = input.int(1, "Contracts per Trade", minval = 1, group = grpRules)
+
+grpDate = "Date Range Filter"
+i_useDateFilter = input.bool(false, "Limit Backtest to Date Range", group = grpDate)
+i_startDate     = input.time(timestamp("2020-01-01 00:00"), "Start", group = grpDate)
+i_endDate       = input.time(timestamp("2099-01-01 00:00"), "End", group = grpDate)
+
+grpDisp = "Display"
+i_showDebugTable = input.bool(true, "Show Debug Table", group = grpDisp)
+i_showLabels     = input.bool(true, "Show Break/Entry Labels", group = grpDisp)
+i_showOrbShade   = input.bool(true, "Shade ORB Window", group = grpDisp)
+
+// ── Time helpers (all inputs, so results stay "simple string" for time()) ──
+f_pad2(n) =>
+    n < 10 ? "0" + str.tostring(n, "#") : str.tostring(n, "#")
+
+f_hhmmToMinutes(hhmm) =>
+    h = int(str.tonumber(str.substring(hhmm, 0, 2)))
+    m = int(str.tonumber(str.substring(hhmm, 2, 4)))
+    h * 60 + m
+
+f_minutesToHHMM(mins) =>
+    m = int(mins) % 1440
+    m := m < 0 ? m + 1440 : m
+    h = int(m / 60)
+    mm = m % 60
+    f_pad2(h) + f_pad2(mm)
+
+// ── Session windows built from inputs ───────────────────────────────────
+orbStartMin      = f_hhmmToMinutes(i_orbStartTime)
+orbSessionStr    = i_orbStartTime + "-" + f_minutesToHHMM(orbStartMin + i_orbDurationMin)
+
+vwapAnchorHHMM   = i_vwapAnchorSame ? i_orbStartTime : i_vwapAnchorTime
+vwapAnchorMin    = f_hhmmToMinutes(vwapAnchorHHMM)
+vwapSessionStr   = vwapAnchorHHMM + "-" + f_minutesToHHMM(vwapAnchorMin + 1)
+
+sessionEndMin    = f_hhmmToMinutes(i_sessionEndTime)
+// Widen the flatten window a few minutes so a missed exact-minute bar
+// (thin data) doesn't skip the flatten entirely.
+sessionEndStr    = i_sessionEndTime + "-" + f_minutesToHHMM(sessionEndMin + 5)
+
+inORBWindow      = not na(time(timeframe.period, orbSessionStr, i_sessionTZ))
+isVwapAnchorBar  = not na(time(timeframe.period, vwapSessionStr, i_sessionTZ))
+isSessionEndWindow = not na(time(timeframe.period, sessionEndStr, i_sessionTZ))
+
+// A "session" for this script's state machine is anchored to vwapAnchorTime
+// (see header notes) rather than the calendar date, so it works whether the
+// data resets at 09:30 (RTH) or 18:00 (continuous Globex).
+newSession = isVwapAnchorBar
+orbWindowStart = inORBWindow and not inORBWindow[1]
+orbWindowEnd   = inORBWindow[1] and not inORBWindow
+
+// ── Per-session state ───────────────────────────────────────────────────
+var float orbHigh           = na
+var float orbLow            = na
+var bool  orbComplete       = false
+var string breakDir         = na       // "UP", "DOWN", or na
+var float breakoutExtreme   = na
+var bool  triggered         = false
+var bool  sessionSkipped    = false
+var bool  tradedThisSession = false
+var bool  flattenedThisSession = false
+var float vwapCumPV         = 0.0
+var float vwapCumVol        = 0.0
+var float sessionVWAP       = na
+var float stopLevel         = na
+var float targetLevel       = na
+
+if newSession
+    tradedThisSession    := false
+    flattenedThisSession := false
+    sessionSkipped       := false
+    breakDir             := na
+    breakoutExtreme      := na
+    triggered            := false
+    stopLevel            := na
+    targetLevel          := na
+    vwapCumPV            := 0.0
+    vwapCumVol           := 0.0
+    sessionVWAP          := na
+    orbHigh              := na
+    orbLow               := na
+    orbComplete          := false
+
+if orbWindowStart
+    orbHigh     := na
+    orbLow      := na
+    orbComplete := false
+
+// ── ORB accumulation ────────────────────────────────────────────────────
+if inORBWindow
+    orbHigh := na(orbHigh) ? high : math.max(orbHigh, high)
+    orbLow  := na(orbLow) ? low : math.min(orbLow, low)
+
+if orbWindowEnd
+    orbComplete := true
+    if (orbHigh - orbLow) <= 0
+        sessionSkipped := true
+
+// ── Session VWAP (typical price, running since the anchor bar) ─────────
+tp = hlc3
+vwapCumPV  += tp * volume
+vwapCumVol += volume
+sessionVWAP := vwapCumVol > 0 ? vwapCumPV / vwapCumVol : na
+
+// ── End-of-session flatten (checked every bar, before new entries) ─────
+if isSessionEndWindow and not flattenedThisSession
+    strategy.cancel_all()
+    if strategy.position_size != 0
+        strategy.close_all("Session Flatten")
+    flattenedThisSession := true
+    tradedThisSession    := true
+
+// ── Date range filter ───────────────────────────────────────────────────
+inDateRange = not i_useDateFilter or (time >= i_startDate and time <= i_endDate)
+
+// ── Break detection + fade trigger ──────────────────────────────────────
+canEvaluate = orbComplete and not inORBWindow and not sessionSkipped and
+     not flattenedThisSession and inDateRange and
+     not (i_oneTradePerSession and tradedThisSession)
+
+if canEvaluate and na(breakDir)
+    brokeUp   = high > orbHigh
+    brokeDown = low < orbLow
+    if brokeUp and brokeDown
+        // Ambiguous — can't tell intrabar which boundary broke first. Skip.
+        sessionSkipped := true
+    else if brokeUp
+        breakDir        := "UP"
+        breakoutExtreme := high
+        if i_showLabels
+            label.new(bar_index, high, "BREAK ▲", style = label.style_label_down,
+                 color = color.orange, textcolor = color.white, size = size.small)
+    else if brokeDown
+        breakDir        := "DOWN"
+        breakoutExtreme := low
+        if i_showLabels
+            label.new(bar_index, low, "BREAK ▼", style = label.style_label_up,
+                 color = color.orange, textcolor = color.white, size = size.small)
+
+if canEvaluate and not na(breakDir) and not triggered
+    breakoutExtreme := breakDir == "UP" ? math.max(breakoutExtreme, high) : math.min(breakoutExtreme, low)
+
+    doLong  = breakDir == "DOWN" and i_enableLongFades and close > sessionVWAP
+    doShort = breakDir == "UP" and i_enableShortFades and close < sessionVWAP
+
+    if doShort
+        stopLevel   := math.round_to_mintick(breakoutExtreme + i_stopBufferTicks * syminfo.mintick)
+        targetLevel := orbLow
+        strategy.entry("FadeShort", strategy.short, qty = i_qty)
+        strategy.exit("FadeShortExit", "FadeShort", stop = stopLevel, limit = targetLevel)
+        triggered         := true
+        tradedThisSession := true
+        if i_showLabels
+            label.new(bar_index, high, "SHORT FADE", style = label.style_label_down,
+                 color = color.red, textcolor = color.white, size = size.small)
+    else if doLong
+        stopLevel   := math.round_to_mintick(breakoutExtreme - i_stopBufferTicks * syminfo.mintick)
+        targetLevel := orbHigh
+        strategy.entry("FadeLong", strategy.long, qty = i_qty)
+        strategy.exit("FadeLongExit", "FadeLong", stop = stopLevel, limit = targetLevel)
+        triggered         := true
+        tradedThisSession := true
+        if i_showLabels
+            label.new(bar_index, low, "LONG FADE", style = label.style_label_up,
+                 color = color.green, textcolor = color.white, size = size.small)
+
+// ── Plots ────────────────────────────────────────────────────────────────
+plot(orbHigh, title = "ORB High", style = plot.style_linebr, color = color.new(color.teal, 0), linewidth = 1)
+plot(orbLow, title = "ORB Low", style = plot.style_linebr, color = color.new(color.maroon, 0), linewidth = 1)
+plot(sessionVWAP, title = "Session VWAP", color = color.new(color.blue, 0), linewidth = 1)
+plot(strategy.position_size != 0 ? stopLevel : na, title = "Stop", style = plot.style_linebr, color = color.new(color.red, 0), linewidth = 1)
+plot(strategy.position_size != 0 ? targetLevel : na, title = "Target", style = plot.style_linebr, color = color.new(color.green, 0), linewidth = 1)
+
+bgcolor(i_showOrbShade and inORBWindow ? color.new(color.blue, 90) : na, title = "ORB Window")
+
+if barstate.islast and timeframe.period != "1"
+    label.new(bar_index, high, "⚠ Designed for the 1-minute chart", style = label.style_label_down,
+         color = color.red, textcolor = color.white, size = size.normal)
+
+// ── Debug table ──────────────────────────────────────────────────────────
+var table dbg = table.new(position.top_right, 2, 8, border_width = 1, border_color = color.gray)
+if i_showDebugTable and barstate.islast
+    table.cell(dbg, 0, 0, "ORB VWAP Fade", text_color = color.white, bgcolor = color.new(color.gray, 60))
+    table.cell(dbg, 1, 0, "", bgcolor = color.new(color.gray, 60))
+    table.cell(dbg, 0, 1, "ORB High", text_color = color.white)
+    table.cell(dbg, 1, 1, na(orbHigh) ? "—" : str.tostring(orbHigh, format.mintick), text_color = color.white)
+    table.cell(dbg, 0, 2, "ORB Low", text_color = color.white)
+    table.cell(dbg, 1, 2, na(orbLow) ? "—" : str.tostring(orbLow, format.mintick), text_color = color.white)
+    table.cell(dbg, 0, 3, "Break Dir", text_color = color.white)
+    table.cell(dbg, 1, 3, na(breakDir) ? "—" : breakDir, text_color = color.white)
+    table.cell(dbg, 0, 4, "Breakout Extreme", text_color = color.white)
+    table.cell(dbg, 1, 4, na(breakoutExtreme) ? "—" : str.tostring(breakoutExtreme, format.mintick), text_color = color.white)
+    table.cell(dbg, 0, 5, "Session VWAP", text_color = color.white)
+    table.cell(dbg, 1, 5, na(sessionVWAP) ? "—" : str.tostring(sessionVWAP, format.mintick), text_color = color.white)
+    table.cell(dbg, 0, 6, "Session Skipped", text_color = color.white)
+    table.cell(dbg, 1, 6, sessionSkipped ? "yes" : "no", text_color = color.white)
+    table.cell(dbg, 0, 7, "Traded This Session", text_color = color.white)
+    table.cell(dbg, 1, 7, tradedThisSession ? "yes" : "no", text_color = color.white)
