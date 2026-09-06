@@ -77,43 +77,52 @@ i_showDebugTable = input.bool(defval = true, title = "Show Debug Table", group =
 i_showLabels     = input.bool(defval = true, title = "Show Break/Entry Labels", group = "Display")
 i_showOrbShade   = input.bool(defval = true, title = "Shade ORB Window", group = "Display")
 
-// ── Time helpers (all inputs, so results stay "simple string" for time()) ──
-f_pad2(n) =>
-    n < 10 ? "0" + str.tostring(n, "#") : str.tostring(n, "#")
-
+// ── Time helpers ─────────────────────────────────────────────────────────
+// Session/anchor detection is done with plain hour()/minute()/calendar-date
+// arithmetic rather than a dynamically-built time() session string. A
+// time(timeframe, session, timezone) session argument that isn't a literal
+// written directly in the call is not reliably evaluated as a real window —
+// it can end up matching far more (or less) than intended, which is what
+// caused ORB high/low to balloon out to some old historical level and the
+// ORB window to never actually close (so no break/entry logic ever ran).
+// This version avoids time()'s session matching entirely.
 f_hhmmToMinutes(hhmm) =>
     h = int(str.tonumber(str.substring(hhmm, 0, 2)))
     m = int(str.tonumber(str.substring(hhmm, 2, 4)))
     h * 60 + m
 
-f_minutesToHHMM(mins) =>
-    m = int(mins) % 1440
-    m := m < 0 ? m + 1440 : m
-    h = int(m / 60)
-    mm = m % 60
-    f_pad2(h) + f_pad2(mm)
+f_dateId(t, tz) =>
+    year(t, tz) * 10000 + month(t, tz) * 100 + dayofmonth(t, tz)
 
 // ── Session windows built from inputs ───────────────────────────────────
-orbStartMin      = f_hhmmToMinutes(i_orbStartTime)
-orbSessionStr    = i_orbStartTime + "-" + f_minutesToHHMM(orbStartMin + i_orbDurationMin)
+orbStartMin    = f_hhmmToMinutes(i_orbStartTime)
+orbEndMin      = orbStartMin + i_orbDurationMin
 
-vwapAnchorHHMM   = i_vwapAnchorSame ? i_orbStartTime : i_vwapAnchorTime
-vwapAnchorMin    = f_hhmmToMinutes(vwapAnchorHHMM)
-vwapSessionStr   = vwapAnchorHHMM + "-" + f_minutesToHHMM(vwapAnchorMin + 1)
+vwapAnchorHHMM = i_vwapAnchorSame ? i_orbStartTime : i_vwapAnchorTime
+vwapAnchorMin  = f_hhmmToMinutes(vwapAnchorHHMM)
 
-sessionEndMin    = f_hhmmToMinutes(i_sessionEndTime)
-// Widen the flatten window a few minutes so a missed exact-minute bar
-// (thin data) doesn't skip the flatten entirely.
-sessionEndStr    = i_sessionEndTime + "-" + f_minutesToHHMM(sessionEndMin + 5)
+sessionEndMin   = f_hhmmToMinutes(i_sessionEndTime)
+// If the flatten time's clock value is numerically before the anchor's
+// (e.g. anchor 18:00, flatten 16:10), the flatten falls on the following
+// calendar day — flag that so the threshold check below doesn't fire the
+// instant the new session starts.
+sessionEndWraps = sessionEndMin < vwapAnchorMin
 
-inORBWindow      = not na(time(timeframe.period, orbSessionStr, i_sessionTZ))
-isVwapAnchorBar  = not na(time(timeframe.period, vwapSessionStr, i_sessionTZ))
-isSessionEndWindow = not na(time(timeframe.period, sessionEndStr, i_sessionTZ))
+barMinuteOfDay = hour(time, i_sessionTZ) * 60 + minute(time, i_sessionTZ)
 
-// A "session" for this script's state machine is anchored to vwapAnchorTime
-// (see header notes) rather than the calendar date, so it works whether the
-// data resets at 09:30 (RTH) or 18:00 (continuous Globex).
-newSession = isVwapAnchorBar
+inORBWindow = barMinuteOfDay >= orbStartMin and barMinuteOfDay < orbEndMin
+
+// Bucket every bar into the session that most recently crossed the VWAP
+// anchor time, using the bar's absolute calendar date (in sessionTimeZone)
+// rather than a specific "anchor bar" — this is unaffected by data gaps,
+// weekends, or a missing exact-minute bar at the anchor time.
+sessionDateId = barMinuteOfDay >= vwapAnchorMin ? f_dateId(time, i_sessionTZ) : f_dateId(time - 86400000, i_sessionTZ)
+newSession    = sessionDateId != sessionDateId[1]
+
+pastSessionEnd = sessionEndWraps ?
+     (barMinuteOfDay >= sessionEndMin and barMinuteOfDay < vwapAnchorMin) :
+     (barMinuteOfDay >= sessionEndMin)
+
 orbWindowStart = inORBWindow and not inORBWindow[1]
 orbWindowEnd   = inORBWindow[1] and not inORBWindow
 
@@ -171,7 +180,7 @@ vwapCumVol += volume
 sessionVWAP := vwapCumVol > 0 ? vwapCumPV / vwapCumVol : na
 
 // ── End-of-session flatten (checked every bar, before new entries) ─────
-if isSessionEndWindow and not flattenedThisSession
+if pastSessionEnd and not flattenedThisSession
     strategy.cancel_all()
     if strategy.position_size != 0
         strategy.close_all("Session Flatten")
