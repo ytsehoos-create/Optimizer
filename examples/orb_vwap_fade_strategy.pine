@@ -247,6 +247,14 @@ if canEvaluate and not na(breakDir) and not triggered
             label.new(bar_index, low, "LONG FADE", style = label.style_label_up,
                  color = color.green, textcolor = color.white, size = size.small)
 
+// If oneTradePerSession is off, re-arm for another fade in the same
+// breakDir once the current trade closes (stop/target hit) and the session
+// is still open — otherwise `triggered` staying true forever blocked
+// re-entry regardless of this input, which is why toggling it did nothing.
+positionJustClosed = strategy.position_size == 0 and strategy.position_size[1] != 0
+if positionJustClosed and not i_oneTradePerSession and not flattenedThisSession and not sessionSkipped
+    triggered := false
+
 // ── Plots ────────────────────────────────────────────────────────────────
 plot(orbHigh, title = "ORB High", style = plot.style_linebr, color = color.new(color.teal, 0), linewidth = 1)
 plot(orbLow, title = "ORB Low", style = plot.style_linebr, color = color.new(color.maroon, 0), linewidth = 1)
