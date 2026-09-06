@@ -31,7 +31,13 @@ strategy(
      title                    = "ORB Breakout Fade — VWAP Reclaim",
      shorttitle               = "ORB-VWAP-Fade",
      overlay                  = true,
-     initial_capital          = 25000,
+     // Bumped up from a smaller default: MNQ notional (~$2/pt * ~29,000 =
+     // ~$58k/contract) can exceed a small initial_capital, which makes
+     // TradingView's simulated margin check silently reject the fill —
+     // strategy.entry() still runs (so the on-chart label still draws) but
+     // no trade shows up in the Strategy Tester. Raise further if you're
+     // testing an instrument with even larger notional per contract.
+     initial_capital          = 100000,
      default_qty_type         = strategy.fixed,
      default_qty_value        = 1,
      pyramiding               = 0,
