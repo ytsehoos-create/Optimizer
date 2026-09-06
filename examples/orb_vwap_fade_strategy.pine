@@ -46,33 +46,33 @@ strategy(
      slippage                 = input.int(defval = 1, title = "Slippage (ticks)", minval = 0, group = "Backtest Realism"))
 
 // ── Inputs ───────────────────────────────────────────────────────────────
-grpSession = "Session & ORB"
-i_orbStartTime   = input.string(defval = "0930", title = "ORB Start Time (HHMM, exchange time)", group = grpSession)
-i_orbDurationMin = input.int(defval = 5, title = "ORB Duration (minutes)", minval = 1, maxval = 120, group = grpSession, tooltip = "Also test 15 as an alt config")
-i_vwapAnchorSame = input.bool(defval = true, title = "VWAP Anchor Time = ORB Start Time", group = grpSession)
-i_vwapAnchorTime = input.string(defval = "0930", title = "VWAP Anchor Time (HHMM, used if above is false)", group = grpSession)
-i_sessionTZ      = input.string(defval = "America/New_York", title = "Session Time Zone", group = grpSession)
-i_sessionEndTime = input.string(defval = "1610", title = "Session End / Flatten Time (HHMM)", group = grpSession)
+// Note: the `group` (and `title`/`tooltip`/`options`) argument of input.*()
+// must be a literal string written directly in the call — Pine builds the
+// Inputs UI panel via static analysis, so a variable there is a compile
+// error. Hence the repeated literal group names below instead of a shared var.
+i_orbStartTime   = input.string(defval = "0930", title = "ORB Start Time (HHMM, exchange time)", group = "Session & ORB")
+i_orbDurationMin = input.int(defval = 5, title = "ORB Duration (minutes)", minval = 1, maxval = 120, group = "Session & ORB", tooltip = "Also test 15 as an alt config")
+i_vwapAnchorSame = input.bool(defval = true, title = "VWAP Anchor Time = ORB Start Time", group = "Session & ORB")
+i_vwapAnchorTime = input.string(defval = "0930", title = "VWAP Anchor Time (HHMM, used if above is false)", group = "Session & ORB")
+i_sessionTZ      = input.string(defval = "America/New_York", title = "Session Time Zone", group = "Session & ORB")
+i_sessionEndTime = input.string(defval = "1610", title = "Session End / Flatten Time (HHMM)", group = "Session & ORB")
 
-grpRules = "Trade Rules"
-i_oneTradePerSession = input.bool(defval = true, title = "One Trade Per Session", group = grpRules)
-i_stopBufferTicks    = input.float(defval = 0.0, title = "Stop Buffer (ticks beyond breakout extreme)", minval = 0.0, group = grpRules)
-i_enableLongFades    = input.bool(defval = true, title = "Enable Long Fades (fade DOWN breaks)", group = grpRules)
-i_enableShortFades   = input.bool(defval = true, title = "Enable Short Fades (fade UP breaks)", group = grpRules)
-i_qty                = input.int(defval = 1, title = "Contracts per Trade", minval = 1, group = grpRules)
+i_oneTradePerSession = input.bool(defval = true, title = "One Trade Per Session", group = "Trade Rules")
+i_stopBufferTicks    = input.float(defval = 0.0, title = "Stop Buffer (ticks beyond breakout extreme)", minval = 0.0, group = "Trade Rules")
+i_enableLongFades    = input.bool(defval = true, title = "Enable Long Fades (fade DOWN breaks)", group = "Trade Rules")
+i_enableShortFades   = input.bool(defval = true, title = "Enable Short Fades (fade UP breaks)", group = "Trade Rules")
+i_qty                = input.int(defval = 1, title = "Contracts per Trade", minval = 1, group = "Trade Rules")
 
-grpDate = "Date Range Filter"
-i_useDateFilter = input.bool(defval = false, title = "Limit Backtest to Date Range", group = grpDate)
+i_useDateFilter = input.bool(defval = false, title = "Limit Backtest to Date Range", group = "Date Range Filter")
 // defval must be a const int (milliseconds since epoch, UTC) in v6 — timestamp()
 // returns a runtime value there, so the range is hardcoded here instead:
 // 1577836800000 = 2020-01-01 00:00 UTC, 4070908800000 = 2099-01-01 00:00 UTC.
-i_startDate     = input.time(defval = 1577836800000, title = "Start", group = grpDate)
-i_endDate       = input.time(defval = 4070908800000, title = "End", group = grpDate)
+i_startDate     = input.time(defval = 1577836800000, title = "Start", group = "Date Range Filter")
+i_endDate       = input.time(defval = 4070908800000, title = "End", group = "Date Range Filter")
 
-grpDisp = "Display"
-i_showDebugTable = input.bool(defval = true, title = "Show Debug Table", group = grpDisp)
-i_showLabels     = input.bool(defval = true, title = "Show Break/Entry Labels", group = grpDisp)
-i_showOrbShade   = input.bool(defval = true, title = "Shade ORB Window", group = grpDisp)
+i_showDebugTable = input.bool(defval = true, title = "Show Debug Table", group = "Display")
+i_showLabels     = input.bool(defval = true, title = "Show Break/Entry Labels", group = "Display")
+i_showOrbShade   = input.bool(defval = true, title = "Shade ORB Window", group = "Display")
 
 // ── Time helpers (all inputs, so results stay "simple string" for time()) ──
 f_pad2(n) =>
