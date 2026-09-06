@@ -37,12 +37,12 @@ strategy(
      pyramiding               = 0,
      calc_on_every_tick       = false,
      process_orders_on_close  = false,
-     commission_type          = input.string(
-          defval  = strategy.commission.cash_per_contract,
-          title   = "Commission Type",
-          options = [strategy.commission.percent, strategy.commission.cash_per_contract, strategy.commission.cash_per_order],
-          group   = "Backtest Realism"),
-     commission_value         = input.float(defval = 0.0, title = "Commission Value (% for Percent, $ otherwise)", minval = 0, group = "Backtest Realism"),
+     // commission_type must be a compile-time constant in Pine — it can't be
+     // wrapped in input.string() — so it's fixed here rather than user-toggled.
+     // Change to strategy.commission.percent or .cash_per_order if you need a
+     // different commission model; commission_value below stays configurable.
+     commission_type          = strategy.commission.cash_per_contract,
+     commission_value         = input.float(defval = 0.0, title = "Commission Value ($ per contract)", minval = 0, group = "Backtest Realism"),
      slippage                 = input.int(defval = 1, title = "Slippage (ticks)", minval = 0, group = "Backtest Realism"))
 
 // ── Inputs ───────────────────────────────────────────────────────────────
