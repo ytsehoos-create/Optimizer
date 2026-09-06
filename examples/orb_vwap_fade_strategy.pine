@@ -1,4 +1,4 @@
-//@version=5
+//@version=6
 // ============================================================================
 // ORB Breakout Fade — VWAP Reclaim Trigger
 // ============================================================================
@@ -6,7 +6,8 @@
 // breakout itself — waits for a 1-min CLOSE back across session VWAP against
 // the breakout direction, then fades toward the opposite side of the ORB.
 // Stop sits at the breakout leg's extreme (new HOD/LOD made during the break),
-// target is the opposite ORB boundary.
+// target is the opposite ORB boundary. Coded as a strategy() (backtestable),
+// not an indicator().
 //
 // Assumptions / open items (see spec §9 — confirm before trusting results):
 //   - Designed to run on the 1-minute chart. All logic below assumes 1-min bars.
@@ -26,46 +27,52 @@
 //     the chart's symbol has the correct tick size for the instrument tested.
 // ============================================================================
 
-strategy("ORB Breakout Fade — VWAP Reclaim",
-     shorttitle           = "ORB-VWAP-Fade",
-     overlay              = true,
-     initial_capital      = 25000,
-     default_qty_type     = strategy.fixed,
-     default_qty_value    = 1,
-     pyramiding           = 0,
-     calc_on_every_tick   = false,
-     process_orders_on_close = false,
-     commission_type      = input.string(strategy.commission.cash_per_contract, "Commission Type",
-                                  options = [strategy.commission.percent, strategy.commission.cash_per_contract, strategy.commission.cash_per_order],
-                                  group = "Backtest Realism"),
-     commission_value     = input.float(0.0, "Commission Value (% for Percent, $ otherwise)", minval = 0, group = "Backtest Realism"),
-     slippage              = input.int(1, "Slippage (ticks)", minval = 0, group = "Backtest Realism"))
+strategy(
+     title                    = "ORB Breakout Fade — VWAP Reclaim",
+     shorttitle               = "ORB-VWAP-Fade",
+     overlay                  = true,
+     initial_capital          = 25000,
+     default_qty_type         = strategy.fixed,
+     default_qty_value        = 1,
+     pyramiding               = 0,
+     calc_on_every_tick       = false,
+     process_orders_on_close  = false,
+     commission_type          = input.string(
+          defval  = strategy.commission.cash_per_contract,
+          title   = "Commission Type",
+          options = [strategy.commission.percent, strategy.commission.cash_per_contract, strategy.commission.cash_per_order],
+          group   = "Backtest Realism"),
+     commission_value         = input.float(defval = 0.0, title = "Commission Value (% for Percent, $ otherwise)", minval = 0, group = "Backtest Realism"),
+     slippage                 = input.int(defval = 1, title = "Slippage (ticks)", minval = 0, group = "Backtest Realism"))
 
 // ── Inputs ───────────────────────────────────────────────────────────────
 grpSession = "Session & ORB"
-i_orbStartTime   = input.string("0930", "ORB Start Time (HHMM, exchange time)", group = grpSession)
-i_orbDurationMin = input.int(5, "ORB Duration (minutes)", minval = 1, maxval = 120, group = grpSession, tooltip = "Also test 15 as an alt config")
-i_vwapAnchorSame = input.bool(true, "VWAP Anchor Time = ORB Start Time", group = grpSession)
-i_vwapAnchorTime = input.string("0930", "VWAP Anchor Time (HHMM, used if above is false)", group = grpSession)
-i_sessionTZ      = input.string("America/New_York", "Session Time Zone", group = grpSession)
-i_sessionEndTime = input.string("1610", "Session End / Flatten Time (HHMM)", group = grpSession)
+i_orbStartTime   = input.string(defval = "0930", title = "ORB Start Time (HHMM, exchange time)", group = grpSession)
+i_orbDurationMin = input.int(defval = 5, title = "ORB Duration (minutes)", minval = 1, maxval = 120, group = grpSession, tooltip = "Also test 15 as an alt config")
+i_vwapAnchorSame = input.bool(defval = true, title = "VWAP Anchor Time = ORB Start Time", group = grpSession)
+i_vwapAnchorTime = input.string(defval = "0930", title = "VWAP Anchor Time (HHMM, used if above is false)", group = grpSession)
+i_sessionTZ      = input.string(defval = "America/New_York", title = "Session Time Zone", group = grpSession)
+i_sessionEndTime = input.string(defval = "1610", title = "Session End / Flatten Time (HHMM)", group = grpSession)
 
 grpRules = "Trade Rules"
-i_oneTradePerSession = input.bool(true, "One Trade Per Session", group = grpRules)
-i_stopBufferTicks    = input.float(0, "Stop Buffer (ticks beyond breakout extreme)", minval = 0, group = grpRules)
-i_enableLongFades    = input.bool(true, "Enable Long Fades (fade DOWN breaks)", group = grpRules)
-i_enableShortFades   = input.bool(true, "Enable Short Fades (fade UP breaks)", group = grpRules)
-i_qty                = input.int(1, "Contracts per Trade", minval = 1, group = grpRules)
+i_oneTradePerSession = input.bool(defval = true, title = "One Trade Per Session", group = grpRules)
+i_stopBufferTicks    = input.float(defval = 0.0, title = "Stop Buffer (ticks beyond breakout extreme)", minval = 0.0, group = grpRules)
+i_enableLongFades    = input.bool(defval = true, title = "Enable Long Fades (fade DOWN breaks)", group = grpRules)
+i_enableShortFades   = input.bool(defval = true, title = "Enable Short Fades (fade UP breaks)", group = grpRules)
+i_qty                = input.int(defval = 1, title = "Contracts per Trade", minval = 1, group = grpRules)
 
 grpDate = "Date Range Filter"
-i_useDateFilter = input.bool(false, "Limit Backtest to Date Range", group = grpDate)
-i_startDate     = input.time(timestamp("2020-01-01 00:00"), "Start", group = grpDate)
-i_endDate       = input.time(timestamp("2099-01-01 00:00"), "End", group = grpDate)
+i_useDateFilter = input.bool(defval = false, title = "Limit Backtest to Date Range", group = grpDate)
+// defval must be a const int (milliseconds since epoch, UTC) in v6 — timestamp()
+// returns a runtime value there, so the range is hardcoded here instead:
+// 1577836800000 = 2020-01-01 00:00 UTC, 4070908800000 = 2099-01-01 00:00 UTC.
+i_startDate     = input.time(defval = 1577836800000, title = "Start", group = grpDate)
+i_endDate       = input.time(defval = 4070908800000, title = "End", group = grpDate)
 
 grpDisp = "Display"
-i_showDebugTable = input.bool(true, "Show Debug Table", group = grpDisp)
-i_showLabels     = input.bool(true, "Show Break/Entry Labels", group = grpDisp)
-i_showOrbShade   = input.bool(true, "Shade ORB Window", group = grpDisp)
+i_showDebugTable = input.bool(defval = true, title = "Show Debug Table", group = grpDisp)
+i_showLabels     = input.bool(defval = true, title = "Show Break/Entry Labels", group = grpDisp)
+i_showOrbShade   = input.bool(defval = true, title = "Shade ORB Window", group = grpDisp)
 
 // ── Time helpers (all inputs, so results stay "simple string" for time()) ──
 f_pad2(n) =>
