@@ -1,0 +1,6 @@
+rule + r6=False: +$8508  quarters [3066, -304, 2865, 2882]
+rule + t2r_dn_Fri toggle: +$2950  quarters [694, 1042, 0, 1214]
+rule + z3a=False: +$554  quarters [324, 151, 1115, -1035]
+rule + t2r_dn_Wed toggle: +$2025  quarters [69, 1324, -305, 937]
+rule + filter_b=0.2: +$534  quarters [906, -918, 259, 287]
+level + t2x_dn[T]+0.05: +$483  quarters [91, 141, 251, 0]
