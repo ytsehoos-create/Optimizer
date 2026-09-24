@@ -28,13 +28,6 @@ import pandas as pd
 PT = 2.0          # MNQ $ per point
 RISK_CAP = 300.0
 
-RULESETS = {
-    "v1": dict(gap_max=1.00, vwap_filter=True, filter_b=0.25,
-               large_ib=lambda dow: 0.9),
-    "v2": dict(gap_max=1.25, vwap_filter=False, filter_b=0.20,
-               large_ib=lambda dow: {1: 0.7, 3: 0.9}.get(dow, 1.5)),
-}
-
 # T2R: (entry, stop, target) as multiples of IB range from the broken boundary,
 # signed away from the IB (+ = beyond the boundary).
 T2R_CELLS = {
@@ -49,7 +42,33 @@ T2X_CELLS = {
     ("dn", 1): (0.30, 0.60, -0.20), ("dn", 2): (0.50, 0.60, -0.20),
     ("dn", 4): (0.40, 0.60, -0.20),
 }
+# "Verified Ruleset v2" infographic (2026-09-22) per-cell grids.
+T2R_CELLS_V2I = {
+    ("up", 1): (0.35, 0.45, -0.15), ("up", 2): (0.20, 0.30, -0.25),
+    ("up", 3): (0.35, 0.45, -0.60), ("up", 4): (0.15, 0.25, -0.25),
+    ("dn", 1): (0.25, 0.35, -0.35), ("dn", 3): (0.20, 0.30, -0.25),
+}
+T2X_CELLS_V2I = {
+    ("up", 0): (0.15, 0.35, -0.30), ("up", 1): (0.25, 0.55, -0.40),
+    ("up", 2): (0.20, 0.60, -0.30), ("up", 4): (0.55, 0.60, -0.30),
+    ("dn", 1): (0.35, 0.55, -0.30), ("dn", 2): (0.50, 0.60, -0.20),
+    ("dn", 4): (0.45, 0.55, -0.30),
+}
 DOW = ["Mon", "Tue", "Wed", "Thu", "Fri"]
+
+# Common keys: gap_max (T1 gap %), vwap_filter (T1 zone 1), filter_b (T2R first-break
+# bar), large_ib(dow) (% of price, T2R/T2X). Optional: t2r_cells, t2x_cells,
+# rule1 (T1 win cancels T2R), gating ("realtime" | "hindsight"),
+# large_ib_ref ("c1030" | "session_close"), t2x_arm ("close" | "touch").
+RULESETS = {
+    "v1": dict(gap_max=1.00, vwap_filter=True, filter_b=0.25,
+               large_ib=lambda dow: 0.9),
+    "v2": dict(gap_max=1.25, vwap_filter=False, filter_b=0.20,
+               large_ib=lambda dow: {1: 0.7, 3: 0.9}.get(dow, 1.5)),
+    "v2i": dict(gap_max=1.25, vwap_filter=False, filter_b=0.20,
+                large_ib=lambda dow: {1: 0.7, 3: 0.9}.get(dow, 1.5),
+                t2r_cells=T2R_CELLS_V2I, t2x_cells=T2X_CELLS_V2I, rule1=False),
+}
 
 
 @dataclass
@@ -180,11 +199,13 @@ def run_session(bars, prev_close, rs):
             brk_dir = "both" if (up and dn) else ("up" if up else "dn")
             break
     info["break"] = f"{brk_dir}@{bars.hm[brk_i]}" if brk_i is not None else "none"
-    large_ib = ib_pct > rs["large_ib"](dow)
+    ref_px = bars.c.iloc[-1] if rs.get("large_ib_ref") == "session_close" else c1030
+    large_ib = rng / ref_px * 100 > rs["large_ib"](dow)
+    realtime = rs.get("gating", "realtime") == "realtime"
 
     # ---------- T2R setup ----------
     t2r = None
-    cell = T2R_CELLS.get((brk_dir, dow)) if brk_dir in ("up", "dn") else None
+    cell = rs.get("t2r_cells", T2R_CELLS).get((brk_dir, dow)) if brk_dir in ("up", "dn") else None
     if dow == 0:
         log.append("T2R out: Monday")
     elif brk_i is None or brk_dir == "both":
@@ -208,7 +229,7 @@ def run_session(bars, prev_close, rs):
 
     # ---------- T2X setup ----------
     t2x = None
-    xcell = T2X_CELLS.get((brk_dir, dow)) if brk_dir in ("up", "dn") else None
+    xcell = rs.get("t2x_cells", T2X_CELLS).get((brk_dir, dow)) if brk_dir in ("up", "dn") else None
     if brk_i is None or brk_dir == "both":
         log.append("T2X out: no clean break")
     elif xcell is None:
@@ -244,7 +265,7 @@ def run_session(bars, prev_close, rs):
                     t1.entry, t1.fill_i = px, i
         # T2R limit, placed after the break bar closes
         if t2r and t2r.fill_i < 0 and brk_i < i and b.hm < 1400:
-            if t1 and status_at(t1, i) == "win":
+            if realtime and rs.get("rule1", True) and t1 and status_at(t1, i) == "win":
                 log.append(f"T2R out: Rule 1 (T1 won) at {b.hm}")
                 t2r = None
             else:
@@ -260,7 +281,9 @@ def run_session(bars, prev_close, rs):
             if t2x_armed:
                 s1, s2 = status_at(t1, i), status_at(t2r, i)
                 veto = None
-                if s1 == "loss":
+                if not realtime:
+                    pass
+                elif s1 == "loss":
                     veto = "Rule 3 (T1 lost)"
                 elif s1 == "out" and s2 == "out":
                     veto = "Rule 6 (T1 & T2R out)"
@@ -278,7 +301,9 @@ def run_session(bars, prev_close, rs):
                         t2x.entry, t2x.fill_i = px, i
                         if s2 == "out":
                             t2x.note = "Rule 5: T2R unfilled (reduced confidence)"
-            elif i > brk_i and ((brk_dir == "up" and b.c < ibh) or (brk_dir == "dn" and b.c > ibl)):
+            elif i > brk_i and (
+                    (brk_dir == "up" and (b.l if rs.get("t2x_arm") == "touch" else b.c) < ibh) or
+                    (brk_dir == "dn" and (b.h if rs.get("t2x_arm") == "touch" else b.c) > ibl)):
                 t2x_armed = True
         # Manage open positions
         for t in (t1, t2r, t2x):
@@ -292,6 +317,15 @@ def run_session(bars, prev_close, rs):
             trades[t.setup] = t
         elif t and t.fill_i < 0:
             log.append(f"{t.setup} out: no fill")
+    if not realtime:  # session-level gates using end-of-session outcomes
+        o1 = next(("win" if t.pnl > 0 else "loss" for k, t in trades.items() if k.startswith("T1")), "out")
+        o2 = "out" if "T2R" not in trades else ("win" if trades["T2R"].pnl > 0 else "loss")
+        if rs.get("rule1", True) and o1 == "win" and "T2R" in trades:
+            del trades["T2R"]
+            log.append("T2R out: Rule 1 (T1 won, hindsight)")
+        if "T2X" in trades and (o1 == "loss" or (o1 == "out" and o2 == "out") or (dow == 0 and o1 == "out")):
+            del trades["T2X"]
+            log.append("T2X out: Rule 3/6/7 (hindsight)")
     return info, trades, log
 
 

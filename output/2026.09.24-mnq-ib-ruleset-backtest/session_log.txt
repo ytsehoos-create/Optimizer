@@ -1620,3 +1620,792 @@ ALL  n=196 WR= 58.2% PF= 2.13 P&L=$ 23041.12  maxDD(daily)=$1090.62
   2026-09-22 Tue IB=224.2(0.72%) IB2=hi z=11.8 gap=0.06% brk=up@1030 | T1-Z1:win+224(2x) $+224
       T2R out: large IB 0.72%
       T2X out: large IB 0.72%
+
+===== v2i =====  sessions=249
+T1   n=129 WR= 63.6% PF= 1.52 P&L=$  5741.77
+T2R  n= 55 WR= 36.4% PF= 2.88 P&L=$ 18346.87
+T2X  n= 29 WR= 58.6% PF= 5.11 P&L=$ 12075.62
+ALL  n=213 WR= 55.9% PF= 2.52 P&L=$ 36164.27  maxDD(daily)=$1644.33
+  2025-09-23 Tue IB=80.2(0.31%) IB2=lo z=29.6 gap=0.01% brk=dn@1205 | T2R:loss-289(18x) $-289
+      T1 out: zone 30%
+      T2X out: no fill
+  2025-09-24 Wed IB=114.2(0.44%) IB2=lo z=29.1 gap=0.21% brk=dn@1110 | - $+0
+      T1 out: zone 29%
+      T2R out: dn inactive Wed
+      T2X out: no fill
+  2025-09-25 Thu IB=219.8(0.86%) IB2=hi z=10.0 gap=0.63% brk=up@1040 | T1-Z1:win+220(2x) $+220
+      T2X out: up inactive Thu
+      T2R out: no fill
+  2025-09-26 Fri IB=213.2(0.83%) IB2=lo z=23.1 gap=0.09% brk=up@1440 | T1-Z1:loss-188(2x) $-188
+      T2R out: no fill
+      T2X out: no fill
+  2025-09-29 Mon IB=126.8(0.49%) IB2=hi z=14.0 gap=0.49% brk=dn@1135 | T1-Z1:loss-228(3x) $-228
+      T2R out: Monday
+      T2X out: dn inactive Mon
+  2025-09-30 Tue IB=108.2(0.42%) IB2=lo z=56.4 gap=0.06% brk=up@1045 | T1-Z3a:win+378(4x) T2X:loss-260(4x) $+118
+      T2R out: no fill
+  2025-10-01 Wed IB=167.0(0.64%) IB2=hi z=5.4 gap=0.52% brk=up@1030 | T2R:loss-267(8x) $-267
+      T1-Z1 out: no fill
+      T2X out: no fill
+  2025-10-02 Thu IB=154.8(0.59%) IB2=lo z=39.9 gap=0.59% brk=dn@1100 | - $+0
+      T1 out: zone 40%
+      T2X out: dn inactive Thu
+      T2R out: no fill
+  2025-10-03 Fri IB=120.0(0.46%) IB2=lo z=32.7 gap=0.1% brk=dn@1300 | - $+0
+      T1 out: zone 33%
+      T2R out: dn inactive Fri
+      T2X out: no fill
+  2025-10-06 Mon IB=104.8(0.4%) IB2=lo z=24.8 gap=0.84% brk=dn@1040 | T1-Z1:win+262(5x) $+262
+      T2R out: Monday
+      T2X out: dn inactive Mon
+  2025-10-07 Tue IB=58.0(0.22%) IB2=lo z=9.9 gap=0.2% brk=dn@1035 | T1-Z1:win+232(10x) $+232
+      T2R out: filter B ext 0.37x
+      T2X out: no fill
+  2025-10-08 Wed IB=157.8(0.6%) IB2=hi z=9.2 gap=0.13% brk=up@1125 | T1-Z1:win+237(3x) T2R:loss-284(9x) $-47
+      T2X out: no fill
+  2025-10-09 Thu IB=89.5(0.34%) IB2=lo z=7.3 gap=0.0% brk=dn@1030 | T1-Z1:win+215(6x) $+215
+      T2R out: filter B ext 0.22x
+      T2X out: dn inactive Thu
+  2025-10-10 Fri IB=94.2(0.36%) IB2=hi z=56.5 gap=0.07% brk=dn@1055 | T1-Z3a:win+410(5x) $+410
+      T2R out: dn inactive Fri
+      T2X out: no fill
+  2025-10-13 Mon IB=189.2(0.73%) IB2=hi z=- gap=1.66% brk=up@1215 | - $+0
+      T1 out: gap 1.66%
+      T2R out: Monday
+      T2X out: no fill
+  2025-10-14 Tue IB=301.8(1.17%) IB2=hi z=1.1 gap=1.09% brk=up@1030 | - $+0
+      T2R out: large IB 1.17%
+      T2X out: large IB 1.17%
+      T1-Z1 out: no fill
+  2025-10-15 Wed IB=220.8(0.84%) IB2=hi z=7.5 gap=0.95% brk=dn@1150 | T1-Z1:loss-265(2x) $-265
+      T2R out: dn inactive Wed
+      T2X out: no fill
+  2025-10-16 Thu IB=112.0(0.43%) IB2=lo z=60.7 gap=0.46% brk=up@1035 | T1-Z3a:win+264(3x) T2R:loss-291(13x) $-27
+      T2X out: up inactive Thu
+  2025-10-17 Fri IB=288.5(1.11%) IB2=hi z=18.0 gap=0.37% brk=up@1230 | T1-Z1:loss-173(1x) $-173
+      T2R out: no fill
+      T2X out: no fill
+  2025-10-20 Mon IB=168.8(0.64%) IB2=hi z=1.2 gap=0.5% brk=up@1030 | - $+0
+      T2R out: Monday
+      T1-Z1 out: no fill
+      T2X out: no fill
+  2025-10-21 Tue IB=99.8(0.38%) IB2=lo z=16.3 gap=0.0% brk=dn@1030 | T1-Z1:loss-299(6x) $-299
+      T2X out: Rule 3 (T1 lost) at 1040
+      T2R out: no fill
+  2025-10-22 Wed IB=173.0(0.66%) IB2=lo z=5.1 gap=0.1% brk=dn@1030 | T1-Z1:win+208(3x) $+208
+      T2R out: dn inactive Wed
+      T2X out: no fill
+  2025-10-23 Thu IB=181.0(0.69%) IB2=hi z=18.1 gap=0.09% brk=up@1035 | T1-Z1:win+181(2x) T2R:loss-290(8x) $-109
+      T2X out: up inactive Thu
+  2025-10-24 Fri IB=120.5(0.45%) IB2=hi z=42.1 gap=0.81% brk=up@1220 | T2R:win+1157(12x) $+1157
+      T1 out: zone 42%
+      T2X out: no fill
+  2025-10-27 Mon IB=80.5(0.3%) IB2=hi z=10.2 gap=1.16% brk=up@1030 | T1-Z1:win+242(6x) T2X:win+652(9x) $+894
+      T2R out: Monday
+  2025-10-28 Tue IB=65.0(0.24%) IB2=lo z=25.8 gap=0.34% brk=dn@1030 | T2R:win+1794(23x) T2X:win+930(11x) $+2724
+      T1 out: zone 26%
+  2025-10-29 Wed IB=72.2(0.26%) IB2=hi z=39.8 gap=0.39% brk=dn@1050 | - $+0
+      T1 out: zone 40%
+      T2R out: dn inactive Wed
+      T2X out: no fill
+  2025-10-30 Thu IB=238.0(0.88%) IB2=hi z=66.9 gap=0.57% brk=dn@1515 | T1-Z3a:win+158(1x) $+158
+      T2X out: dn inactive Thu
+      T2R out: no fill
+  2025-10-31 Fri IB=141.8(0.52%) IB2=lo z=34.4 gap=1.22% brk=dn@1155 | - $+0
+      T1 out: zone 34%
+      T2R out: dn inactive Fri
+      T2X out: no fill
+  2025-11-03 Mon IB=231.8(0.86%) IB2=lo z=4.3 gap=0.9% brk=dn@1030 | T1-Z1:loss-232(2x) $-232
+      T2R out: Monday
+      T2X out: dn inactive Mon
+  2025-11-04 Tue IB=230.8(0.86%) IB2=hi z=- gap=1.36% brk=dn@1215 | - $+0
+      T1 out: gap 1.36%
+      T2R out: large IB 0.86%
+      T2X out: large IB 0.86%
+  2025-11-05 Wed IB=230.2(0.86%) IB2=hi z=12.8 gap=0.14% brk=up@1040 | T1-Z1:win+230(2x) T2R:loss-276(6x) $-46
+      T2X out: Rule 6 (T1 & T2R out) at 1110
+  2025-11-06 Thu IB=280.5(1.06%) IB2=lo z=36.4 gap=0.25% brk=dn@1035 | - $+0
+      T1 out: zone 36%
+      T2R out: large IB 1.06%
+      T2X out: dn inactive Thu
+  2025-11-07 Fri IB=229.8(0.88%) IB2=lo z=38.2 gap=0.57% brk=dn@1040 | - $+0
+      T1 out: zone 38%
+      T2R out: dn inactive Fri
+      T2X out: no fill
+  2025-11-10 Mon IB=142.5(0.53%) IB2=hi z=- gap=1.43% brk=dn@1055 | - $+0
+      T1 out: gap 1.43%
+      T2R out: Monday
+      T2X out: dn inactive Mon
+  2025-11-11 Tue IB=113.0(0.42%) IB2=lo z=11.5 gap=0.4% brk=dn@1030 | T1-Z1:loss-282(5x) T2X:win+881(6x) $+599
+      T2R out: filter B ext 0.24x
+  2025-11-12 Wed IB=219.0(0.82%) IB2=lo z=23.5 gap=0.49% brk=dn@1035 | T1-Z1:win+208(2x) $+208
+      T2R out: dn inactive Wed
+      T2X out: no fill
+  2025-11-13 Thu IB=220.8(0.84%) IB2=lo z=46.9 gap=0.56% brk=dn@1045 | - $+0
+      T1 out: zone 47%
+      T2R out: filter B ext 0.24x
+      T2X out: dn inactive Thu
+  2025-11-14 Fri IB=402.2(1.54%) IB2=hi z=- gap=1.44% brk=up@1035 | - $+0
+      T1 out: gap 1.44%
+      T2R out: large IB 1.54%
+      T2X out: large IB 1.54%
+  2025-11-17 Mon IB=299.5(1.14%) IB2=hi z=39.1 gap=0.41% brk=dn@1115 | - $+0
+      T1 out: zone 39%
+      T2R out: Monday
+      T2X out: dn inactive Mon
+  2025-11-18 Tue IB=402.0(1.57%) IB2=lo z=28.8 gap=0.65% brk=dn@1100 | - $+0
+      T1 out: zone 29%
+      T2R out: large IB 1.57%
+      T2X out: large IB 1.57%
+  2025-11-19 Wed IB=415.2(1.6%) IB2=hi z=8.0 gap=0.1% brk=dn@1230 | T1-Z1:loss-249(1x) $-249
+      T2R out: dn inactive Wed
+      T2X out: large IB 1.60%
+  2025-11-20 Thu IB=155.2(0.59%) IB2=hi z=- gap=1.89% brk=up@1035 | - $+0
+      T1 out: gap 1.89%
+      T2X out: up inactive Thu
+      T2R out: no fill
+  2025-11-21 Fri IB=271.2(1.08%) IB2=lo z=7.0 gap=0.26% brk=dn@1030 | T1-Z1:win+217(2x) T2X:loss-271(5x) $-54
+      T2R out: dn inactive Fri
+  2025-11-24 Mon IB=256.0(0.99%) IB2=hi z=11.9 gap=0.82% brk=up@1035 | - $+0
+      T2R out: Monday
+      T1-Z1 out: no fill
+      T2X out: no fill
+  2025-11-25 Tue IB=280.0(1.08%) IB2=lo z=64.1 gap=0.3% brk=up@1120 | T1-Z3a:win+201(1x) $+201
+      T2R out: large IB 1.08%
+      T2X out: large IB 1.08%
+  2025-11-26 Wed IB=146.8(0.56%) IB2=lo z=38.3 gap=0.55% brk=up@1100 | T2R:loss-294(10x) $-294
+      T1 out: zone 38%
+      T2X out: no fill
+  2025-12-01 Mon IB=180.8(0.69%) IB2=hi z=36.5 gap=0.16% brk=up@1050 | - $+0
+      T1 out: zone 37%
+      T2R out: Monday
+      T2X out: Rule 6 (T1 & T2R out) at 1110
+  2025-12-02 Tue IB=183.0(0.69%) IB2=hi z=44.4 gap=0.34% brk=up@1050 | - $+0
+      T1 out: zone 44%
+      T2X out: Rule 6 (T1 & T2R out) at 1105
+      T2R out: no fill
+  2025-12-03 Wed IB=144.2(0.54%) IB2=hi z=31.7 gap=0.39% brk=up@1030 | T2R:win+1298(10x) T2X:win+288(2x) $+1587
+      T1 out: zone 32%
+  2025-12-04 Thu IB=193.2(0.73%) IB2=lo z=36.2 gap=0.2% brk=dn@1105 | - $+0
+      T1 out: zone 36%
+      T2X out: dn inactive Thu
+      T2R out: no fill
+  2025-12-05 Fri IB=207.2(0.77%) IB2=hi z=14.8 gap=0.2% brk=dn@1130 | T1-Z1:loss-249(2x) $-249
+      T2R out: dn inactive Fri
+      T2X out: Rule 3 (T1 lost) at 1155
+  2025-12-08 Mon IB=204.0(0.76%) IB2=lo z=21.7 gap=0.24% brk=dn@1055 | T1-Z1:win+174(2x) $+174
+      T2R out: Monday
+      T2X out: dn inactive Mon
+  2025-12-09 Tue IB=110.0(0.41%) IB2=hi z=11.8 gap=0.19% brk=up@1040 | T1-Z1:win+220(4x) T2R:loss-286(13x) $-66
+      T2X out: no fill
+  2025-12-10 Wed IB=106.0(0.4%) IB2=hi z=35.1 gap=0.21% brk=dn@1040 | - $+0
+      T1 out: zone 35%
+      T2R out: dn inactive Wed
+      T2X out: Rule 6 (T1 & T2R out) at 1050
+  2025-12-11 Thu IB=259.5(0.97%) IB2=lo z=80.4 gap=0.59% brk=up@1335 | - $+0
+      T1 out: zone 80%
+      T2R out: large IB 0.97%
+      T2X out: up inactive Thu
+  2025-12-12 Fri IB=305.5(1.16%) IB2=lo z=1.6 gap=0.58% brk=dn@1030 | T1-Z1:win+122(1x) $+122
+      T2R out: dn inactive Fri
+      T2X out: no fill
+  2025-12-15 Mon IB=375.5(1.44%) IB2=lo z=8.9 gap=0.75% brk=none | T1-Z1:loss-188(1x) $-188
+      T2R out: Monday
+      T2X out: no clean break
+  2025-12-16 Tue IB=232.5(0.89%) IB2=lo z=28.2 gap=0.38% brk=dn@1300 | - $+0
+      T1 out: zone 28%
+      T2R out: large IB 0.89%
+      T2X out: large IB 0.89%
+  2025-12-17 Wed IB=204.0(0.78%) IB2=lo z=35.9 gap=0.19% brk=dn@1035 | - $+0
+      T1 out: zone 36%
+      T2R out: dn inactive Wed
+      T2X out: no fill
+  2025-12-18 Thu IB=177.2(0.68%) IB2=hi z=- gap=1.51% brk=up@1030 | T2R:win+2694(8x) $+2694
+      T1 out: gap 1.51%
+      T2X out: up inactive Thu
+  2025-12-19 Fri IB=244.8(0.93%) IB2=hi z=37.6 gap=0.42% brk=none | - $+0
+      T1 out: zone 38%
+      T2R out: no clean break
+      T2X out: no clean break
+  2025-12-22 Mon IB=124.0(0.47%) IB2=lo z=13.3 gap=0.76% brk=dn@1030 | T1-Z1:win+198(4x) $+198
+      T2R out: Monday
+      T2X out: dn inactive Mon
+  2025-12-23 Tue IB=124.0(0.47%) IB2=lo z=37.3 gap=0.17% brk=up@1125 | - $+0
+      T1 out: zone 37%
+      T2R out: no fill
+      T2X out: no fill
+  2025-12-26 Fri IB=100.8(0.38%) IB2=lo z=48.4 gap=0.33% brk=none | - $+0
+      T1 out: zone 48%
+      T2R out: no clean break
+      T2X out: no clean break
+  2025-12-29 Mon IB=157.2(0.59%) IB2=lo z=53.1 gap=0.6% brk=dn@1225 | T1-Z3a:loss-265(3x) $-265
+      T2R out: Monday
+      T2X out: dn inactive Mon
+  2025-12-30 Tue IB=101.2(0.38%) IB2=hi z=76.3 gap=0.18% brk=up@1120 | - $+0
+      T1 out: zone 76%
+      T2X out: Rule 6 (T1 & T2R out) at 1135
+      T2R out: no fill
+  2025-12-31 Wed IB=124.0(0.47%) IB2=lo z=27.4 gap=0.0% brk=dn@1050 | - $+0
+      T1 out: zone 27%
+      T2R out: dn inactive Wed
+      T2X out: no fill
+  2026-01-02 Fri IB=346.2(1.32%) IB2=lo z=9.4 gap=0.88% brk=dn@1050 | T1-Z1:win+138(1x) $+138
+      T2R out: dn inactive Fri
+      T2X out: no fill
+  2026-01-05 Mon IB=145.5(0.55%) IB2=hi z=7.4 gap=0.98% brk=up@1030 | T1-Z1:win+218(3x) T2X:loss-219(5x) $-1
+      T2R out: Monday
+  2026-01-06 Tue IB=170.0(0.64%) IB2=hi z=3.8 gap=0.19% brk=up@1235 | T1-Z1:loss-204(2x) $-204
+      T2R out: no fill
+      T2X out: no fill
+  2026-01-07 Wed IB=109.2(0.41%) IB2=hi z=12.8 gap=0.09% brk=up@1030 | T1-Z1:loss-262(4x) T2R:win+1278(13x) $+1016
+      T2X out: Rule 3 (T1 lost) at 1040
+  2026-01-08 Thu IB=233.2(0.88%) IB2=lo z=54.7 gap=0.18% brk=none | T1-Z3a:loss-277(2x) $-277
+      T2R out: no clean break
+      T2X out: no clean break
+  2026-01-09 Fri IB=245.0(0.92%) IB2=hi z=2.8 gap=0.12% brk=up@1030 | T1-Z1:win+245(2x) T2R:loss-294(6x) $-49
+      T2X out: no fill
+  2026-01-12 Mon IB=189.5(0.71%) IB2=hi z=6.1 gap=0.7% brk=up@1110 | T1-Z1:win+190(2x) $+190
+      T2R out: Monday
+      T2X out: no fill
+  2026-01-13 Tue IB=231.2(0.87%) IB2=lo z=13.3 gap=0.01% brk=dn@1045 | T1-Z1:win+185(2x) $+185
+      T2R out: large IB 0.87%
+      T2X out: large IB 0.87%
+  2026-01-14 Wed IB=258.2(0.98%) IB2=lo z=31.0 gap=0.61% brk=dn@1045 | - $+0
+      T1 out: zone 31%
+      T2R out: dn inactive Wed
+      T2X out: no fill
+  2026-01-15 Thu IB=117.0(0.44%) IB2=lo z=21.8 gap=1.09% brk=dn@1045 | T1-Z1:loss-267(5x) T2R:win+1264(12x) $+997
+      T2X out: dn inactive Thu
+  2026-01-16 Fri IB=228.5(0.86%) IB2=lo z=2.7 gap=0.56% brk=dn@1030 | T1-Z1:win+183(2x) $+183
+      T2R out: dn inactive Fri
+      T2X out: no fill
+  2026-01-20 Tue IB=136.5(0.52%) IB2=hi z=- gap=1.67% brk=up@1030 | T2R:win+1365(10x) T2X:win+532(3x) $+1897
+      T1 out: gap 1.67%
+  2026-01-21 Wed IB=258.8(0.99%) IB2=hi z=3.0 gap=0.21% brk=up@1030 | T1-Z1:loss-155(1x) T2R:loss-259(5x) T2X:loss-207(1x) $-621
+  2026-01-22 Thu IB=197.5(0.75%) IB2=lo z=29.2 gap=0.98% brk=none | - $+0
+      T1 out: zone 29%
+      T2R out: no clean break
+      T2X out: no clean break
+  2026-01-23 Fri IB=202.2(0.76%) IB2=hi z=9.3 gap=0.21% brk=up@1030 | T1-Z1:win+202(2x) T2R:loss-283(7x) $-81
+      T2X out: no fill
+  2026-01-26 Mon IB=182.5(0.68%) IB2=hi z=22.3 gap=0.05% brk=up@1050 | T1-Z1:win+182(2x) T2X:eod-119(4x) $+64
+      T2R out: Monday
+  2026-01-27 Tue IB=160.2(0.6%) IB2=hi z=21.8 gap=0.52% brk=up@1035 | T1-Z1:win+240(3x) $+240
+      T2R out: no fill
+      T2X out: no fill
+  2026-01-28 Wed IB=98.0(0.36%) IB2=lo z=13.8 gap=0.66% brk=dn@1030 | T1-Z1:win+235(6x) $+235
+      T2R out: dn inactive Wed
+      T2X out: no fill
+  2026-01-29 Thu IB=459.0(1.73%) IB2=lo z=3.8 gap=0.06% brk=dn@1030 | T1-Z1:loss-230(1x) $-230
+      T2R out: large IB 1.73%
+      T2X out: dn inactive Thu
+  2026-01-30 Fri IB=148.8(0.56%) IB2=lo z=2.5 gap=0.59% brk=dn@1030 | T1-Z1:loss-298(4x) $-298
+      T2R out: dn inactive Fri
+      T2X out: Rule 3 (T1 lost) at 1040
+  2026-02-02 Mon IB=372.0(1.39%) IB2=hi z=12.6 gap=0.5% brk=up@1200 | T1-Z1:win+186(1x) $+186
+      T2R out: Monday
+      T2X out: no fill
+  2026-02-03 Tue IB=482.2(1.83%) IB2=lo z=15.9 gap=0.29% brk=dn@1150 | T1-Z1:win+193(1x) $+193
+      T2R out: large IB 1.83%
+      T2X out: large IB 1.83%
+  2026-02-04 Wed IB=278.8(1.07%) IB2=lo z=50.4 gap=0.23% brk=dn@1100 | T1-Z3a:loss-283(2x) $-283
+      T2R out: dn inactive Wed
+      T2X out: no fill
+  2026-02-05 Thu IB=410.5(1.62%) IB2=lo z=6.6 gap=0.88% brk=dn@1110 | T1-Z1:win+164(1x) $+164
+      T2R out: large IB 1.62%
+      T2X out: dn inactive Thu
+  2026-02-06 Fri IB=283.5(1.1%) IB2=hi z=28.2 gap=0.47% brk=up@1105 | T2R:loss-283(5x) $-283
+      T1 out: zone 28%
+      T2X out: no fill
+  2026-02-09 Mon IB=298.8(1.15%) IB2=hi z=24.0 gap=0.34% brk=up@1035 | - $+0
+      T2R out: Monday
+      T1-Z1 out: no fill
+      T2X out: no fill
+  2026-02-10 Tue IB=195.8(0.75%) IB2=hi z=23.6 gap=0.15% brk=dn@1510 | T1-Z1:loss-235(2x) $-235
+      T2R out: large IB 0.75%
+      T2X out: large IB 0.75%
+  2026-02-11 Wed IB=407.5(1.57%) IB2=lo z=4.6 gap=0.77% brk=none | T1-Z1:loss-204(1x) $-204
+      T2R out: no clean break
+      T2X out: no clean break
+  2026-02-12 Thu IB=223.8(0.86%) IB2=lo z=28.2 gap=0.26% brk=dn@1035 | - $+0
+      T1 out: zone 28%
+      T2R out: filter B ext 0.20x
+      T2X out: dn inactive Thu
+  2026-02-13 Fri IB=292.0(1.14%) IB2=hi z=7.6 gap=0.08% brk=up@1030 | T1-Z1:win+146(1x) $+146
+      T2R out: filter B ext 0.20x
+      T2X out: no fill
+  2026-02-17 Tue IB=354.2(1.4%) IB2=lo z=18.6 gap=0.56% brk=dn@1030 | T1-Z1:win+142(1x) $+142
+      T2R out: large IB 1.40%
+      T2X out: large IB 1.40%
+  2026-02-18 Wed IB=322.8(1.25%) IB2=hi z=5.3 gap=0.13% brk=up@1040 | T1-Z1:loss-194(1x) $-194
+      T2R out: no fill
+      T2X out: no fill
+  2026-02-19 Thu IB=188.0(0.73%) IB2=hi z=48.9 gap=0.48% brk=up@1115 | - $+0
+      T1 out: zone 49%
+      T2X out: up inactive Thu
+      T2R out: no fill
+  2026-02-20 Fri IB=405.2(1.57%) IB2=hi z=26.8 gap=0.58% brk=up@1045 | - $+0
+      T1 out: zone 27%
+      T2R out: large IB 1.57%
+      T2X out: large IB 1.57%
+  2026-02-23 Mon IB=200.5(0.78%) IB2=lo z=15.5 gap=0.36% brk=dn@1035 | T1-Z1:win+160(2x) $+160
+      T2R out: Monday
+      T2X out: dn inactive Mon
+  2026-02-24 Tue IB=320.5(1.24%) IB2=hi z=0.8 gap=0.14% brk=up@1030 | - $+0
+      T2R out: large IB 1.24%
+      T2X out: large IB 1.24%
+      T1-Z1 out: no fill
+  2026-02-25 Wed IB=204.2(0.78%) IB2=hi z=13.1 gap=0.51% brk=up@1400 | T1-Z1:win+204(2x) $+204
+      T2R out: no fill
+      T2X out: no fill
+  2026-02-26 Thu IB=457.0(1.78%) IB2=lo z=10.6 gap=0.16% brk=dn@1030 | T1-Z1:loss-228(1x) $-228
+      T2R out: large IB 1.78%
+      T2X out: dn inactive Thu
+  2026-02-27 Fri IB=217.8(0.84%) IB2=hi z=12.3 gap=1.03% brk=up@1040 | T1-Z1:win+218(2x) T2R:win+1045(6x) $+1263
+      T2X out: no fill
+  2026-03-02 Mon IB=342.5(1.33%) IB2=hi z=- gap=1.37% brk=up@1045 | - $+0
+      T1 out: gap 1.37%
+      T2R out: Monday
+      T2X out: Rule 6 (T1 & T2R out) at 1055
+  2026-03-03 Tue IB=310.2(1.23%) IB2=lo z=- gap=1.89% brk=up@1145 | - $+0
+      T1 out: gap 1.89%
+      T2R out: large IB 1.23%
+      T2X out: large IB 1.23%
+  2026-03-04 Wed IB=328.5(1.27%) IB2=hi z=0.8 gap=0.38% brk=up@1030 | T1-Z1:win+164(1x) T2R:eod+702(4x) $+866
+      T2X out: Rule 6 (T1 & T2R out) at 1040
+  2026-03-05 Thu IB=223.0(0.86%) IB2=hi z=87.9 gap=0.51% brk=dn@1030 | - $+0
+      T1 out: zone 88%
+      T2R out: filter B ext 0.25x
+      T2X out: dn inactive Thu
+  2026-03-06 Fri IB=217.0(0.85%) IB2=hi z=- gap=1.4% brk=up@1030 | T2R:loss-260(6x) $-260
+      T1 out: gap 1.40%
+      T2X out: no fill
+  2026-03-09 Mon IB=212.8(0.84%) IB2=lo z=41.6 gap=0.92% brk=up@1040 | - $+0
+      T1 out: zone 42%
+      T2R out: Monday
+      T2X out: no fill
+  2026-03-10 Tue IB=188.5(0.73%) IB2=lo z=58.9 gap=0.0% brk=up@1035 | T1-Z3a:win+310(2x) $+310
+      T2R out: large IB 0.73%
+      T2X out: large IB 0.73%
+  2026-03-11 Wed IB=201.2(0.78%) IB2=lo z=24.3 gap=0.19% brk=dn@1030 | T1-Z1:win+196(2x) T2X:win+1972(7x) $+2168
+      T2R out: dn inactive Wed
+  2026-03-12 Thu IB=218.0(0.86%) IB2=lo z=0.2 gap=0.81% brk=dn@1030 | T1-Z1:loss-218(2x) T2R:win+1177(6x) $+959
+      T2X out: dn inactive Thu
+  2026-03-13 Fri IB=194.0(0.76%) IB2=hi z=67.4 gap=0.35% brk=dn@1040 | T1-Z3a:win+126(1x) $+126
+      T2R out: dn inactive Fri
+      T2X out: no fill
+  2026-03-16 Mon IB=142.8(0.56%) IB2=hi z=33.8 gap=1.02% brk=dn@1050 | - $+0
+      T1 out: zone 34%
+      T2R out: Monday
+      T2X out: dn inactive Mon
+  2026-03-17 Tue IB=150.2(0.59%) IB2=hi z=34.6 gap=0.46% brk=dn@1135 | - $+0
+      T1 out: zone 35%
+      T2X out: Rule 6 (T1 & T2R out) at 1215
+      T2R out: no fill
+  2026-03-18 Wed IB=187.8(0.74%) IB2=lo z=5.6 gap=0.32% brk=dn@1300 | T1-Z1:loss-282(3x) $-282
+      T2R out: dn inactive Wed
+      T2X out: no fill
+  2026-03-19 Thu IB=221.8(0.89%) IB2=hi z=53.4 gap=0.89% brk=up@1105 | T1-Z3a:loss-252(2x) $-252
+      T2X out: up inactive Thu
+      T2R out: no fill
+  2026-03-20 Fri IB=250.2(1.01%) IB2=lo z=12.1 gap=0.34% brk=dn@1050 | T1-Z1:win+200(2x) T2X:win+1877(5x) $+2077
+      T2R out: dn inactive Fri
+  2026-03-23 Mon IB=257.5(1.02%) IB2=hi z=- gap=1.54% brk=dn@1150 | - $+0
+      T1 out: gap 1.54%
+      T2R out: Monday
+      T2X out: dn inactive Mon
+  2026-03-24 Tue IB=182.2(0.74%) IB2=lo z=37.9 gap=0.57% brk=up@1050 | - $+0
+      T1 out: zone 38%
+      T2R out: large IB 0.74%
+      T2X out: large IB 0.74%
+  2026-03-25 Wed IB=197.5(0.79%) IB2=lo z=76.8 gap=0.85% brk=dn@1115 | - $+0
+      T1 out: zone 77%
+      T2R out: dn inactive Wed
+      T2X out: Rule 6 (T1 & T2R out) at 1125
+  2026-03-26 Thu IB=175.2(0.71%) IB2=hi z=39.7 gap=0.87% brk=dn@1055 | T2R:loss-280(8x) $-280
+      T1 out: zone 40%
+      T2X out: dn inactive Thu
+  2026-03-27 Fri IB=220.2(0.92%) IB2=lo z=15.1 gap=0.55% brk=dn@1045 | T1-Z1:win+176(2x) T2X:loss-264(6x) $-88
+      T2R out: dn inactive Fri
+  2026-03-30 Mon IB=245.0(1.02%) IB2=lo z=13.1 gap=0.84% brk=dn@1035 | T1-Z1:win+196(2x) $+196
+      T2R out: Monday
+      T2X out: dn inactive Mon
+  2026-03-31 Tue IB=202.2(0.84%) IB2=hi z=6.8 gap=1.03% brk=up@1030 | T1-Z1:loss-243(2x) $-243
+      T2R out: large IB 0.84%
+      T2X out: large IB 0.84%
+  2026-04-01 Wed IB=166.8(0.67%) IB2=hi z=13.6 gap=0.73% brk=up@1030 | T1-Z1:win+167(2x) T2R:win+1201(8x) T2X:win+334(2x) $+1701
+  2026-04-02 Thu IB=328.0(1.34%) IB2=hi z=- gap=1.76% brk=up@1030 | - $+0
+      T1 out: gap 1.76%
+      T2R out: large IB 1.34%
+      T2X out: up inactive Thu
+  2026-04-06 Mon IB=207.8(0.83%) IB2=hi z=42.1 gap=0.18% brk=dn@1310 | - $+0
+      T1 out: zone 42%
+      T2R out: Monday
+      T2X out: dn inactive Mon
+  2026-04-07 Tue IB=309.2(1.25%) IB2=lo z=36.7 gap=0.48% brk=dn@1100 | - $+0
+      T1 out: zone 37%
+      T2R out: large IB 1.25%
+      T2X out: large IB 1.25%
+  2026-04-08 Wed IB=209.2(0.82%) IB2=lo z=- gap=3.33% brk=dn@1030 | - $+0
+      T1 out: gap 3.33%
+      T2R out: dn inactive Wed
+      T2X out: Rule 6 (T1 & T2R out) at 1250
+  2026-04-09 Thu IB=149.0(0.58%) IB2=lo z=12.6 gap=0.01% brk=dn@1030 | T1-Z1:loss-298(4x) $-298
+      T2X out: dn inactive Thu
+      T2R out: no fill
+  2026-04-10 Fri IB=103.2(0.4%) IB2=lo z=70.2 gap=0.26% brk=up@1030 | T1-Z3a:win+184(3x) T2R:win+1156(14x) T2X:loss-299(29x) $+1041
+  2026-04-13 Mon IB=173.0(0.67%) IB2=hi z=21.4 gap=0.26% brk=up@1050 | T1-Z1:win+173(2x) T2X:win+623(4x) $+796
+      T2R out: Monday
+  2026-04-14 Tue IB=150.8(0.57%) IB2=hi z=2.2 gap=0.45% brk=up@1030 | T1-Z1:win+226(3x) T2R:loss-271(9x) T2X:win+588(3x) $+543
+  2026-04-15 Wed IB=152.2(0.57%) IB2=hi z=1.1 gap=0.08% brk=up@1030 | T2R:loss-274(9x) T2X:win+304(2x) $+30
+      T1-Z1 out: no fill
+  2026-04-16 Thu IB=177.8(0.66%) IB2=lo z=42.9 gap=0.28% brk=up@1105 | T2R:loss-284(8x) $-284
+      T1 out: zone 43%
+      T2X out: up inactive Thu
+  2026-04-17 Fri IB=146.2(0.54%) IB2=hi z=24.6 gap=0.77% brk=up@1030 | T1-Z1:win+219(3x) T2R:loss-292(10x) $-73
+      T2X out: no fill
+  2026-04-20 Mon IB=110.0(0.4%) IB2=lo z=12.7 gap=0.11% brk=dn@1030 | T1-Z1:win+220(5x) $+220
+      T2R out: Monday
+      T2X out: dn inactive Mon
+  2026-04-21 Tue IB=158.8(0.58%) IB2=hi z=27.4 gap=0.23% brk=dn@1100 | - $+0
+      T1 out: zone 27%
+      T2R out: filter B ext 0.35x
+      T2X out: Rule 6 (T1 & T2R out) at 1115
+  2026-04-22 Wed IB=184.0(0.67%) IB2=hi z=1.1 gap=0.88% brk=up@1030 | T1-Z1:win+184(2x) T2R:loss-294(8x) T2X:win+368(2x) $+258
+  2026-04-23 Thu IB=138.5(0.5%) IB2=hi z=62.5 gap=0.23% brk=up@1055 | T1-Z3a:loss-208(2x) T2R:win+2631(10x) $+2424
+      T2X out: up inactive Thu
+  2026-04-24 Fri IB=137.5(0.49%) IB2=hi z=48.0 gap=1.03% brk=up@1045 | T2R:loss-275(10x) $-275
+      T1 out: zone 48%
+      T2X out: no fill
+  2026-04-27 Mon IB=131.8(0.47%) IB2=lo z=46.7 gap=0.08% brk=up@1330 | - $+0
+      T1 out: zone 47%
+      T2R out: Monday
+      T2X out: no fill
+  2026-04-28 Tue IB=181.5(0.65%) IB2=hi z=45.3 gap=1.01% brk=dn@1035 | T2R:win+1742(8x) $+1742
+      T1 out: zone 45%
+      T2X out: no fill
+  2026-04-29 Wed IB=152.8(0.55%) IB2=hi z=5.2 gap=0.13% brk=up@1030 | T1-Z1:win+229(3x) T2R:win+1237(9x) T2X:loss-244(2x) $+1222
+  2026-04-30 Thu IB=327.8(1.18%) IB2=lo z=20.0 gap=0.54% brk=up@1330 | T1-Z1:loss-164(1x) $-164
+      T2R out: large IB 1.18%
+      T2X out: up inactive Thu
+  2026-05-01 Fri IB=293.2(1.03%) IB2=hi z=12.7 gap=0.19% brk=up@1145 | T1-Z1:win+147(1x) $+147
+      T2R out: no fill
+      T2X out: no fill
+  2026-05-04 Mon IB=105.0(0.37%) IB2=hi z=40.0 gap=0.06% brk=up@1035 | - $+0
+      T1 out: zone 40%
+      T2R out: Monday
+      T2X out: Rule 6 (T1 & T2R out) at 1100
+  2026-05-05 Tue IB=164.5(0.57%) IB2=hi z=9.4 gap=0.73% brk=up@1035 | T1-Z1:win+247(3x) T2X:eod+285(3x) $+532
+      T2R out: no fill
+  2026-05-06 Wed IB=169.5(0.58%) IB2=hi z=51.9 gap=0.89% brk=up@1040 | T1-Z3a:loss-274(3x) T2R:loss-271(8x) $-545
+      T2X out: no fill
+  2026-05-07 Thu IB=189.5(0.64%) IB2=hi z=12.7 gap=0.14% brk=up@1035 | T1-Z1:loss-227(2x) $-227
+      T2X out: up inactive Thu
+      T2R out: no fill
+  2026-05-08 Fri IB=302.8(1.02%) IB2=hi z=18.2 gap=0.66% brk=up@1055 | T1-Z1:win+151(1x) T2R:loss-242(4x) $-91
+      T2X out: no fill
+  2026-05-11 Mon IB=158.0(0.53%) IB2=lo z=4.3 gap=0.12% brk=dn@1030 | T1-Z1:loss-237(3x) $-237
+      T2R out: Monday
+      T2X out: dn inactive Mon
+  2026-05-12 Tue IB=214.8(0.72%) IB2=lo z=2.1 gap=0.72% brk=dn@1030 | T1-Z1:win+172(2x) $+172
+      T2R out: large IB 0.72%
+      T2X out: large IB 0.72%
+  2026-05-13 Wed IB=214.0(0.72%) IB2=lo z=75.6 gap=0.38% brk=up@1050 | T2R:loss-300(7x) $-300
+      T1 out: zone 76%
+      T2X out: no fill
+  2026-05-14 Thu IB=230.8(0.76%) IB2=hi z=26.8 gap=0.0% brk=up@1040 | T2R:eod+948(6x) $+948
+      T1 out: zone 27%
+      T2X out: up inactive Thu
+  2026-05-15 Fri IB=293.0(0.98%) IB2=hi z=- gap=1.35% brk=up@1320 | T2R:loss-293(5x) $-293
+      T1 out: gap 1.35%
+      T2X out: no fill
+  2026-05-18 Mon IB=238.8(0.8%) IB2=lo z=14.8 gap=0.36% brk=dn@1030 | T1-Z1:win+191(2x) $+191
+      T2R out: Monday
+      T2X out: dn inactive Mon
+  2026-05-19 Tue IB=405.0(1.38%) IB2=lo z=12.2 gap=0.84% brk=up@1305 | T1-Z1:loss-202(1x) $-202
+      T2R out: large IB 1.38%
+      T2X out: large IB 1.38%
+  2026-05-20 Wed IB=225.5(0.76%) IB2=hi z=10.6 gap=0.51% brk=up@1030 | T1-Z1:win+226(2x) T2R:loss-271(6x) T2X:win+226(1x) $+180
+  2026-05-21 Thu IB=211.5(0.71%) IB2=lo z=29.8 gap=0.59% brk=up@1310 | - $+0
+      T1 out: zone 30%
+      T2R out: filter B ext 0.20x
+      T2X out: up inactive Thu
+  2026-05-22 Fri IB=228.0(0.76%) IB2=lo z=32.5 gap=0.45% brk=up@1325 | - $+0
+      T1 out: zone 32%
+      T2R out: no fill
+      T2X out: no fill
+  2026-05-26 Tue IB=257.5(0.84%) IB2=hi z=6.6 gap=1.16% brk=up@1030 | T1-Z1:loss-154(1x) $-154
+      T2R out: large IB 0.84%
+      T2X out: large IB 0.84%
+  2026-05-27 Wed IB=303.8(1.0%) IB2=lo z=9.2 gap=0.35% brk=dn@1030 | T1-Z1:win+122(1x) T2X:loss-243(4x) $-122
+      T2R out: dn inactive Wed
+  2026-05-28 Thu IB=265.0(0.86%) IB2=hi z=14.3 gap=0.02% brk=up@1055 | T1-Z1:win+132(1x) T2R:loss-265(5x) $-132
+      T2X out: up inactive Thu
+  2026-05-29 Fri IB=189.8(0.61%) IB2=lo z=31.8 gap=0.25% brk=dn@1040 | - $+0
+      T1 out: zone 32%
+      T2R out: dn inactive Fri
+      T2X out: Rule 6 (T1 & T2R out) at 1115
+  2026-06-01 Mon IB=172.2(0.56%) IB2=lo z=50.2 gap=0.18% brk=up@1115 | T1-Z3a:win+514(3x) $+514
+      T2R out: Monday
+      T2X out: no fill
+  2026-06-02 Tue IB=223.5(0.72%) IB2=hi z=39.0 gap=0.05% brk=up@1100 | - $+0
+      T1 out: zone 39%
+      T2R out: large IB 0.72%
+      T2X out: large IB 0.72%
+  2026-06-03 Wed IB=312.2(1.0%) IB2=lo z=72.8 gap=0.15% brk=none | T1-Z3a:loss-298(1x) $-298
+      T2R out: no clean break
+      T2X out: no clean break
+  2026-06-04 Thu IB=212.2(0.69%) IB2=lo z=89.0 gap=1.18% brk=up@1100 | T2R:loss-297(7x) $-297
+      T1 out: zone 89%
+      T2X out: up inactive Thu
+  2026-06-05 Fri IB=342.8(1.13%) IB2=lo z=- gap=1.45% brk=dn@1110 | - $+0
+      T1 out: gap 1.45%
+      T2R out: dn inactive Fri
+      T2X out: no fill
+  2026-06-08 Mon IB=253.2(0.84%) IB2=lo z=- gap=1.72% brk=up@1035 | - $+0
+      T1 out: gap 1.72%
+      T2R out: Monday
+      T2X out: no fill
+  2026-06-09 Tue IB=486.8(1.62%) IB2=lo z=17.2 gap=0.95% brk=dn@1040 | T1-Z1:win+195(1x) $+195
+      T2R out: large IB 1.62%
+      T2X out: large IB 1.62%
+  2026-06-10 Wed IB=460.0(1.55%) IB2=hi z=13.1 gap=0.89% brk=up@1030 | T1-Z1:win+230(1x) $+230
+      T2R out: large IB 1.55%
+      T2X out: large IB 1.55%
+  2026-06-11 Thu IB=397.8(1.35%) IB2=hi z=44.8 gap=0.77% brk=dn@1055 | - $+0
+      T1 out: zone 45%
+      T2R out: large IB 1.35%
+      T2X out: dn inactive Thu
+  2026-06-12 Fri IB=396.2(1.32%) IB2=hi z=29.1 gap=0.13% brk=up@1055 | T2R:loss-238(3x) T2X:win+4715(7x) $+4478
+      T1 out: zone 29%
+  2026-06-15 Mon IB=198.2(0.64%) IB2=hi z=- gap=2.28% brk=up@1100 | - $+0
+      T1 out: gap 2.28%
+      T2R out: Monday
+      T2X out: no fill
+  2026-06-16 Tue IB=217.0(0.7%) IB2=lo z=4.3 gap=0.2% brk=dn@1030 | - $+0
+      T2R out: large IB 0.70%
+      T2X out: large IB 0.70%
+      T1-Z1 out: no fill
+  2026-06-17 Wed IB=225.0(0.73%) IB2=hi z=15.8 gap=0.71% brk=dn@1045 | T1-Z1:loss-270(2x) $-270
+      T2R out: dn inactive Wed
+      T2X out: Rule 3 (T1 lost) at 1115
+  2026-06-18 Thu IB=251.0(0.81%) IB2=hi z=- gap=1.98% brk=up@1045 | T2R:loss-251(5x) $-251
+      T1 out: gap 1.98%
+      T2X out: up inactive Thu
+  2026-06-22 Mon IB=223.8(0.72%) IB2=lo z=6.0 gap=0.42% brk=dn@1030 | - $+0
+      T2R out: Monday
+      T2X out: dn inactive Mon
+      T1-Z1 out: no fill
+  2026-06-23 Tue IB=430.2(1.42%) IB2=hi z=- gap=3.02% brk=dn@1445 | - $+0
+      T1 out: gap 3.02%
+      T2R out: large IB 1.42%
+      T2X out: large IB 1.42%
+  2026-06-24 Wed IB=318.2(1.06%) IB2=lo z=56.8 gap=0.2% brk=up@1045 | T1-Z3a:win+275(1x) T2R:win+1146(4x) T2X:loss-255(1x) $+1166
+  2026-06-25 Thu IB=902.0(3.02%) IB2=lo z=- gap=2.14% brk=none | - $+0
+      T1 out: gap 2.14%
+      T2R out: no clean break
+      T2X out: no clean break
+  2026-06-26 Fri IB=482.2(1.61%) IB2=hi z=- gap=1.29% brk=up@1135 | - $+0
+      T1 out: gap 1.29%
+      T2R out: large IB 1.61%
+      T2X out: large IB 1.61%
+  2026-06-29 Mon IB=564.5(1.89%) IB2=lo z=48.1 gap=1.1% brk=up@1155 | - $+0
+      T1 out: zone 48%
+      T2R out: Monday
+      T2X out: large IB 1.89%
+  2026-06-30 Tue IB=393.2(1.28%) IB2=hi z=4.5 gap=0.0% brk=up@1030 | T1-Z1:win+197(1x) $+197
+      T2R out: large IB 1.28%
+      T2X out: large IB 1.28%
+  2026-07-01 Wed IB=240.0(0.78%) IB2=hi z=17.8 gap=0.9% brk=up@1120 | T1-Z1:loss-288(2x) $-288
+      T2X out: Rule 3 (T1 lost) at 1140
+      T2R out: no fill
+  2026-07-02 Thu IB=382.8(1.27%) IB2=lo z=6.4 gap=0.02% brk=dn@1030 | T1-Z1:win+153(1x) $+153
+      T2R out: large IB 1.27%
+      T2X out: dn inactive Thu
+  2026-07-06 Mon IB=266.2(0.88%) IB2=hi z=11.3 gap=1.0% brk=up@1030 | T1-Z1:win+133(1x) $+133
+      T2R out: Monday
+      T2X out: Rule 6 (T1 & T2R out) at 1040
+  2026-07-07 Tue IB=426.8(1.44%) IB2=lo z=10.3 gap=1.18% brk=dn@1035 | T1-Z1:win+171(1x) $+171
+      T2R out: large IB 1.44%
+      T2X out: large IB 1.44%
+  2026-07-08 Wed IB=197.2(0.67%) IB2=hi z=54.1 gap=0.65% brk=dn@1045 | T1-Z3a:win+362(2x) T2X:loss-276(7x) $+86
+      T2R out: dn inactive Wed
+  2026-07-09 Thu IB=316.8(1.05%) IB2=lo z=47.3 gap=0.97% brk=up@1305 | - $+0
+      T1 out: zone 47%
+      T2R out: large IB 1.05%
+      T2X out: up inactive Thu
+  2026-07-10 Fri IB=172.0(0.57%) IB2=hi z=35.6 gap=0.37% brk=dn@1030 | - $+0
+      T1 out: zone 36%
+      T2R out: dn inactive Fri
+      T2X out: Rule 6 (T1 & T2R out) at 1040
+  2026-07-13 Mon IB=244.0(0.81%) IB2=lo z=85.3 gap=1.08% brk=up@1100 | - $+0
+      T1 out: zone 85%
+      T2R out: Monday
+      T2X out: Rule 6 (T1 & T2R out) at 1110
+  2026-07-14 Tue IB=247.8(0.83%) IB2=lo z=47.1 gap=1.15% brk=up@1100 | - $+0
+      T1 out: zone 47%
+      T2R out: large IB 0.83%
+      T2X out: large IB 0.83%
+  2026-07-15 Wed IB=340.2(1.13%) IB2=lo z=25.1 gap=0.56% brk=dn@1035 | - $+0
+      T1 out: zone 25%
+      T2R out: dn inactive Wed
+      T2X out: no fill
+  2026-07-16 Thu IB=274.2(0.92%) IB2=lo z=82.0 gap=0.78% brk=dn@1340 | - $+0
+      T1 out: zone 82%
+      T2R out: large IB 0.92%
+      T2X out: dn inactive Thu
+  2026-07-17 Fri IB=479.2(1.65%) IB2=hi z=- gap=2.07% brk=up@1035 | - $+0
+      T1 out: gap 2.07%
+      T2R out: large IB 1.65%
+      T2X out: large IB 1.65%
+  2026-07-20 Mon IB=285.0(0.97%) IB2=lo z=43.2 gap=0.96% brk=dn@1050 | - $+0
+      T1 out: zone 43%
+      T2R out: Monday
+      T2X out: dn inactive Mon
+  2026-07-21 Tue IB=183.8(0.62%) IB2=lo z=- gap=1.5% brk=up@1045 | T2R:loss-294(8x) $-294
+      T1 out: gap 1.50%
+      T2X out: Rule 6 (T1 & T2R out) at 1100
+  2026-07-22 Wed IB=194.5(0.66%) IB2=hi z=33.4 gap=0.74% brk=up@1105 | T2R:win+1225(7x) $+1225
+      T1 out: zone 33%
+      T2X out: no fill
+  2026-07-23 Thu IB=227.8(0.78%) IB2=hi z=- gap=1.5% brk=dn@1030 | T2R:loss-273(6x) $-273
+      T1 out: gap 1.50%
+      T2X out: dn inactive Thu
+  2026-07-24 Fri IB=323.2(1.13%) IB2=lo z=28.7 gap=0.26% brk=dn@1035 | - $+0
+      T1 out: zone 29%
+      T2R out: dn inactive Fri
+      T2X out: Rule 6 (T1 & T2R out) at 1055
+  2026-07-27 Mon IB=541.5(1.91%) IB2=lo z=2.0 gap=1.08% brk=dn@1030 | T1-Z1:win+217(1x) $+217
+      T2R out: Monday
+      T2X out: dn inactive Mon
+  2026-07-28 Tue IB=389.8(1.39%) IB2=lo z=26.4 gap=0.85% brk=up@1125 | - $+0
+      T1 out: zone 26%
+      T2R out: large IB 1.39%
+      T2X out: large IB 1.39%
+  2026-07-29 Wed IB=458.5(1.65%) IB2=lo z=7.4 gap=0.02% brk=dn@1040 | T1-Z1:win+183(1x) $+183
+      T2R out: dn inactive Wed
+      T2X out: large IB 1.65%
+  2026-07-30 Thu IB=426.8(1.5%) IB2=hi z=- gap=1.96% brk=up@1030 | - $+0
+      T1 out: gap 1.96%
+      T2R out: large IB 1.50%
+      T2X out: up inactive Thu
+  2026-07-31 Fri IB=646.0(2.26%) IB2=lo z=26.5 gap=1.21% brk=none | - $+0
+      T1 out: zone 26%
+      T2R out: no clean break
+      T2X out: no clean break
+  2026-08-03 Mon IB=371.8(1.28%) IB2=hi z=1.7 gap=0.05% brk=up@1030 | - $+0
+      T2R out: Monday
+      T1-Z1 out: no fill
+      T2X out: no fill
+  2026-08-04 Tue IB=356.2(1.19%) IB2=hi z=1.5 gap=1.14% brk=up@1030 | - $+0
+      T2R out: large IB 1.19%
+      T2X out: large IB 1.19%
+      T1-Z1 out: no fill
+  2026-08-05 Wed IB=172.2(0.57%) IB2=lo z=8.3 gap=0.33% brk=dn@1030 | - $+0
+      T2R out: dn inactive Wed
+      T1-Z1 out: no fill
+      T2X out: no fill
+  2026-08-06 Thu IB=425.5(1.42%) IB2=hi z=18.7 gap=0.91% brk=up@1100 | T1-Z1:win+213(1x) $+213
+      T2R out: large IB 1.42%
+      T2X out: up inactive Thu
+  2026-08-07 Fri IB=257.5(0.86%) IB2=lo z=76.4 gap=0.73% brk=up@1125 | - $+0
+      T1 out: zone 76%
+      T2X out: Rule 6 (T1 & T2R out) at 1230
+      T2R out: no fill
+  2026-08-10 Mon IB=181.0(0.6%) IB2=hi z=23.3 gap=0.09% brk=none | T1-Z1:loss-217(2x) $-217
+      T2R out: Monday
+      T2X out: no clean break
+  2026-08-11 Tue IB=206.8(0.69%) IB2=lo z=68.6 gap=0.32% brk=dn@1225 | T1-Z3a:loss-180(1x) T2R:loss-289(7x) $-470
+      T2X out: no fill
+  2026-08-12 Wed IB=153.2(0.51%) IB2=lo z=44.5 gap=1.19% brk=dn@1030 | - $+0
+      T1 out: zone 45%
+      T2R out: dn inactive Wed
+      T2X out: Rule 6 (T1 & T2R out) at 1040
+  2026-08-13 Thu IB=375.0(1.23%) IB2=hi z=1.1 gap=0.19% brk=up@1030 | T1-Z1:win+188(1x) $+188
+      T2R out: large IB 1.23%
+      T2X out: up inactive Thu
+  2026-08-14 Fri IB=146.5(0.48%) IB2=lo z=17.2 gap=0.15% brk=dn@1030 | T1-Z1:win+234(4x) $+234
+      T2R out: dn inactive Fri
+      T2X out: no fill
+  2026-08-17 Mon IB=109.2(0.36%) IB2=lo z=37.1 gap=0.24% brk=up@1100 | - $+0
+      T1 out: zone 37%
+      T2R out: Monday
+      T2X out: Rule 6 (T1 & T2R out) at 1130
+  2026-08-18 Tue IB=201.8(0.67%) IB2=lo z=- gap=1.32% brk=dn@1050 | T2R:win+1695(7x) T2X:eod+316(3x) $+2010
+      T1 out: gap 1.32%
+  2026-08-19 Wed IB=366.2(1.23%) IB2=lo z=29.2 gap=0.37% brk=none | - $+0
+      T1 out: zone 29%
+      T2R out: no clean break
+      T2X out: no clean break
+  2026-08-20 Thu IB=165.8(0.56%) IB2=lo z=27.6 gap=0.57% brk=dn@1125 | T2R:win+1343(9x) $+1343
+      T1 out: zone 28%
+      T2X out: dn inactive Thu
+  2026-08-21 Fri IB=252.2(0.85%) IB2=lo z=23.4 gap=0.55% brk=up@1150 | T1-Z1:loss-217(2x) $-217
+      T2R out: no fill
+      T2X out: no fill
+  2026-08-24 Mon IB=296.0(1.01%) IB2=lo z=21.6 gap=0.54% brk=none | T1-Z1:loss-275(2x) $-275
+      T2R out: Monday
+      T2X out: no clean break
+  2026-08-25 Tue IB=206.8(0.7%) IB2=lo z=2.8 gap=0.67% brk=dn@1030 | T1-Z1:win+165(2x) $+165
+      T2R out: large IB 0.70%
+      T2X out: large IB 0.70%
+  2026-08-26 Wed IB=177.0(0.6%) IB2=lo z=12.6 gap=0.32% brk=up@1500 | T1-Z1:loss-266(3x) $-266
+      T2R out: filter B ext 0.20x
+      T2X out: no fill
+  2026-08-27 Thu IB=198.2(0.66%) IB2=hi z=7.7 gap=0.77% brk=up@1105 | T1-Z1:win+198(2x) $+198
+      T2X out: up inactive Thu
+      T2R out: no fill
+  2026-08-28 Fri IB=202.0(0.67%) IB2=lo z=73.4 gap=0.21% brk=up@1035 | T1-Z3a:win+108(1x) T2R:loss-283(7x) T2X:loss-283(14x) $-458
+  2026-08-31 Mon IB=163.0(0.55%) IB2=lo z=12.7 gap=0.19% brk=up@1550 | T1-Z1:loss-244(3x) $-244
+      T2R out: Monday
+      T2X out: no fill
+  2026-09-01 Tue IB=139.0(0.47%) IB2=hi z=- gap=1.32% brk=up@1030 | - $+0
+      T1 out: gap 1.32%
+      T2R out: filter B ext 0.24x
+      T2X out: Rule 6 (T1 & T2R out) at 1230
+  2026-09-02 Wed IB=176.8(0.6%) IB2=hi z=3.7 gap=0.1% brk=up@1030 | T1-Z1:win+177(2x) T2X:eod+125(2x) $+302
+      T2R out: no fill
+  2026-09-03 Thu IB=176.0(0.59%) IB2=hi z=18.2 gap=0.2% brk=up@1100 | T1-Z1:loss-211(2x) $-211
+      T2R out: filter B ext 0.36x
+      T2X out: up inactive Thu
+  2026-09-04 Fri IB=138.2(0.46%) IB2=hi z=69.6 gap=0.19% brk=dn@1040 | T1-Z3a:win+168(2x) $+168
+      T2R out: dn inactive Fri
+      T2X out: no fill
+  2026-09-08 Tue IB=262.2(0.88%) IB2=lo z=35.1 gap=0.26% brk=none | - $+0
+      T1 out: zone 35%
+      T2R out: no clean break
+      T2X out: no clean break
+  2026-09-09 Wed IB=177.0(0.59%) IB2=hi z=33.2 gap=0.29% brk=dn@1110 | - $+0
+      T1 out: zone 33%
+      T2R out: dn inactive Wed
+      T2X out: no fill
+  2026-09-10 Thu IB=205.2(0.7%) IB2=hi z=27.9 gap=1.23% brk=up@1035 | - $+0
+      T1 out: zone 28%
+      T2X out: up inactive Thu
+      T2R out: no fill
+  2026-09-11 Fri IB=127.8(0.43%) IB2=hi z=18.8 gap=0.95% brk=dn@1045 | T1-Z1:loss-230(3x) $-230
+      T2R out: dn inactive Fri
+      T2X out: Rule 3 (T1 lost) at 1105
+  2026-09-14 Mon IB=208.0(0.71%) IB2=hi z=- gap=1.62% brk=up@1125 | - $+0
+      T1 out: gap 1.62%
+      T2R out: Monday
+      T2X out: no fill
+  2026-09-15 Tue IB=150.5(0.51%) IB2=lo z=15.9 gap=0.08% brk=dn@1030 | T1-Z1:win+181(3x) T2R:loss-271(9x) $-90
+      T2X out: no fill
+  2026-09-16 Wed IB=109.8(0.37%) IB2=hi z=28.2 gap=0.46% brk=up@1055 | T2R:loss-285(13x) $-285
+      T1 out: zone 28%
+      T2X out: no fill
+  2026-09-17 Thu IB=135.5(0.46%) IB2=hi z=- gap=1.59% brk=up@1035 | - $+0
+      T1 out: gap 1.59%
+      T2X out: up inactive Thu
+      T2R out: no fill
+  2026-09-18 Fri IB=151.2(0.51%) IB2=lo z=23.3 gap=0.24% brk=dn@1220 | T1-Z1:loss-201(3x) $-201
+      T2R out: dn inactive Fri
+      T2X out: no fill
+  2026-09-21 Mon IB=303.2(0.99%) IB2=hi z=0.6 gap=1.02% brk=up@1030 | - $+0
+      T2R out: Monday
+      T1-Z1 out: no fill
+      T2X out: no fill
+  2026-09-22 Tue IB=224.2(0.72%) IB2=hi z=11.8 gap=0.06% brk=up@1030 | T1-Z1:win+224(2x) $+224
+      T2R out: large IB 0.72%
+      T2X out: large IB 0.72%
