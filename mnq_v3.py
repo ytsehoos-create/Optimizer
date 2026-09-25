@@ -120,12 +120,13 @@ def simulate(S: Session, P: dict):
         zone = dist / R * 100
         info["zone"] = zone
         if zone <= P["z1_max"]:
+            Z = {**P, **P.get("z1_by_dow", {}).get(dow, {})}   # optional per-weekday level overrides
             if S.ib2 == "hi":
-                pos["T1"] = _mk("T1-Z1", +1, ibh - P["z1_long_e"] * R, ibh - P["z1_long_s"] * R,
-                                ibh - P["z1_long_t"] * R)
+                pos["T1"] = _mk("T1-Z1", +1, ibh - Z["z1_long_e"] * R, ibh - Z["z1_long_s"] * R,
+                                ibh - Z["z1_long_t"] * R)
             else:
-                pos["T1"] = _mk("T1-Z1", -1, ibl + P["z1_short_e"] * R, ibl + P["z1_short_s"] * R,
-                                ibl + P["z1_short_t"] * R)
+                pos["T1"] = _mk("T1-Z1", -1, ibl + Z["z1_short_e"] * R, ibl + Z["z1_short_s"] * R,
+                                ibl + Z["z1_short_t"] * R)
         elif P["z3a"] and P["z3a_lo"] <= zone <= P["z3a_hi"]:
             side = -1 if S.ib2 == "hi" else +1
             stop = ibh - P["z3a_s"] * R if S.ib2 == "hi" else ibl + P["z3a_s"] * R
