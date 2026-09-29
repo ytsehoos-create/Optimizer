@@ -46,6 +46,7 @@ class Session:
     ib2: str | None
     c1030: float
     gap: float
+    atr: float = float("nan")   # 14-session RTH ATR from prior days only
 
 
 def load_sessions(path="data/mnq_5m_rth_12mo.csv"):
@@ -54,6 +55,9 @@ def load_sessions(path="data/mnq_5m_rth_12mo.csv"):
     raw["date"] = dt.dt.strftime("%Y-%m-%d")
     raw["hm"] = dt.dt.hour * 100 + dt.dt.minute
     rth = raw[(raw.hm >= 930) & (raw.hm < 1600)]
+    D = rth.groupby("date").agg(h=("high", "max"), l=("low", "min"), c=("close", "last"))
+    tr = np.maximum(D.h - D.l, np.maximum((D.h - D.c.shift()).abs(), (D.l - D.c.shift()).abs()))
+    atr = tr.rolling(14).mean().shift(1)
     out, prev_close = [], None
     for d, g in rth.groupby("date"):
         if len(g) != 78:          # holiday half-days
@@ -68,7 +72,7 @@ def load_sessions(path="data/mnq_5m_rth_12mo.csv"):
         if gap is not None:
             out.append(Session(d, pd.Timestamp(d).dayofweek, o, h, l, c,
                                g["RTH VWAP"].to_numpy(float), hm, i0, ibh, ibl,
-                               ibh - ibl, ib2, c[i0 - 1], gap))
+                               ibh - ibl, ib2, c[i0 - 1], gap, float(atr.get(d, np.nan))))
         prev_close = c[-1]
     return out
 
@@ -142,6 +146,10 @@ def simulate(S: Session, P: dict):
 
     def try_fill(p, i, gate=None):
         o, h, l = S.o[i], S.h[i], S.l[i]
+        cap = P.get("atr_used_max")
+        if gate is None and cap and p.setup in ("T2R", "T2X") and S.atr == S.atr:
+            if (S.h[:i].max() - S.l[:i].min()) / S.atr >= cap:   # range before this bar
+                gate = f"session range >= {cap} ATR"
         px = (min(o, p.entry) if l <= p.entry else None) if p.side > 0 else \
              (max(o, p.entry) if h >= p.entry else None)
         if px is None:
