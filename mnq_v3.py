@@ -180,7 +180,8 @@ def simulate(S: Session, P: dict):
             if hm >= P["t2r_cutoff"]:
                 t2r.state, t2r.why = "cancelled", "cutoff"
             else:
-                gate = "R1 (T1 won)" if P["r1"] and t1 and t1.won() else None
+                gate = ("R1 (T1 won)" if P["r1"] and t1 and t1.won()
+                        and t1.setup in P.get("r1_zones", ("T1-Z1", "T1-Z3a")) else None)
                 try_fill(t2r, i, gate)
         t2x = pos.get("T2X")
         if t2x and t2x.state == "pending" and t2x_armed:
@@ -192,6 +193,8 @@ def simulate(S: Session, P: dict):
                 gate = None
                 if P["r3"] and t1 and t1.lost():
                     gate = "R3 (T1 lost)"
+                elif t1 and t1.won() and t1.setup in P.get("t2x_cancel_after_win", ()):
+                    gate = "R2z (Zone 3a won)"
                 elif P["r6"] and not t1_in and not t2r_in:
                     gate = "R6 (T1 & T2R out)"
                 elif P["r7"] and dow == 0 and not t1_in:
