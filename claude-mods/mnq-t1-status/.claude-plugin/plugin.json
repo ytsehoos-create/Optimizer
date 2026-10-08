@@ -1,0 +1,22 @@
+{
+  "name": "mnq-t1-status",
+  "version": "0.1.0",
+  "description": "Status line with today's MNQ v3 T1 setup: zone, entry/stop/target, lots and order state, refreshed every 5 minutes from TradingView bars.",
+  "userConfig": {
+    "riskCap": {
+      "type": "number",
+      "title": "Risk per trade ($)",
+      "description": "Dollar risk used to size lots: max(1, floor(risk / (stop points x $2))).",
+      "default": 200
+    },
+    "symbol": {
+      "type": "string",
+      "title": "TradingView symbol",
+      "description": "Symbol passed to the TradingView MCP for 5-minute bars.",
+      "default": "CME_MINI:MNQ1!"
+    }
+  },
+  "author": {
+    "name": "ytsehoos"
+  }
+}

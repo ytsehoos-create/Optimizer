@@ -1,0 +1,13 @@
+{
+  "name": "optimizer-mods",
+  "owner": {
+    "name": "ytsehoos"
+  },
+  "description": "Claude Code mods for the MNQ IB suite (v3).",
+  "plugins": [
+    {
+      "name": "mnq-t1-status",
+      "source": "./claude-mods/mnq-t1-status"
+    }
+  ]
+}
