@@ -175,6 +175,31 @@ def simulate(S: Session, P: dict):
         p.entry, p.state, p.fill_i = px, "open", i
 
     t2x_armed = False
+
+    def closer(p, lvl):
+        return min(p.target, lvl) if p.side > 0 else max(p.target, lvl)
+
+    def aligned_target(p, i, hm, t1, armed):
+        """Optional T2 handoff (P["align"]): while the other T2 order is live, an open
+        T2 trade takes profit at the other's entry if that is closer than its own target,
+        so one exits exactly where the other enters. "t2x": T2X only; "both": T2X and T2R."""
+        al = P.get("align")
+        if al == "t2x" or al == "both":
+            r = pos.get("T2R")
+            if p.setup == "T2X" and r is not None:
+                live = r.fill_i == i or (r.state == "pending" and hm < P["t2r_cutoff"] and not (
+                    P["r1"] and t1 and t1.won() and t1.setup in P.get("r1_zones", ("T1-Z1", "T1-Z3a"))))
+                if live:
+                    return closer(p, r.entry)
+            x = pos.get("T2X")
+            if al == "both" and p.setup == "T2R" and x is not None:
+                t1_in = t1 is not None and t1.state in ("open", "closed")
+                live = x.fill_i == i or (x.state == "pending" and armed and hm < P["t2x_cutoff"]
+                                         and not (P["r3"] and t1 and t1.lost())
+                                         and not (P["r7"] and dow == 0 and not t1_in))
+                if live:
+                    return closer(p, x.entry)
+        return p.target
     for i in range(i0, n):
         hm = S.hm[i]
         # 1. pending fills
@@ -218,11 +243,12 @@ def simulate(S: Session, P: dict):
             if p.state != "open" or i < p.fill_i:
                 continue
             h, l = S.h[i], S.l[i]
+            tgt = aligned_target(p, i, hm, t1, t2x_armed)
             if (p.side > 0 and l <= p.stop) or (p.side < 0 and h >= p.stop):
                 gp = S.o[i] if ((p.side > 0 and S.o[i] < p.stop) or (p.side < 0 and S.o[i] > p.stop)) else p.stop
                 p.state, p.exit_i, p.exit_px, p.why = "closed", i, gp, "stop"
-            elif i > p.fill_i and ((p.side > 0 and h >= p.target) or (p.side < 0 and l <= p.target)):
-                p.state, p.exit_i, p.exit_px, p.why = "closed", i, p.target, "target"
+            elif i > p.fill_i and ((p.side > 0 and h >= tgt) or (p.side < 0 and l <= tgt)):
+                p.state, p.exit_i, p.exit_px, p.why = "closed", i, tgt, "target"
             elif hm == 1555:
                 p.state, p.exit_i, p.exit_px, p.why = "closed", i, S.c[i], "eod"
         # 3. break bookkeeping
@@ -248,6 +274,15 @@ def simulate(S: Session, P: dict):
                     e, s_, t = c
                     pos["T2X"] = (_mk("T2X", +1, ibh - e * R, ibh - s_ * R, ibh + t * R) if brk == "up"
                                   else _mk("T2X", -1, ibl + e * R, ibl + s_ * R, ibl - t * R))
+            if P.get("align") == "levels" and brk != "both":
+                # permanent level change: each T2 target never runs past the other's entry level
+                cr, cx = P["t2r"].get((brk, dow), P["t2r"].get(brk)), P["t2x"].get((brk, dow), P["t2x"].get(brk))
+                r_on = cr and dow in P["t2r_days"][brk]
+                x_on = cx and dow in P["t2x_days"][brk]
+                if r_on and "T2X" in pos:
+                    pos["T2X"].target = closer(pos["T2X"], ibh + cr[0] * R if brk == "up" else ibl - cr[0] * R)
+                if x_on and "T2R" in pos:
+                    pos["T2R"].target = closer(pos["T2R"], ibh - cx[0] * R if brk == "up" else ibl + cx[0] * R)
             brk_i = i
         elif info["brk"] in ("up", "dn") and not info["dbl"] and ((info["brk"] == "up" and dn) or (info["brk"] == "dn" and up)):
             info["dbl"] = True
@@ -262,6 +297,10 @@ def simulate(S: Session, P: dict):
             if (info["brk"] == "up" and (S.l[i] if touch else S.c[i]) < ibh) or \
                (info["brk"] == "dn" and (S.h[i] if touch else S.c[i]) > ibl):
                 t2x_armed = True
+                r = pos.get("T2R")
+                if P.get("align") == "t2x_fixed" and r is not None and r.state == "pending" and hm < P["t2r_cutoff"] \
+                        and not (P["r1"] and pos.get("T1") and pos["T1"].won()):
+                    pos["T2X"].target = closer(pos["T2X"], r.entry)   # set once, when the T2X order is placed
     for p in pos.values():
         if p.state == "open":   # safety
             p.state, p.exit_i, p.exit_px, p.why = "closed", n - 1, S.c[-1], "eod"
