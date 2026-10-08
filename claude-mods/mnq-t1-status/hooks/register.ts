@@ -4,7 +4,7 @@ import { etParts, evaluate, parseBars, type T1Snapshot } from './t1'
 const TOOL = 'mcp__Trading_View__mcp-tv-get-ohlcv'
 const EVERY_MS = 5 * 60_000
 
-type Settings = { riskCap: number; symbol: string }
+type Settings = { riskCap: number; maxRisk: number; symbol: string }
 let latest: T1Snapshot | undefined
 
 // Fetches ~33h of 5-minute bars (prior close through now), evaluates today's T1
@@ -17,7 +17,7 @@ async function refresh($: EngineInterface, settings: Settings): Promise<T1Snapsh
   } else {
     const bars = parseBars(rec.text ?? rec.result)
     latest = bars.length
-      ? evaluate(bars, settings.riskCap)
+      ? evaluate(bars, settings.riskCap, settings.maxRisk)
       : { line: 'MNQ T1 · no bars from TradingView', detail: 'The TradingView answer held no bars.', state: 'waiting' }
   }
   $.ui.status(latest.line)
@@ -33,6 +33,7 @@ async function tick($: EngineInterface, settings: Settings): Promise<void> {
 export const register: Register = (on, options) => {
   const settings: Settings = {
     riskCap: typeof options.riskCap === 'number' && options.riskCap > 0 ? options.riskCap : 200,
+    maxRisk: typeof options.maxRisk === 'number' && options.maxRisk >= 0 ? options.maxRisk : 300,
     symbol: typeof options.symbol === 'string' && options.symbol ? options.symbol : 'CME_MINI:MNQ1!',
   }
 

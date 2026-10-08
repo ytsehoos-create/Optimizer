@@ -9,6 +9,12 @@
       "description": "Dollar risk used to size lots: max(1, floor(risk / (stop points x $2))).",
       "default": 200
     },
+    "maxRisk": {
+      "type": "number",
+      "title": "Skip above risk ($)",
+      "description": "Skip the day if the trade (even 1 lot) risks more than this; 0 turns the ceiling off.",
+      "default": 300
+    },
     "symbol": {
       "type": "string",
       "title": "TradingView symbol",

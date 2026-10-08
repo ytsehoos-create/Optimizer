@@ -84,8 +84,8 @@ export function parseBars(answer: unknown): Bar[] {
   return visit(answer, 0) ?? []
 }
 
-/** Evaluates today's T1 from bars (oldest first). `riskCap` in dollars. */
-export function evaluate(bars: readonly Bar[], riskCap: number): T1Snapshot {
+/** Evaluates today's T1 from bars (oldest first). `riskCap` sizes lots; a trade risking more than `maxRisk` (0 = off) is skipped. */
+export function evaluate(bars: readonly Bar[], riskCap: number, maxRisk = 300): T1Snapshot {
   const all: EtBar[] = bars.map(b => ({ ...b, ...etParts(b.t * 1000) }))
   const rth = all.filter(b => b.hm >= 930 && b.hm < 1600)
   const last = all[all.length - 1]
@@ -151,6 +151,8 @@ export function evaluate(bars: readonly Bar[], riskCap: number): T1Snapshot {
     return skip(`zone ${zone.toFixed(0)}%`)
   }
   const lots = Math.max(1, Math.floor(riskCap / (Math.abs(entry - stop) * PT_VALUE)))
+  const tradeRisk = lots * Math.abs(entry - stop) * PT_VALUE
+  if (maxRisk > 0 && tradeRisk > maxRisk) return skip(`${lots} lot risks $${Math.round(tradeRisk)} > $${Math.round(maxRisk)}`)
   const dir = side > 0 ? 'LONG' : 'SHORT'
   const levels = `${dir} ${lots} @${px(entry)} · S ${px(stop)} · T ${px(target)}`
   const head = `MNQ T1 ${kind} ${levels}`

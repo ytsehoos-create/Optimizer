@@ -40,6 +40,13 @@ describe('T1 evaluation on real MNQ days (matches the v3 backtest)', () => {
     expect(evaluate(toBars(sep18), 300).line).toContain('SHORT 3 @29724.25')
   })
 
+  test('risk ceiling: skips when the trade risks more than the ceiling', () => {
+    const snap = evaluate(toBars(sep22), 200, 100) // 1 lot risks $134.50
+    expect(snap.state).toBe('skip')
+    expect(snap.line).toContain('skip: 1 lot risks $135 > $100')
+    expect(evaluate(toBars(sep22), 200, 0).state).toBe('target') // 0 = off
+  })
+
   test('Eastern time across DST', () => {
     expect(etParts(Date.UTC(2026, 8, 22, 13, 30)).hm).toBe(930) // EDT
     expect(etParts(Date.UTC(2026, 11, 1, 14, 30)).hm).toBe(930) // EST

@@ -14,6 +14,9 @@
 //   Cancel    = unfilled order cancelled at 14:00 ET. One trade per day.
 //   Flatten   = any open position closed at the 15:55 bar close.
 //   Size      = max(1, floor(risk $ ÷ (stop distance pts × $/pt))).
+//   Ceiling   = optional: skip the day if even that size risks more than the
+//               ceiling (default $300; 1 contract can exceed the risk setting
+//               on wide-IB days). None of the 95 backtest trades exceeded $276.
 //
 // Automation (resting-order mode, matches the backtest's limit fills):
 //   Create ONE alert on this strategy: Condition = this strategy,
@@ -25,14 +28,19 @@
 //   JSON keys follow TradersPost's format. If your bridge differs, edit only
 //   the three f_msg* functions below.
 // ============================================================================
+// margin_long/short = 0: no cash-margin simulation. TradingView's default (100%)
+// requires the full contract value (~$60K per MNQ) in cash and silently rejects
+// every order; futures margin is far smaller and size is set by risk instead.
 strategy("MNQ v3 · T1 Zone 1", shorttitle = "T1-Z1", overlay = true, pyramiding = 0,
-     process_orders_on_close = true, initial_capital = 50000,
+     process_orders_on_close = true, initial_capital = 50000, margin_long = 0, margin_short = 0,
      commission_type = strategy.commission.cash_per_contract, commission_value = 0.62,
      slippage = 1, max_lines_count = 500, max_labels_count = 500)
 
 // ── Inputs ──────────────────────────────────────────────────────────────────
 G1 = "Risk"
 riskCap   = input.float(200, "Risk per trade ($)", minval = 1, group = G1)
+maxRisk   = input.float(300, "Skip if the trade risks more than ($, 0 = off)", minval = 0, group = G1,
+     tooltip = "1 contract can risk more than the risk setting on wide-IB days. Above this ceiling the day is skipped.")
 
 G2 = "Rules (v3 defaults)"
 gapMax    = input.float(1.0,  "Skip if gap ≥ (%)",               step = 0.05, group = G2)
@@ -56,6 +64,7 @@ dFri = input.bool(true, "Fri", inline = "d", group = G3)
 
 G4 = "Automation"
 sendAlerts = input.bool(true, "Send webhook alerts", group = G4)
+showLabels = input.bool(true, "Show a status label at 10:30 each day", group = G4)
 tickerOut  = input.string("MNQ1!", "Ticker sent to bridge", group = G4)
 
 // ── Session clock (America/New_York) ────────────────────────────────────────
@@ -165,9 +174,18 @@ if lastIBBar and not na(ibH)
         tgtPx   := math.round_to_mintick(tgtPx)
         riskPts = math.abs(entryPx - stopPx)
         qty := math.max(1, math.floor(riskCap / (riskPts * syminfo.pointvalue)))
-        pending := true
-        tradesAtArm := totalTrades
-        status := (side > 0 ? "LONG " : "SHORT ") + str.tostring(qty) + " @ " + f_px(entryPx)
+        tradeRisk = qty * riskPts * syminfo.pointvalue
+        if maxRisk > 0 and tradeRisk > maxRisk
+            status := "skip: " + str.tostring(qty) + " lot risks $" + str.tostring(tradeRisk, "#") + " > $" + str.tostring(maxRisk, "#")
+            side := 0
+        else
+            pending := true
+            tradesAtArm := totalTrades
+            status := (side > 0 ? "LONG " : "SHORT ") + str.tostring(qty) + " @ " + f_px(entryPx) +
+                 " · S " + f_px(stopPx) + " · T " + f_px(tgtPx) + " · risk $" + str.tostring(tradeRisk, "#")
+    if showLabels and dayOn
+        label.new(bar_index, high, "T1 Z1 · " + status, yloc = yloc.abovebar, style = label.style_label_down,
+             color = side != 0 ? color.new(color.blue, 20) : color.new(color.gray, 30), textcolor = color.white, size = size.small)
 
 // ── Manage the pending order (decisions at each bar close apply to the next bar)
 if pending and strategy.closedtrades + strategy.opentrades > tradesAtArm
