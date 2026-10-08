@@ -96,7 +96,7 @@ Other rules:
 
 **Sizing:** "Risk per trade" applies to every row unless the row sets its own risk.
 - To size up one cell, enter a dollar amount in that row's last box, e.g. $300 on the Wednesday break-up row.
-- The $300 ceiling still applies. At $200 the largest T2R risk was $200, because the stop is only 0.10–0.20R, so it's usually 4–9 lots.
+- The $300 ceiling still applies. At $200 the largest T2R risk was $200, because the stop is only 0.10–0.20R, so it's usually 4–6 lots (2–15 in the backtest).
 
 **Chart:** MNQ1! 5-minute, RTH or ETH, margin simulation off (same as the T1 scripts).
 
