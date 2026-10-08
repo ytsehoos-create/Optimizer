@@ -44,3 +44,26 @@
 - **TradingView's simulated fills and your broker's real fills can differ.** A touch fills a limit in the backtest, but not always at the broker. Reconcile them daily.
 - **Half-day sessions** (e.g. day after Thanksgiving, Christmas Eve) close before 14:00 or 15:55. Switch the strategy off or set the day toggles on those dates.
 - **The VWAP filter is evaluated by the script, not the broker.** It works by cancelling and re-placing the resting order, so the alert must stay active all session.
+
+## T1_Zone3a_v3.pine — T1 Zone 3a
+
+**What it trades:** at the 10:30 close, if that close sits 50–75% of the IB range away from IB2, it goes market toward IB1:
+- **Short** when IB2 is the high: stop IBH − 0.25R, target IBL.
+- **Long** when IB2 is the low: stop IBL + 0.25R, target IBH.
+
+Other rules:
+- Same gap filter (skip at 1.0% or more), sizing, $300 ceiling and 15:55 flatten as Zone 1.
+- No VWAP filter and no cutoff: it enters at 10:30 or not at all.
+- It never trades on the same day as Zone 1, because the two zones don't overlap.
+
+**Chart:** same as Zone 1: MNQ1! 5-minute, RTH or ETH, margin simulation off.
+
+**Reference results** (v3 engine, Sep 2025 – Sep 2026, $200 risk, net of costs): 21 trades, 61.9% win rate, PF 1.70, +$961, max drawdown $490. The largest risk on a single trade was $298, just under the ceiling.
+- The trade-by-trade list is in `output/2026.09.24-mnq-ib-v3/T1_Zone3a_expected_trades.csv`.
+- The script's logic, ported to Python, matched the engine on all 21 trades: direction, entry, stop, target, lots, exit reason and exit bar.
+
+**Automation:** one alert, "alert() function calls only", pointed at your bridge.
+- **Enter:** at 10:30, a market order with stop and target attached.
+- **Exit:** at 15:55, if still in the trade.
+
+**Running both T1 scripts:** add each to its own chart (or both to one) with its own alert. They can't conflict, because Zone 1 and Zone 3a never trade on the same day.
