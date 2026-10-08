@@ -31,6 +31,8 @@
 //   bridges whose cancel acts on the whole ticker.
 //
 //   Flatten everything at the 15:55 bar close. Size = max(1, floor(risk $ ÷ stop $)).
+//   Defaults: $200 per trade; Wednesday T2R breakout fades and Wednesday T2X
+//   breakout longs $300.
 //   Orders are processed from the bar after they are placed, as in the backtest.
 //
 // Automation: ONE alert, "alert() function calls only", Webhook URL = your
@@ -131,7 +133,7 @@ xuWedOn = input.bool(true,  "Wed", inline = "xuWed", group = GXU)
 xuWedE  = input.float(0.20, "", step = 0.05, inline = "xuWed", group = GXU)
 xuWedS  = input.float(0.60, "", step = 0.05, inline = "xuWed", group = GXU)
 xuWedT  = input.float(0.30, "", step = 0.05, inline = "xuWed", group = GXU)
-xuWedRk = input.float(0,    "", minval = 0, step = 25, inline = "xuWed", group = GXU)
+xuWedRk = input.float(300,  "", minval = 0, step = 25, inline = "xuWed", group = GXU)
 xuThuOn = input.bool(false, "Thu", inline = "xuThu", group = GXU)
 xuThuE  = input.float(0.20, "", step = 0.05, inline = "xuThu", group = GXU)
 xuThuS  = input.float(0.60, "", step = 0.05, inline = "xuThu", group = GXU)

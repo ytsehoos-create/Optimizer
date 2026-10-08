@@ -167,9 +167,9 @@ Other rules:
 - **Cancel** at 13:00 if unfilled, or if the setup never armed. A later break of the other side does not cancel it.
 - **Flatten** at the 15:55 bar close. One trade a day.
 
-**Sizing:** "Risk per trade" ($200) applies to every row unless the row sets its own risk in its last box. No T2X row is sized up by default.
+**Sizing:** "Risk per trade" ($200) applies to every row unless the row sets its own risk in its last box. **Wednesday breakout longs default to $300** (sized-up cell); every other row follows the base.
 - **Stop distances range from 0.10R to 0.40R** (stop minus entry), so lots vary a lot by row:
-  - Tue and Wed breakout longs (0.40R stop): mostly 1 lot.
+  - Tue breakout longs (0.40R stop): mostly 1 lot. Wed breakout longs, at $300: mostly 2 lots.
   - Wed breakdown shorts and Fri breakout longs (0.10R stop): 3–9 lots.
 - **The largest risk at $200 was $206** (1 lot), so the $300 ceiling never triggered.
 
@@ -177,12 +177,14 @@ Other rules:
 - **Why:** the arming bar often closes past the T2X entry (14 times in the backtest). The engine then fills at the next bar's open, and so does this script.
 - **The 15:55 flatten** still fills at that bar's close.
 
-**Reference results** (script logic with the backtest's fill rules, $200 risk, net of costs):
+**Reference results** (script logic with the backtest's fill rules, $200 risk with Wednesday breakout longs at $300, net of costs):
 
 | Window | Trades | Win rate | PF | Net | Max drawdown |
 |---|---|---|---|---|---|
-| Sep 23 2025 – Sep 22 2026 (uploaded data) | 43 | 65.1% | 4.58 | +$8,259 | $586 |
-| Oct 13 2025 – Oct 8 2026, as TradingView will show it | 44 | 65.9% | 5.11 | +$9,460 | $586 |
+| Sep 23 2025 – Sep 22 2026 (uploaded data) | 43 | 65.1% | 4.64 | +$8,842 | $586 |
+| Oct 13 2025 – Oct 8 2026, as TradingView will show it | 44 | 65.9% | 5.14 | +$10,043 | $586 |
+
+With every row at $200, the uploaded year was +$8,259.
 
 - **What the TradingView window includes:** the expected list plus 1 half-day trade the backtest skipped, Fri Nov 28 2025: long 10 lots, target, +$1,278.
 - **Recent trades:** the trade-by-trade list is in `output/2026.09.24-mnq-ib-v3/T2X_expected_trades.csv`. It includes 2 trades computed from live TradingView bars: Sep 30 2026 long, stopped, −$170; Oct 5 2026 long, target, +$269.
@@ -191,7 +193,7 @@ Other rules:
   - **Mar 11 2026 trades 5 lots instead of 4,** because the stop distance rounds to exactly $40 a lot.
   - The engine's total is 44 trades, +$7,845.
 
-- **Checked against TradingView** (Oct 13 2025 – Oct 8 2026): 44 trades, 29 wins, +$9,452.82, PF 5.108, max drawdown $588. That's the expected +$9,460.32 less exactly $7.50: TradingView's 1 tick of slippage on the 15 contracts flattened at 15:55.
+- **Checked against TradingView** (Oct 13 2025 – Oct 8 2026, run before the Wednesday change, every row at $200): 44 trades, 29 wins, +$9,452.82, PF 5.108, max drawdown $588. That's the expected +$9,460.32 less exactly $7.50: TradingView's 1 tick of slippage on the 15 contracts flattened at 15:55.
 
 **Expected differences in TradingView's backtest:** same as T2R. TradingView may take a target on the fill bar or pick a different order inside a bar. It adds 1 tick of slippage at the 15:55 flatten. It trades holiday half-days, which you flatten by hand.
 
@@ -215,16 +217,16 @@ As with T2R, run it on its own account. Bridges often cancel and exit by ticker,
 
 The point of rule 2: every cancel the script sends happens while the account is flat, so a bridge whose cancel clears the whole ticker can never remove a live trade's stop and target.
 
-**Sizing:** "Risk per trade" applies to every row unless the row sets its own. The Wednesday T2R break-up row defaults to $300, as in the T2R script.
+**Sizing:** "Risk per trade" applies to every row unless the row sets its own. Two Wednesday rows default to $300, as in the standalone scripts: T2R break-up (short fade) and T2X break-up (long).
 
-**Reference results** (script logic with the backtest's fill rules, defaults: $200 and Wednesday T2R breakouts $300, net of costs):
+**Reference results** (script logic with the backtest's fill rules, defaults: $200, with Wednesday T2R and T2X breakouts at $300, net of costs):
 
 | Window | Trades | Win rate | PF | Net | Max drawdown |
 |---|---|---|---|---|---|
-| Sep 23 2025 – Sep 22 2026 (uploaded data) | 99 | 53.5% | 3.29 | +$19,554 | $715 |
-| Oct 13 2025 – Oct 8 2026 | 99 | 54.5% | 3.46 | +$20,480 | $715 |
+| Sep 23 2025 – Sep 22 2026 (uploaded data) | 99 | 53.5% | 3.34 | +$20,139 | $677 |
+| Oct 13 2025 – Oct 8 2026 | 99 | 54.5% | 3.51 | +$21,065 | $677 |
 
-- **Half-days:** TradingView will also trade the two holiday half-days, which add 3 trades and +$1,752. Expect about 102 trades and +$22,232 for Oct 13 – Oct 8.
+- **Half-days:** TradingView will also trade the two holiday half-days, which add 3 trades and +$1,752. Expect about 102 trades and +$22,817 for Oct 13 – Oct 8.
 - **Trade list:** `output/2026.09.24-mnq-ib-v3/T2_combined_expected_trades.csv`, including 6 trades from live TradingView bars (Sep 24 – Oct 7 2026).
 - **Checks:** on days when only one setup trades, the script's trades match the standalone T2R and T2X scripts exactly (36 and 23 trades). On the 20 days both traded, no two positions were ever open at once.
 
