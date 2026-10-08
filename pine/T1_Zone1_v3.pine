@@ -1,0 +1,231 @@
+//@version=6
+// ============================================================================
+// MNQ v3 · T1 Zone 1 (IB second-side pullback)          Chart: MNQ1! 5-minute
+// ----------------------------------------------------------------------------
+// Rules (identical to the v3 backtest engine, mnq_v3.py):
+//   IB        = 09:30–10:30 ET. IB2 = the IB extreme formed last.
+//   Zone      = |10:30 close − IB2| ÷ IB range × 100. Trade only if zone ≤ 25%.
+//   Gap       = |09:30 open − prior RTH close| ÷ prior RTH close. Skip if ≥ 1.0%.
+//   LONG  (IB2 = IBH): limit IBH − 0.25R · stop IBH − 0.55R · target IBH
+//   SHORT (IB2 = IBL): limit IBL + 0.20R · stop IBL + 0.45R · target IBL
+//   VWAP      = RTH VWAP of the prior bar must be below a long / above a short
+//               entry. If price touches the entry while VWAP is on the wrong
+//               side, the trade is skipped for the day.
+//   Cancel    = unfilled order cancelled at 14:00 ET. One trade per day.
+//   Flatten   = any open position closed at the 15:55 bar close.
+//   Size      = max(1, floor(risk $ ÷ (stop distance pts × $/pt))).
+//
+// Automation (resting-order mode, matches the backtest's limit fills):
+//   Create ONE alert on this strategy: Condition = this strategy,
+//   "alert() function calls only", Webhook URL = your bridge, Message = blank.
+//   The script sends:
+//     PLACE  → limit entry with attached stop + target (bracket)
+//     CANCEL → cancel the working entry (VWAP flips, 14:00 cutoff)
+//     EXIT   → flatten at 15:55
+//   JSON keys follow TradersPost's format. If your bridge differs, edit only
+//   the three f_msg* functions below.
+// ============================================================================
+strategy("MNQ v3 · T1 Zone 1", shorttitle = "T1-Z1", overlay = true, pyramiding = 0,
+     process_orders_on_close = true, initial_capital = 50000,
+     commission_type = strategy.commission.cash_per_contract, commission_value = 0.62,
+     slippage = 1, max_lines_count = 500, max_labels_count = 500)
+
+// ── Inputs ──────────────────────────────────────────────────────────────────
+G1 = "Risk"
+riskCap   = input.float(200, "Risk per trade ($)", minval = 1, group = G1)
+
+G2 = "Rules (v3 defaults)"
+gapMax    = input.float(1.0,  "Skip if gap ≥ (%)",               step = 0.05, group = G2)
+zoneMax   = input.float(25,   "Zone 1 max (% of IB from IB2)",   step = 1,    group = G2)
+useVwap   = input.bool(true,  "VWAP filter",                                  group = G2)
+longE     = input.float(0.25, "Long entry  = IBH − x·R",         step = 0.05, group = G2)
+longS     = input.float(0.55, "Long stop   = IBH − x·R",         step = 0.05, group = G2)
+longT     = input.float(0.00, "Long target = IBH − x·R",         step = 0.05, group = G2)
+shortE    = input.float(0.20, "Short entry  = IBL + x·R",        step = 0.05, group = G2)
+shortS    = input.float(0.45, "Short stop   = IBL + x·R",        step = 0.05, group = G2)
+shortT    = input.float(0.00, "Short target = IBL + x·R",        step = 0.05, group = G2)
+cutoffHM  = input.int(1400,   "Cancel unfilled at (HHMM ET)",                 group = G2)
+flatHM    = input.int(1555,   "Flatten at close of bar (HHMM ET)",            group = G2)
+
+G3 = "Days"
+dMon = input.bool(true, "Mon", inline = "d", group = G3)
+dTue = input.bool(true, "Tue", inline = "d", group = G3)
+dWed = input.bool(true, "Wed", inline = "d", group = G3)
+dThu = input.bool(true, "Thu", inline = "d", group = G3)
+dFri = input.bool(true, "Fri", inline = "d", group = G3)
+
+G4 = "Automation"
+sendAlerts = input.bool(true, "Send webhook alerts", group = G4)
+tickerOut  = input.string("MNQ1!", "Ticker sent to bridge", group = G4)
+
+// ── Session clock (America/New_York) ────────────────────────────────────────
+if not (timeframe.isminutes and timeframe.multiplier == 5)
+    runtime.error("T1 Zone 1 is built and tested on a 5-minute chart.")
+
+TZ        = "America/New_York"
+hm        = hour(time, TZ) * 100 + minute(time, TZ)
+nextT     = time + timeframe.in_seconds() * 1000
+nextHm    = hour(nextT, TZ) * 100 + minute(nextT, TZ)
+isRTH     = hm >= 930 and hm < 1600
+newRTH    = hm == 930
+inIB      = hm >= 930 and hm < 1030
+lastIBBar = hm == 1025
+dow       = dayofweek(time, TZ)
+dayOn     = (dow == dayofweek.monday and dMon) or (dow == dayofweek.tuesday and dTue) or
+             (dow == dayofweek.wednesday and dWed) or (dow == dayofweek.thursday and dThu) or
+             (dow == dayofweek.friday and dFri)
+
+vwapRTH   = ta.vwap(hlc3, newRTH)
+
+// ── Webhook messages (edit here for a different bridge) ─────────────────────
+f_px(x) => str.tostring(x, "#.##")
+f_msgPlace(dir, size, entry, stop, tgt) =>
+    '{"ticker":"' + tickerOut + '","action":"' + (dir > 0 ? "buy" : "sell") +
+     '","orderType":"limit","limitPrice":' + f_px(entry) + ',"quantity":' + str.tostring(size) +
+     ',"stopLoss":{"type":"stop","stopPrice":' + f_px(stop) + '},"takeProfit":{"limitPrice":' + f_px(tgt) + '}}'
+f_msgCancel() =>
+    '{"ticker":"' + tickerOut + '","action":"cancel"}'
+f_msgExit() =>
+    '{"ticker":"' + tickerOut + '","action":"exit"}'
+
+// ── State ───────────────────────────────────────────────────────────────────
+var float prevRthClose = na
+var float lastRthClose = na
+var float rthOpen      = na
+var float ibH          = na
+var float ibL          = na
+var int   ibHBar       = na
+var int   ibLBar       = na
+var int   side         = 0       // +1 long, −1 short, 0 none today
+var float entryPx      = na
+var float stopPx       = na
+var float tgtPx        = na
+var int   qty          = 0
+var bool  pending      = false   // setup alive, not yet filled
+var bool  working      = false   // limit order currently live (sent to broker)
+var bool  traded       = false
+var int   tradesAtArm  = 0       // trade count when the setup armed (detects fills, even same-bar exits)
+var string status      = "waiting for IB"
+
+totalTrades = strategy.closedtrades + strategy.opentrades
+
+// New RTH session: roll the prior close, reset the day.
+if newRTH
+    prevRthClose := lastRthClose
+    rthOpen := open
+    ibH := high
+    ibL := low
+    ibHBar := bar_index
+    ibLBar := bar_index
+    side := 0
+    entryPx := na
+    stopPx := na
+    tgtPx := na
+    qty := 0
+    pending := false
+    working := false
+    traded := false
+    status := "building IB"
+    strategy.cancel_all()
+else if inIB
+    if high > ibH
+        ibH := high
+        ibHBar := bar_index
+    if low < ibL
+        ibL := low
+        ibLBar := bar_index
+
+if isRTH
+    lastRthClose := close
+
+// ── 10:30: decide the setup (runs at the 10:25 bar close) ───────────────────
+if lastIBBar and not na(ibH)
+    R = ibH - ibL
+    gapPct = na(prevRthClose) ? na : math.abs(rthOpen - prevRthClose) / prevRthClose * 100
+    ib2Hi = ibHBar > ibLBar
+    ib2Lo = ibLBar > ibHBar
+    zone = ib2Hi ? (ibH - close) / R * 100 : ib2Lo ? (close - ibL) / R * 100 : na
+    if not dayOn
+        status := "day off"
+    else if R <= 0 or not (ib2Hi or ib2Lo)
+        status := "no IB2 (extremes on same bar)"
+    else if na(gapPct)
+        status := "no prior close"
+    else if gapPct >= gapMax
+        status := "skip: gap " + str.tostring(gapPct, "#.##") + "%"
+    else if zone > zoneMax
+        status := "skip: zone " + str.tostring(zone, "#") + "%"
+    else
+        side := ib2Hi ? 1 : -1
+        entryPx := ib2Hi ? ibH - longE * R  : ibL + shortE * R
+        stopPx  := ib2Hi ? ibH - longS * R  : ibL + shortS * R
+        tgtPx   := ib2Hi ? ibH - longT * R  : ibL + shortT * R
+        entryPx := math.round_to_mintick(entryPx)
+        stopPx  := math.round_to_mintick(stopPx)
+        tgtPx   := math.round_to_mintick(tgtPx)
+        riskPts = math.abs(entryPx - stopPx)
+        qty := math.max(1, math.floor(riskCap / (riskPts * syminfo.pointvalue)))
+        pending := true
+        tradesAtArm := totalTrades
+        status := (side > 0 ? "LONG " : "SHORT ") + str.tostring(qty) + " @ " + f_px(entryPx)
+
+// ── Manage the pending order (decisions at each bar close apply to the next bar)
+if pending and strategy.closedtrades + strategy.opentrades > tradesAtArm
+    pending := false
+    working := false
+    traded := true
+    status := "in trade"
+
+if pending and not lastIBBar
+    // A touch of the entry while the order was withheld for VWAP = skip for the day.
+    touched = side > 0 ? low <= entryPx : high >= entryPx
+    if not working and touched
+        pending := false
+        status := "skip: VWAP on wrong side at touch"
+
+if pending
+    vwapOk = not useVwap or (side > 0 ? vwapRTH < entryPx : vwapRTH > entryPx)
+    if nextHm >= cutoffHM or nextHm < 930
+        pending := false
+        strategy.cancel("T1")
+        strategy.cancel("T1 exit")
+        if working and sendAlerts
+            alert(f_msgCancel(), alert.freq_once_per_bar_close)
+        working := false
+        status := "cancelled: 14:00 cutoff"
+    else if vwapOk
+        strategy.entry("T1", side > 0 ? strategy.long : strategy.short, qty = qty, limit = entryPx)
+        strategy.exit("T1 exit", from_entry = "T1", stop = stopPx, limit = tgtPx)
+        if not working and sendAlerts
+            alert(f_msgPlace(side, qty, entryPx, stopPx, tgtPx), alert.freq_once_per_bar_close)
+        working := true
+    else
+        strategy.cancel("T1")
+        strategy.cancel("T1 exit")
+        if working and sendAlerts
+            alert(f_msgCancel(), alert.freq_once_per_bar_close)
+        working := false
+
+// ── Flatten at 15:55 bar close ──────────────────────────────────────────────
+if hm == flatHM and strategy.position_size != 0
+    strategy.close_all(comment = "EOD")
+    if sendAlerts
+        alert(f_msgExit(), alert.freq_once_per_bar_close)
+    status := "flattened EOD"
+
+if strategy.position_size == 0 and traded and status == "in trade" and not lastIBBar
+    status := "closed"
+
+// ── Visuals ─────────────────────────────────────────────────────────────────
+showDay = isRTH and hm >= 1030
+plot(showDay ? ibH : na, "IBH", color.new(color.gray, 0), 1, plot.style_linebr)
+plot(showDay ? ibL : na, "IBL", color.new(color.gray, 0), 1, plot.style_linebr)
+plot(isRTH ? vwapRTH : na, "RTH VWAP", color.new(color.orange, 30), 1, plot.style_linebr)
+showLv = showDay and side != 0
+plot(showLv ? entryPx : na, "Entry",  color.new(color.blue, 0),  2, plot.style_linebr)
+plot(showLv ? stopPx  : na, "Stop",   color.new(color.red, 0),   2, plot.style_linebr)
+plot(showLv ? tgtPx   : na, "Target", color.new(color.green, 0), 2, plot.style_linebr)
+
+var table tb = table.new(position.top_right, 1, 1, bgcolor = color.new(color.black, 20))
+if barstate.islast
+    table.cell(tb, 0, 0, "T1 Z1 · " + status, text_color = color.white, text_size = size.small)
