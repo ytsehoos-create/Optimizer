@@ -14,7 +14,10 @@
 //               up   Tue .30/.50/.25 · Wed .20/.30/.25 · Thu .30/.50/.50 · Fri .20/.30/.25
 //               down Tue–Fri .20/.30/.25
 //   Skip if   = IB range > 0.9% of the 10:30 price (large IB), or the break
-//               bar already ran ≥ 0.20R beyond the edge (filter B).
+//               bar already ran ≥ 0.20R beyond the edge (filter B), or the
+//               break bar itself reached the T2R entry. With the v3 levels
+//               (entries 0.20R/0.30R) filter B already covers the last one;
+//               the explicit check keeps it if the settings change.
 //   R1        = if T1 wins before T2R fills, T2R is cancelled. This script
 //               re-creates T1 internally (Zone 1 and Zone 3a, same rules as the
 //               T1 scripts) to know; it never trades T1.
@@ -420,7 +423,9 @@ if afterIB and brk == 0 and not na(c1030)
                 riskPts = math.abs(entryNow - stopNow)
                 lots = math.max(1, math.floor(riskUse / (riskPts * syminfo.pointvalue)))
                 tradeRisk = lots * riskPts * syminfo.pointvalue
-                if maxRisk > 0 and tradeRisk > maxRisk
+                if isUp ? high >= entryNow : low <= entryNow
+                    status := "no trade: the breaking bar already hit the entry"
+                else if maxRisk > 0 and tradeRisk > maxRisk
                     status := "no trade: " + str.tostring(lots) + " lot risks $" + str.tostring(tradeRisk, "#") + " > $" + str.tostring(maxRisk, "#")
                 else
                     side := dir

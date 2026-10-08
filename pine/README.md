@@ -89,6 +89,7 @@ Other rules:
 - **No trade if:**
   - the IB range is above 0.9% of the 10:30 price (large IB)
   - the breaking bar already ran 0.20R or more beyond the edge (filter B)
+  - the breaking bar itself reached the T2R entry. Filter B already covers this, because every v3 entry is 0.20R or more past the edge. In the backtest, 18 breaking bars reached the entry and filter B skipped all of them. The script also checks it directly, so the rule holds if you lower an entry below the filter B setting.
   - one bar breaks both sides first
 - **R1:** if T1 wins before T2R fills, T2R is cancelled. The script works out T1 itself (Zone 1 and Zone 3a, same rules and settings as the two T1 scripts) but never trades it. The table in the top-right corner shows T1's state.
 - **Cancel** at 14:00 if unfilled. A later break of the other side does not cancel it.
