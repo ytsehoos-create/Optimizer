@@ -191,6 +191,8 @@ Other rules:
   - **Mar 11 2026 trades 5 lots instead of 4,** because the stop distance rounds to exactly $40 a lot.
   - The engine's total is 44 trades, +$7,845.
 
+- **Checked against TradingView** (Oct 13 2025 – Oct 8 2026): 44 trades, 29 wins, +$9,452.82, PF 5.108, max drawdown $588. That's the expected +$9,460.32 less exactly $7.50: TradingView's 1 tick of slippage on the 15 contracts flattened at 15:55.
+
 **Expected differences in TradingView's backtest:** same as T2R. TradingView may take a target on the fill bar or pick a different order inside a bar. It adds 1 tick of slippage at the 15:55 flatten. It trades holiday half-days, which you flatten by hand.
 
 **Automation:** one alert, "alert() function calls only", pointed at your bridge.
