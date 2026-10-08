@@ -139,3 +139,59 @@ With every row at $200 the uploaded year is +$9,557 (PF 2.70, max drawdown $781)
   - T1 Zone 1: −$560.
   - T2X: −$385.
   - Whole system: $21,290 instead of $22,077.
+
+## T2X_v3.pine — T2X
+
+**What it trades:** the retrace after the first IB break, in the break's direction.
+1. **Break:** the first bar from 10:30 on that trades beyond the IB sets the direction.
+2. **Arm:** the first later bar that *closes* back inside the IB arms the setup.
+3. **Order:** from the next bar, a limit order rests inside the IB:
+   - **Break up:** long at IBH − e·R, stop IBH − s·R, target IBH + t·R.
+   - **Break down:** short at IBL + e·R, stop IBL + s·R, target IBL − t·R.
+
+| Weekday | Break up, long: entry / stop / target (× R) | Break down, short: entry / stop / target (× R) |
+|---|---|---|
+| Mon | 0.10 / 0.30 / 0.20 | off |
+| Tue | 0.20 / 0.60 / 0.40 | 0.30 / 0.60 / 0.25 |
+| Wed | 0.20 / 0.60 / 0.30 | 0.50 / 0.60 / 0.25 |
+| Thu | off | off |
+| Fri | 0.50 / 0.60 / 0.20 | 0.40 / 0.60 / 0.25 |
+
+Rules that depend on T1 (the script works out T1 itself, with the same rules and settings as the T1 scripts, and never trades it):
+- **R3:** T1 lost → cancel T2X.
+- **R7:** on Mondays, T2X only trades once T1 is in. Until then the order is held back. If price touches the entry while it's held back, the day is over.
+- **R2 safeguard:** T1 won at the opposite edge from T2X's break → cancel T2X. This never happened in the backtest.
+
+Other rules:
+- **No trade if** the IB range is above 0.9% of the 10:30 price, or one bar breaks both sides first. There's no filter B for T2X.
+- **Cancel** at 13:00 if unfilled, or if the setup never armed. A later break of the other side does not cancel it.
+- **Flatten** at the 15:55 bar close. One trade a day.
+
+**Sizing:** "Risk per trade" ($200) applies to every row unless the row sets its own risk in its last box. No T2X row is sized up by default. Most T2X trades are 1 lot, because the stop is 0.30–0.60R away, except Wednesday breakdowns, where the stop is 0.10R and size runs up to 9 lots. The largest risk at $200 was $206 (1 lot), so the $300 ceiling never triggered.
+
+**Order timing:** this script processes orders from the bar *after* they're placed. The T1 and T2R scripts can fill at the placing bar's close; this one can't.
+- **Why:** the arming bar often closes past the T2X entry (14 times in the backtest). The engine then fills at the next bar's open, and so does this script.
+- **The 15:55 flatten** still fills at that bar's close.
+
+**Reference results** (script logic with the backtest's fill rules, $200 risk, net of costs):
+
+| Window | Trades | Win rate | PF | Net | Max drawdown |
+|---|---|---|---|---|---|
+| Sep 23 2025 – Sep 22 2026 (uploaded data) | 43 | 65.1% | 4.58 | +$8,259 | $586 |
+| Oct 13 2025 – Oct 8 2026, as TradingView will show it | 44 | 65.9% | 5.11 | +$9,460 | $586 |
+
+- **What the TradingView window includes:** the expected list plus 1 half-day trade the backtest skipped, Fri Nov 28 2025: long 10 lots, target, +$1,278.
+- **Recent trades:** the trade-by-trade list is in `output/2026.09.24-mnq-ib-v3/T2X_expected_trades.csv`. It includes 2 trades computed from live TradingView bars: Sep 30 2026 long, stopped, −$170; Oct 5 2026 long, target, +$269.
+- **Match against the engine:** ported to Python, the script matched the v3 engine (with separate scripts, so no reversals) on 43 of 44 trades: direction, fill bar, exit bar and exit reason.
+  - **Jan 5 2026 is skipped by the script.** It's a Monday where T1 and T2X filled on the same bar. The engine processes T1 first and takes the T2X (−$93). The script only releases the Monday order after T1 is in, so it counts the touch as coming first.
+  - **Mar 11 2026 trades 5 lots instead of 4,** because the stop distance rounds to exactly $40 a lot.
+  - The engine's total is 44 trades, +$7,845.
+
+**Expected differences in TradingView's backtest:** same as T2R. TradingView may take a target on the fill bar or pick a different order inside a bar. It adds 1 tick of slippage at the 15:55 flatten. It trades holiday half-days, which you flatten by hand.
+
+**Automation:** one alert, "alert() function calls only", pointed at your bridge.
+- **Place:** when the setup arms, or on Mondays once T1 is in. A limit entry with stop and target attached.
+- **Cancel:** on R3, R2 or the 13:00 cutoff.
+- **Exit:** at 15:55, if still in the trade.
+
+As with T2R, run it on its own account. Bridges often cancel and exit by ticker, and brokers net opposite positions.
