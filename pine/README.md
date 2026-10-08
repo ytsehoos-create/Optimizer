@@ -70,3 +70,65 @@ Other rules:
 - **Exit:** at 15:55, if still in the trade.
 
 **Running both T1 scripts:** add each to its own chart (or both to one) with its own alert. They can't conflict, because Zone 1 and Zone 3a never trade on the same day.
+
+## T2R_v3.pine — T2R
+
+**What it trades:** the first break of the IB from 10:30 on. At the close of the bar that breaks, it rests a limit order beyond the broken edge to fade the extension back into the IB.
+- **Break up:** short at IBH + e·R, stop IBH + s·R, target IBH − t·R.
+- **Break down:** long at IBL − e·R, stop IBL − s·R, target IBL + t·R.
+
+| Weekday | Break up: entry / stop / target (× R) | Break down: entry / stop / target (× R) |
+|---|---|---|
+| Mon | off | off |
+| Tue | 0.30 / 0.50 / 0.25 | 0.20 / 0.30 / 0.25 |
+| Wed | 0.20 / 0.30 / 0.25 | 0.20 / 0.30 / 0.25 |
+| Thu | 0.30 / 0.50 / 0.50 | 0.20 / 0.30 / 0.25 |
+| Fri | 0.20 / 0.30 / 0.25 | 0.20 / 0.30 / 0.25 |
+
+Other rules:
+- **No trade if:**
+  - the IB range is above 0.9% of the 10:30 price (large IB)
+  - the breaking bar already ran 0.20R or more beyond the edge (filter B)
+  - one bar breaks both sides first
+- **R1:** if T1 wins before T2R fills, T2R is cancelled. The script works out T1 itself (Zone 1 and Zone 3a, same rules and settings as the two T1 scripts) but never trades it. The table in the top-right corner shows T1's state.
+- **Cancel** at 14:00 if unfilled. A later break of the other side does not cancel it.
+- **Flatten** at the 15:55 bar close. One trade a day. No gap filter (that's T1 only).
+
+**Sizing:** "Risk per trade" applies to every row unless the row sets its own risk.
+- To size up one cell, enter a dollar amount in that row's last box, e.g. $300 on the Wednesday break-up row.
+- The $300 ceiling still applies. At $200 the largest T2R risk was $200, because the stop is only 0.10–0.20R, so it's usually 4–9 lots.
+
+**Chart:** MNQ1! 5-minute, RTH or ETH, margin simulation off (same as the T1 scripts).
+
+**Reference results** (script logic with the backtest's fill rules, $200 risk, net of costs):
+
+| Window | Trades | Win rate | PF | Net | Max drawdown |
+|---|---|---|---|---|---|
+| Sep 23 2025 – Sep 22 2026 (uploaded data) | 51 | 41.2% | 2.70 | +$9,557 | $781 |
+| Oct 13 2025 – Oct 8 2026 (TradingView's window for Zone 3a) | 51 | 43.1% | 2.94 | +$10,513 | $781 |
+
+- The trade-by-trade list is in `output/2026.09.24-mnq-ib-v3/T2R_expected_trades.csv`, including 4 trades from Sep 24 – Oct 7 2026 computed from live TradingView bars.
+- Ported to Python, the script matched the v3 engine on all 51 trades: direction, fill bar, exit bar and exit reason.
+  - One lot size differs (Jun 18 2026: 2 lots instead of 1) because the stop distance rounds to exactly $100 a lot.
+  - The engine's exact-price total is +$9,623.
+- **Levels round away from price:** each level is rounded to the tick in the direction price reaches it from. A short's stop of 29636.85 becomes 29637.00, which is where a real stop order triggers. That keeps every touch on the same bar as the backtest.
+
+**Expected differences in TradingView's backtest:**
+- **Same-bar target and stop:** TradingView may hit the target on the fill bar, or pick a different order when one bar touches both stop and target. The engine never takes a target on the fill bar and always assumes the stop. T2R's stop is tight, so this matters more than for T1.
+- **15:55 flatten:** TradingView adds 1 tick of slippage.
+- **Holiday half-days:** TradingView trades them; the backtest skipped them.
+- **R1 uses T1's backtest rules:** when a single bar touches T1's stop and target, R1 counts it as a T1 loss, even if your live T1 trade won.
+
+**Automation:** one alert, "alert() function calls only", pointed at your bridge.
+- **Place:** at the close of the breaking bar, a limit entry with stop and target attached.
+- **Cancel:** when T1 wins (R1) or at the 14:00 cutoff.
+- **Exit:** at 15:55, if still in the trade.
+
+**Running T2R with the T1 scripts: use a different account.**
+- **Cancel and exit can hit T1's orders:** many bridges cancel and exit by ticker, not by order. On one account, a T2R cancel could cancel T1's resting order or its stop and target.
+- **Brokers net opposite positions:** a T1 long and a T2R short in the same account would cancel out.
+- **What separate scripts change:** in the combined backtest, an opposite fill closed the other trade. Separate scripts never do that.
+  - T2R: about the same (+$158).
+  - T1 Zone 1: −$560.
+  - T2X: −$385.
+  - Whole system: $21,290 instead of $22,077.
