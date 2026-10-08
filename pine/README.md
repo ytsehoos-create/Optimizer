@@ -167,7 +167,11 @@ Other rules:
 - **Cancel** at 13:00 if unfilled, or if the setup never armed. A later break of the other side does not cancel it.
 - **Flatten** at the 15:55 bar close. One trade a day.
 
-**Sizing:** "Risk per trade" ($200) applies to every row unless the row sets its own risk in its last box. No T2X row is sized up by default. Most T2X trades are 1 lot, because the stop is 0.30–0.60R away, except Wednesday breakdowns, where the stop is 0.10R and size runs up to 9 lots. The largest risk at $200 was $206 (1 lot), so the $300 ceiling never triggered.
+**Sizing:** "Risk per trade" ($200) applies to every row unless the row sets its own risk in its last box. No T2X row is sized up by default.
+- **Stop distances range from 0.10R to 0.40R** (stop minus entry), so lots vary a lot by row:
+  - Tue and Wed breakout longs (0.40R stop): mostly 1 lot.
+  - Wed breakdown shorts and Fri breakout longs (0.10R stop): 3–9 lots.
+- **The largest risk at $200 was $206** (1 lot), so the $300 ceiling never triggered.
 
 **Order timing:** this script processes orders from the bar *after* they're placed. The T1 and T2R scripts can fill at the placing bar's close; this one can't.
 - **Why:** the arming bar often closes past the T2X entry (14 times in the backtest). The engine then fills at the next bar's open, and so does this script.
