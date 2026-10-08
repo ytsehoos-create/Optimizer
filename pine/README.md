@@ -94,23 +94,26 @@ Other rules:
 - **Cancel** at 14:00 if unfilled. A later break of the other side does not cancel it.
 - **Flatten** at the 15:55 bar close. One trade a day. No gap filter (that's T1 only).
 
-**Sizing:** "Risk per trade" applies to every row unless the row sets its own risk.
-- To size up one cell, enter a dollar amount in that row's last box, e.g. $300 on the Wednesday break-up row.
-- The $300 ceiling still applies. At $200 the largest T2R risk was $200, because the stop is only 0.10–0.20R, so it's usually 4–6 lots (2–15 in the backtest).
+**Sizing:** "Risk per trade" ($200) applies to every row unless the row sets its own risk in its last box.
+- **Wednesday break-up fades risk $300** by default (the sized-up cell). Its trades risked $268–$298, at 7–13 lots.
+- Every other row risked at most $200. The stop is only 0.10–0.20R, so it's usually 4–6 lots (2–15 in the backtest).
+- The $300 ceiling still applies. A row set above $300 would have its trades skipped, so raise the ceiling with it.
 
 **Chart:** MNQ1! 5-minute, RTH or ETH, margin simulation off (same as the T1 scripts).
 
-**Reference results** (script logic with the backtest's fill rules, $200 risk, net of costs):
+**Reference results** (script logic with the backtest's fill rules, $200 risk with Wednesday break-up fades at $300, net of costs):
 
 | Window | Trades | Win rate | PF | Net | Max drawdown |
 |---|---|---|---|---|---|
-| Sep 23 2025 – Sep 22 2026 (uploaded data) | 51 | 41.2% | 2.70 | +$9,557 | $781 |
-| Oct 13 2025 – Oct 8 2026 (TradingView's window for Zone 3a) | 51 | 43.1% | 2.94 | +$10,513 | $781 |
+| Sep 23 2025 – Sep 22 2026 (uploaded data) | 51 | 41.2% | 2.75 | +$11,009 | $906 |
+| Oct 13 2025 – Oct 8 2026 (TradingView's window for Zone 3a) | 51 | 43.1% | 2.98 | +$11,980 | $906 |
+
+With every row at $200 the uploaded year is +$9,557 (PF 2.70, max drawdown $781). The Wednesday size-up adds about $1,450 and $125 of drawdown.
 
 - The trade-by-trade list is in `output/2026.09.24-mnq-ib-v3/T2R_expected_trades.csv`, including 4 trades from Sep 24 – Oct 7 2026 computed from live TradingView bars.
 - Ported to Python, the script matched the v3 engine on all 51 trades: direction, fill bar, exit bar and exit reason.
   - One lot size differs (Jun 18 2026: 2 lots instead of 1) because the stop distance rounds to exactly $100 a lot.
-  - The engine's exact-price total is +$9,623.
+  - The engine's exact-price total, with every row at $200, is +$9,623.
 - **Levels round away from price:** each level is rounded to the tick in the direction price reaches it from. A short's stop of 29636.85 becomes 29637.00, which is where a real stop order triggers. That keeps every touch on the same bar as the backtest.
 
 **Expected differences in TradingView's backtest:**
