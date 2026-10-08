@@ -61,6 +61,9 @@ Other rules:
 **Reference results** (v3 engine, Sep 2025 – Sep 2026, $200 risk, net of costs): 21 trades, 61.9% win rate, PF 1.70, +$961, max drawdown $490. The largest risk on a single trade was $298, just under the ceiling.
 - The trade-by-trade list is in `output/2026.09.24-mnq-ib-v3/T1_Zone3a_expected_trades.csv`.
 - The script's logic, ported to Python, matched the engine on all 21 trades: direction, entry, stop, target, lots, exit reason and exit bar.
+- **Checked against TradingView** (Oct 13 2025 – Oct 8 2026): 21 trades, 11 wins, +$169.02, PF 1.097. The engine over the same window gives 21 trades, 11 wins, +$169.89, PF 1.098.
+  - The engine's window is 19 trades from the list above plus 2 new ones: Sep 29 2026 long (stopped, −$164) and Oct 6 2026 short (stopped, −$201).
+  - TradingView's max drawdown ($546) is higher than the engine's ($490) because TradingView includes open-trade drawdown.
 
 **Automation:** one alert, "alert() function calls only", pointed at your bridge.
 - **Enter:** at 10:30, a market order with stop and target attached.
