@@ -111,6 +111,9 @@ Other rules:
 With every row at $200 the uploaded year is +$9,557 (PF 2.70, max drawdown $781). The Wednesday size-up adds about $1,450 and $125 of drawdown.
 
 - The trade-by-trade list is in `output/2026.09.24-mnq-ib-v3/T2R_expected_trades.csv`, including 4 trades from Sep 24 – Oct 7 2026 computed from live TradingView bars.
+- **Checked against TradingView** (Oct 13 2025 – Oct 8 2026): 53 trades, 23 wins, +$12,453.30, PF 2.943, max drawdown $912.
+  - That equals the 51 expected trades plus 2 on holiday half-days, which the backtest skipped: Nov 28 2025 short 10 lots, target, +$818; Dec 24 2025 short 25 lots, stopped, −$344.
+  - The combined total is 53 trades, 23 wins, +$12,454.30, PF 2.943.
 - Ported to Python, the script matched the v3 engine on all 51 trades: direction, fill bar, exit bar and exit reason.
   - One lot size differs (Jun 18 2026: 2 lots instead of 1) because the stop distance rounds to exactly $100 a lot.
   - The engine's exact-price total, with every row at $200, is +$9,623.
