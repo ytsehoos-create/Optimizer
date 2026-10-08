@@ -201,3 +201,36 @@ Other rules:
 - **Exit:** at 15:55, if still in the trade.
 
 As with T2R, run it on its own account. Bridges often cancel and exit by ticker, and brokers net opposite positions.
+
+## T2_combined_v3.pine — T2R + T2X on one account
+
+**When to use it:** to run T2R and T2X on the **same account**. It holds one position at a time. T1 isn't traded; the script works out T1 internally for the R1, R2, R3 and R7 gates. On separate accounts, use `T2R_v3.pine` and `T2X_v3.pine` instead.
+
+**Rules:** same as the T2R and T2X scripts (levels, skips, gates, 14:00 / 13:00 cutoffs, 15:55 flatten), plus these account rules:
+1. **Aligned targets.** While the account is flat and both orders are resting, each order's target becomes the other's entry if that's closer. A fill can then only hand off at a single price: the first trade takes profit exactly where the second enters. On Nov 28 2025, for example, T2X's long took profit at 26487.00 on the same bar T2R's short entered at 26487.00.
+2. **Nothing changes at the broker while a trade is on.**
+   - **T2X waits:** if it arms during a T2R trade, it's placed once the account is flat.
+   - **Cancels wait too:** an order due for cancelling (cutoff, R1, R2, R3) stays until the account is flat. If it fills through the handoff in the meantime, the script exits it at that bar's close. This happened 5 times in the backtest year.
+3. **Once flat,** the script cancels everything resting and re-places what's still valid.
+
+The point of rule 2: every cancel the script sends happens while the account is flat, so a bridge whose cancel clears the whole ticker can never remove a live trade's stop and target.
+
+**Sizing:** "Risk per trade" applies to every row unless the row sets its own. The Wednesday T2R break-up row defaults to $300, as in the T2R script.
+
+**Reference results** (script logic with the backtest's fill rules, defaults: $200 and Wednesday T2R breakouts $300, net of costs):
+
+| Window | Trades | Win rate | PF | Net | Max drawdown |
+|---|---|---|---|---|---|
+| Sep 23 2025 – Sep 22 2026 (uploaded data) | 99 | 53.5% | 3.29 | +$19,554 | $715 |
+| Oct 13 2025 – Oct 8 2026 | 99 | 54.5% | 3.46 | +$20,480 | $715 |
+
+- **Half-days:** TradingView will also trade the two holiday half-days, which add 3 trades and +$1,752. Expect about 102 trades and +$22,232 for Oct 13 – Oct 8.
+- **Trade list:** `output/2026.09.24-mnq-ib-v3/T2_combined_expected_trades.csv`, including 6 trades from live TradingView bars (Sep 24 – Oct 7 2026).
+- **Checks:** on days when only one setup trades, the script's trades match the standalone T2R and T2X scripts exactly (36 and 23 trades). On the 20 days both traded, no two positions were ever open at once.
+
+**Expected differences in TradingView's backtest:** same as the T2R and T2X scripts.
+
+**Automation:** one alert, "alert() function calls only". Messages:
+- **Place:** limit entry with stop and target.
+- **Cancel:** only ever sent while flat, immediately followed by re-placing whatever is still valid.
+- **Exit:** 15:55, or a cancelled order that filled.
