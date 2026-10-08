@@ -142,7 +142,8 @@ def simulate(S: Session, P: dict):
     large = R / S.c1030 * 100 > P["large_ib"][dow]
 
     def opposite_open(side):
-        return [p for p in pos.values() if p.state == "open" and p.side == -side]
+        ign = P.get("conflict_ignore", ())     # setups that never interact (e.g. T1 traded elsewhere)
+        return [p for p in pos.values() if p.state == "open" and p.side == -side and p.setup not in ign]
 
     def try_fill(p, i, gate=None):
         o, h, l = S.o[i], S.h[i], S.l[i]
@@ -154,6 +155,10 @@ def simulate(S: Session, P: dict):
              (max(o, p.entry) if h >= p.entry else None)
         if px is None:
             return
+        if gate is None and P.get("one_t2") and p.setup in ("T2R", "T2X"):
+            other = pos.get("T2X" if p.setup == "T2R" else "T2R")
+            if other is not None and other.fill_i >= 0:
+                gate = "other T2 already traded"     # one T2 trade per day per account
         if gate:
             p.state, p.why = "cancelled", gate
             return
