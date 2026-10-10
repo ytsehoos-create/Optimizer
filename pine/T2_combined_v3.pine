@@ -301,6 +301,8 @@ var float xRisk = na
 var bool  rAtBroker = false
 var bool  xAtBroker = false
 var float rTgtOut   = na
+var int   rQtyPine  = 0          // size of the resting order inside the strategy emulator
+var int   xQtyPine  = 0
 var float xTgtOut   = na
 var int   seenClosed = 0
 var string rNote = "waiting for IB"
@@ -662,16 +664,18 @@ if not inTrade and not exitedDead and afterIB and nextHm >= 930 and nextHm < 160
         rAtBroker := false
         xAtBroker := false
         if wantR
-            strategy.entry("T2R", rSide > 0 ? strategy.long : strategy.short, qty = rQty, limit = rE)
+            strategy.order("T2R", rSide > 0 ? strategy.long : strategy.short, qty = rQty, limit = rE)
             strategy.exit("T2R exit", from_entry = "T2R", stop = rS, limit = tgtR)
+            rQtyPine := rQty
             if sendAlerts
                 alert(f_msgPlace(rSide, rQty, rE, rS, tgtR), alert.freq_once_per_bar_close)
             rAtBroker := true
             rTgtOut := tgtR
             rNote := "working: " + f_side(rSide) + " " + str.tostring(rQty) + " @ " + f_px(rE) + " · S " + f_px(rS) + " · T " + f_px(tgtR) + (tgtR != rT ? " (aligned)" : "")
         if wantX
-            strategy.entry("T2X", xSide > 0 ? strategy.long : strategy.short, qty = xQty, limit = xE)
+            strategy.order("T2X", xSide > 0 ? strategy.long : strategy.short, qty = xQty, limit = xE)
             strategy.exit("T2X exit", from_entry = "T2X", stop = xS, limit = tgtX)
+            xQtyPine := xQty
             if sendAlerts
                 alert(f_msgPlace(xSide, xQty, xE, xS, tgtX), alert.freq_once_per_bar_close)
             xAtBroker := true
@@ -686,6 +690,31 @@ if not inTrade and not exitedDead and afterIB and nextHm >= 930 and nextHm < 160
 else if inTrade and xSt == 2 and not xAtBroker and not xDead and xNote != "waiting: T2R is in a trade"
     xNote := "waiting: T2R is in a trade"
     evt := evt + (evt == "" ? "" : " · ") + "T2X " + xNote
+
+// ── Handoff emulation (strategy only; nothing is sent to the bridge) ───────
+// At the broker, when a trade's target and the other resting entry sit at the
+// same price, both fill: the trade closes and the new one opens at full size.
+// TradingView's emulator would instead let the resting order spend part of its
+// size closing the trade. So while a trade is on and the other order rests at
+// its target, that order also carries the trade's size and does the closing.
+if inTrade
+    posQty = int(math.abs(strategy.position_size))
+    if openId == "T2X" and rAtBroker and xTgtOut == rE
+        strategy.order("T2R", rSide > 0 ? strategy.long : strategy.short, qty = rQty + posQty, limit = rE)
+        strategy.exit("T2X exit", from_entry = "T2X", stop = xS, limit = na)
+        rQtyPine := rQty + posQty
+    else if openId == "T2R" and xAtBroker and rTgtOut == xE
+        strategy.order("T2X", xSide > 0 ? strategy.long : strategy.short, qty = xQty + posQty, limit = xE)
+        strategy.exit("T2R exit", from_entry = "T2R", stop = rS, limit = na)
+        xQtyPine := xQty + posQty
+else if not exitedDead
+    // Flat again without a handoff: the resting order goes back to its own size.
+    if rAtBroker and rQtyPine != rQty
+        strategy.order("T2R", rSide > 0 ? strategy.long : strategy.short, qty = rQty, limit = rE)
+        rQtyPine := rQty
+    if xAtBroker and xQtyPine != xQty
+        strategy.order("T2X", xSide > 0 ? strategy.long : strategy.short, qty = xQty, limit = xE)
+        xQtyPine := xQty
 
 // ── Flatten at 15:55 bar close ──────────────────────────────────────────────
 if hm == flatAt
