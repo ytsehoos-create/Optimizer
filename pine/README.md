@@ -244,6 +244,8 @@ The point of rule 2: every cancel the script sends happens while the account is 
 - **What a broker does:** both orders fill at the shared price and the new trade gets its full size, as in the expected list.
 - **Fixed Oct 10 2026:** the script now makes TradingView's backtest do the same. This is a strategy-side change only; no extra messages go to the bridge. Without it, the script could believe an order was still resting after a handoff when the account was actually in that trade.
 
+**Re-checked after the handoff fix** (export of Oct 10): 102 trades, 56 wins, +$22,798.88 against the expected +$22,816.88. Every trade matches on date, setup, size, entry and exit. The $18 gap is TradingView's 1 tick of slippage on the 36 contracts closed at market (15:55 flattens and cancelled orders that filled), which the expected list doesn't charge.
+
 **Fixed Oct 10 2026: positions not closing at 15:55.** The first version sent its 15:55 flatten and then cancelled all resting orders in the same bar. On days when a held-back cancel was still waiting (Aug 7, Aug 12 and Sep 2 2026), the cancel also removed the flatten order and the trade's stop and target. The trade then stayed open, and no new trades were placed afterwards. The script now cancels first and then flattens. Re-add or update the script if you added the first version.
 
 **Automation:** one alert, "alert() function calls only". Messages:
