@@ -36,10 +36,13 @@
 //   Orders are processed from the bar after they are placed, as in the backtest.
 //
 // Automation: ONE alert, "alert() function calls only", Webhook URL = your
-//   bridge, Message = blank. Messages (TradersPost-style JSON, edit f_msg*):
-//     PLACE  → limit entry with attached stop + target
-//     CANCEL → cancel the ticker's resting orders (sent only while flat)
-//     EXIT   → flatten (15:55, or a cancelled order that filled)
+//   bridge, Message = blank. Bridge = NinjaView (default) or TradersPost:
+//     PLACE  → NinjaView "oco limit buy/sell": limit entry with TP/SL bracket
+//              that arms on fill, each order with its own oco_id
+//     CANCEL → NinjaView "cancel oco" for that order's oco_id only
+//              (TradersPost: cancel the ticker's resting orders)
+//     EXIT   → NinjaView "cancel oco and flatten" for the open trade's oco_id
+//              (15:55, or a cancelled order that filled)
 // ============================================================================
 strategy("MNQ v3 · T2R + T2X (one account)", shorttitle = "T2", overlay = true, pyramiding = 0,
      process_orders_on_close = false, initial_capital = 50000, margin_long = 0, margin_short = 0,
@@ -197,7 +200,10 @@ t1Fri = input.bool(true, "Fri", inline = "t1d", group = G5)
 G6 = "Automation"
 sendAlerts = input.bool(true, "Send webhook alerts", group = G6)
 showLabels = input.bool(true, "Show status labels on the chart", group = G6)
-tickerOut  = input.string("MNQ1!", "Ticker sent to bridge", group = G6)
+bridge     = input.string("NinjaView", "Bridge", options = ["NinjaView", "TradersPost"], group = G6)
+ntAccount  = input.string("Sim101", "NinjaView: NinjaTrader account (exact name; comma-separate for several)", group = G6)
+ntTicker   = input.string("MNQ 12-26", "NinjaView: NinjaTrader instrument (update at each quarterly roll)", group = G6)
+tickerOut  = input.string("MNQ1!", "TradersPost: ticker sent to bridge", group = G6)
 
 // ── Session clock (America/New_York) ────────────────────────────────────────
 if not (timeframe.isminutes and timeframe.multiplier == 5)
@@ -255,14 +261,26 @@ f_tickDn(x) => math.floor(x / syminfo.mintick + 1e-6) * syminfo.mintick
 // The closer of a trade's own target and another level (both on its profit side).
 f_closer(d, own, lvl) => na(lvl) ? own : d > 0 ? math.min(own, lvl) : math.max(own, lvl)
 f_lots(rk, pts) => math.max(1, math.floor(rk / (pts * syminfo.pointvalue)))
-f_msgPlace(d, n, e, stp, tp) =>
-    '{"ticker":"' + tickerOut + '","action":"' + (d > 0 ? "buy" : "sell") +
-     '","orderType":"limit","limitPrice":' + f_px(e) + ',"quantity":' + str.tostring(n) +
-     ',"stopLoss":{"type":"stop","stopPrice":' + f_px(stp) + '},"takeProfit":{"limitPrice":' + f_px(tp) + '}}'
-f_msgCancel() =>
-    '{"ticker":"' + tickerOut + '","action":"cancel"}'
-f_msgExit() =>
-    '{"ticker":"' + tickerOut + '","action":"exit"}'
+f_nv(a) =>
+    '{"alert":"' + a + '","account":"' + ntAccount + '","ticker":"' + ntTicker + '"'
+// Resting limit entry with a take-profit / stop-loss bracket that arms on fill.
+f_msgPlace(d, n, e, stp, tp, id) =>
+    string m = na
+    if bridge == "NinjaView"
+        m := f_nv("oco limit " + (d > 0 ? "buy" : "sell")) + ',"qty":"' + str.tostring(n) + '","limit_price":"' + f_px(e) +
+             '","take_profit_price":"' + f_px(tp) + '","stop_loss_price":"' + f_px(stp) + '","oco_id":"' + id + '","tif":"DAY"}'
+    else
+        m := '{"ticker":"' + tickerOut + '","action":"' + (d > 0 ? "buy" : "sell") +
+             '","orderType":"limit","limitPrice":' + f_px(e) + ',"quantity":' + str.tostring(n) +
+             ',"stopLoss":{"type":"stop","stopPrice":' + f_px(stp) + '},"takeProfit":{"limitPrice":' + f_px(tp) + '}}'
+    m
+// Cancel one resting order (NinjaView, by oco_id) or the ticker's resting orders (TradersPost).
+f_msgCancel(id) =>
+    bridge == "NinjaView" ? f_nv("cancel oco") + ',"oco_id":"' + id + '"}' : '{"ticker":"' + tickerOut + '","action":"cancel"}'
+// Close the trade opened by order `id` and cancel its bracket; with no id, flatten the instrument.
+f_msgExit(id) =>
+    bridge == "NinjaView" ? (id == "" ? f_nv("market flat") + '}' : f_nv("cancel oco and flatten") + ',"oco_id":"' + id + '"}') :
+         '{"ticker":"' + tickerOut + '","action":"exit"}'
 f_side(d) => d > 0 ? "LONG" : "SHORT"
 
 // ── State ───────────────────────────────────────────────────────────────────
@@ -303,6 +321,9 @@ var bool  xAtBroker = false
 var float rTgtOut   = na
 var int   rQtyPine  = 0          // size of the resting order inside the strategy emulator
 var int   xQtyPine  = 0
+var int   ordSeq    = 0          // makes every oco_id unique (NinjaTrader rejects a reused one)
+var string rId      = ""
+var string xId      = ""
 var float xTgtOut   = na
 var int   seenClosed = 0
 var string rNote = "waiting for IB"
@@ -353,7 +374,9 @@ if newRTH
     if strategy.position_size != 0       // safety net: never carry a position into a new session
         strategy.close_all(comment = "carried over: closed", immediately = true)
         if sendAlerts
-            alert(f_msgExit(), alert.freq_once_per_bar_close)
+            alert(f_msgExit(""), alert.freq_once_per_bar_close)
+    rId := ""
+    xId := ""
 else if inIB
     if high > ibH
         ibH := high
@@ -498,7 +521,7 @@ exitedDead = false
 if openId == "T2R" and rDead
     strategy.close("T2R", comment = "cancelled order filled", immediately = true)
     if sendAlerts
-        alert(f_msgExit(), alert.freq_once_per_bar_close)
+        alert(f_msgExit(rId), alert.freq_once_per_bar_close)
     rSt := 3
     rDead := false
     exitedDead := true
@@ -507,7 +530,7 @@ if openId == "T2R" and rDead
 if openId == "T2X" and xDead
     strategy.close("T2X", comment = "cancelled order filled", immediately = true)
     if sendAlerts
-        alert(f_msgExit(), alert.freq_once_per_bar_close)
+        alert(f_msgExit(xId), alert.freq_once_per_bar_close)
     xSt := 4
     xDead := false
     exitedDead := true
@@ -645,8 +668,13 @@ if not inTrade and not exitedDead and afterIB and nextHm >= 930 and nextHm < 160
         // Bridge: cancel everything resting, then re-place what is still valid.
         // Strategy: cancel what is no longer wanted; re-calling entry/exit with
         // the same id updates the rest in place.
-        if (rAtBroker or xAtBroker) and sendAlerts
-            alert(f_msgCancel(), alert.freq_once_per_bar_close)
+        if sendAlerts and bridge == "NinjaView"
+            if rAtBroker
+                alert(f_msgCancel(rId), alert.freq_once_per_bar_close)
+            if xAtBroker
+                alert(f_msgCancel(xId), alert.freq_once_per_bar_close)
+        else if sendAlerts and (rAtBroker or xAtBroker)
+            alert(f_msgCancel(""), alert.freq_once_per_bar_close)
         if not wantR
             strategy.cancel("T2R")
             strategy.cancel("T2R exit")
@@ -667,8 +695,10 @@ if not inTrade and not exitedDead and afterIB and nextHm >= 930 and nextHm < 160
             strategy.order("T2R", rSide > 0 ? strategy.long : strategy.short, qty = rQty, limit = rE)
             strategy.exit("T2R exit", from_entry = "T2R", stop = rS, limit = tgtR)
             rQtyPine := rQty
+            ordSeq += 1
+            rId := "T2R-" + str.format_time(time, "yyMMdd", TZ) + "-" + str.tostring(ordSeq)
             if sendAlerts
-                alert(f_msgPlace(rSide, rQty, rE, rS, tgtR), alert.freq_once_per_bar_close)
+                alert(f_msgPlace(rSide, rQty, rE, rS, tgtR, rId), alert.freq_once_per_bar_close)
             rAtBroker := true
             rTgtOut := tgtR
             rNote := "working: " + f_side(rSide) + " " + str.tostring(rQty) + " @ " + f_px(rE) + " · S " + f_px(rS) + " · T " + f_px(tgtR) + (tgtR != rT ? " (aligned)" : "")
@@ -676,8 +706,10 @@ if not inTrade and not exitedDead and afterIB and nextHm >= 930 and nextHm < 160
             strategy.order("T2X", xSide > 0 ? strategy.long : strategy.short, qty = xQty, limit = xE)
             strategy.exit("T2X exit", from_entry = "T2X", stop = xS, limit = tgtX)
             xQtyPine := xQty
+            ordSeq += 1
+            xId := "T2X-" + str.format_time(time, "yyMMdd", TZ) + "-" + str.tostring(ordSeq)
             if sendAlerts
-                alert(f_msgPlace(xSide, xQty, xE, xS, tgtX), alert.freq_once_per_bar_close)
+                alert(f_msgPlace(xSide, xQty, xE, xS, tgtX, xId), alert.freq_once_per_bar_close)
             xAtBroker := true
             xTgtOut := tgtX
             xNote := "working: " + f_side(xSide) + " " + str.tostring(xQty) + " @ " + f_px(xE) + " · S " + f_px(xS) + " · T " + f_px(tgtX) + (tgtX != xT ? " (aligned)" : "")
@@ -724,9 +756,14 @@ if hm == flatAt
     if strategy.position_size != 0
         strategy.close_all(comment = "EOD", immediately = true)
         if sendAlerts
-            alert(f_msgExit(), alert.freq_once_per_bar_close)
-    if (rAtBroker or xAtBroker) and sendAlerts
-        alert(f_msgCancel(), alert.freq_once_per_bar_close)
+            alert(f_msgExit(openId == "T2R" ? rId : openId == "T2X" ? xId : ""), alert.freq_once_per_bar_close)
+    if sendAlerts and bridge == "NinjaView"
+        if rAtBroker
+            alert(f_msgCancel(rId), alert.freq_once_per_bar_close)
+        if xAtBroker
+            alert(f_msgCancel(xId), alert.freq_once_per_bar_close)
+    else if sendAlerts and (rAtBroker or xAtBroker)
+        alert(f_msgCancel(""), alert.freq_once_per_bar_close)
     rAtBroker := false
     xAtBroker := false
 

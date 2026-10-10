@@ -252,3 +252,50 @@ The point of rule 2: every cancel the script sends happens while the account is 
 - **Place:** limit entry with stop and target.
 - **Cancel:** only ever sent while flat, immediately followed by re-placing whatever is still valid.
 - **Exit:** 15:55, or a cancelled order that filled.
+
+### Automating the combined script with NinjaView
+
+The script's default bridge is **NinjaView** (TradingView → NinjaView → NinjaTrader 8 → your account). It sends three kinds of messages:
+
+| When | NinjaView alert | What it does |
+|---|---|---|
+| An order is placed (flat account) | `oco limit buy` / `oco limit sell` with `qty`, `limit_price`, `take_profit_price`, `stop_loss_price`, `oco_id`, `tif: DAY` | Rests the limit entry; the take-profit and stop-loss arm when it fills |
+| An order is withdrawn (flat account) | `cancel oco` with that order's `oco_id` | Cancels that one order only |
+| 15:55, or a cancelled order that filled | `cancel oco and flatten` with the open trade's `oco_id` | Cancels the trade's bracket and closes it |
+
+- **Unique IDs:** every order gets a new `oco_id` (for example `T2R-251128-14`), because NinjaTrader rejects a reused OCO ID.
+- **Carried-over safety net:** if a position is still open at the next 9:30 bar, the script sends `market flat`.
+
+**One-time setup**
+1. **Install:** NinjaTrader 8 and the NinjaView add-on (Easy Installer from the NinjaView Downloads page). Restart NinjaTrader; you should see New → Ninjaview → TradeSync.
+2. **Activate:** in NinjaTrader, Help → About → copy the Machine ID, then paste it on NinjaView's Licenses page.
+3. **Connect:** your account in NinjaTrader, with live data for MNQ. NinjaTrader must stay running during the session (your PC or a Windows VPS).
+4. **Copy the webhook:** on NinjaView's Webhook Setup page, copy your webhook URL.
+
+**TradingView**
+1. Open a 5-minute chart of the **dated contract** that matches NinjaTrader (for Dec 2026, `CME_MINI:MNQZ2026`) and add "MNQ v3 · T2R + T2X (one account)".
+   - Charting the same contract you trade keeps the prices identical on both sides.
+   - MNQ1! switches contracts on TradingView's schedule, which may not match the day you change contracts in NinjaTrader.
+2. Settings → Automation:
+   - **Bridge:** NinjaView.
+   - **NinjaTrader account:** the exact account name. Start with `Sim101`.
+   - **NinjaTrader instrument:** `MNQ 12-26`.
+3. Create one alert:
+   - **Condition:** the strategy → "alert() function calls only".
+   - **Expiration:** open-ended.
+   - **Notifications:** Webhook URL = your NinjaView URL.
+   - **Message:** leave blank (the script writes it).
+
+**Before going live**
+- **Test on Sim101 for several sessions.**
+  - At the first IB break you should see a limit order with its bracket in NinjaTrader.
+  - At the 14:00/13:00 cutoffs the unfilled order should be cancelled.
+  - At 15:55 any open trade should close.
+- **Compare logs:** check NinjaView's Trade Log against TradingView's List of Trades.
+- **Check your prop firm's automation rules.** Then change the account name to your prop account and re-create the alert.
+
+**Each quarterly roll** (about a week before expiration, e.g. around Dec 10 2026):
+- Switch the chart to the new contract (`MNQH2027`).
+- Set the instrument to `MNQ 03-27`.
+- Re-create the alert (an alert stays tied to the chart symbol it was made on).
+- Do it with no trade open, after 16:00 or before 9:30.
