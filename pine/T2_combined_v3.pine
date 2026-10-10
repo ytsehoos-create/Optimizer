@@ -205,6 +205,8 @@ if not (timeframe.isminutes and timeframe.multiplier == 5)
 
 TZ        = "America/New_York"
 hm        = hour(time, TZ) * 100 + minute(time, TZ)
+// Charts without extended hours have no bar after 15:55: flatten there at the latest.
+flatAt    = syminfo.session == session.regular ? math.min(flatHM, 1555) : flatHM
 nextT     = time + timeframe.in_seconds() * 1000
 nextHm    = hour(nextT, TZ) * 100 + minute(nextT, TZ)
 isRTH     = hm >= 930 and hm < 1600
@@ -346,6 +348,10 @@ if newRTH
     t1Tag := ""
     t1Note := "building IB"
     strategy.cancel_all()
+    if strategy.position_size != 0       // safety net: never carry a position into a new session
+        strategy.close_all(comment = "carried over: closed", immediately = true)
+        if sendAlerts
+            alert(f_msgExit(), alert.freq_once_per_bar_close)
 else if inIB
     if high > ibH
         ibH := high
@@ -449,7 +455,7 @@ if afterIB and t1St == 2 and bar_index >= t1Fill
         t1St := 4
     else if hitTgt
         t1St := 3
-    else if hm == flatHM
+    else if hm == flatAt
         t1St := (close - t1Px) * t1Side > 0 ? 3 : 4
     if t1St >= 3
         t1Note := t1Tag + " " + (t1St == 3 ? "WON" : "LOST") + " " + str.format_time(time, "HH:mm", TZ)
@@ -682,15 +688,16 @@ else if inTrade and xSt == 2 and not xAtBroker and not xDead and xNote != "waiti
     evt := evt + (evt == "" ? "" : " · ") + "T2X " + xNote
 
 // ── Flatten at 15:55 bar close ──────────────────────────────────────────────
-if hm == flatHM
+if hm == flatAt
+    // Cancel resting orders first, then flatten: a cancel issued after the close
+    // order in the same bar would cancel the close itself (and the trade's bracket).
+    strategy.cancel_all()
     if strategy.position_size != 0
         strategy.close_all(comment = "EOD", immediately = true)
         if sendAlerts
             alert(f_msgExit(), alert.freq_once_per_bar_close)
-    if rAtBroker or xAtBroker
-        strategy.cancel_all()
-        if sendAlerts
-            alert(f_msgCancel(), alert.freq_once_per_bar_close)
+    if (rAtBroker or xAtBroker) and sendAlerts
+        alert(f_msgCancel(), alert.freq_once_per_bar_close)
     rAtBroker := false
     xAtBroker := false
 

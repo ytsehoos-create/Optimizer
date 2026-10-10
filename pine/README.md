@@ -1,5 +1,9 @@
 # Pine Script strategies (MNQ v3)
 
+**Closing time (all scripts):** every open trade is closed at the 15:55 bar close (4:00 pm ET), inside a 4:30 pm deadline. Two safety nets:
+- **RTH-only charts:** there's no bar after 15:55, so a "Flatten at" setting later than 15:55 is treated as 15:55. To hold past 4:00, use an extended-hours chart.
+- **Carried-over trades:** if a position is somehow still open at the next 9:30 bar, the script closes it immediately and sends an exit.
+
 ## T1_Zone1_v3.pine — T1 Zone 1
 
 **Chart:** MNQ1! (or the front-month MNQ contract), 5-minute, exchange time. RTH-only or ETH chart both work. The script keeps its own 09:30–16:00 ET clock and anchors VWAP at 09:30.
@@ -231,6 +235,8 @@ The point of rule 2: every cancel the script sends happens while the account is 
 - **Checks:** on days when only one setup trades, the script's trades match the standalone T2R and T2X scripts exactly (36 and 23 trades). On the 20 days both traded, no two positions were ever open at once.
 
 **Expected differences in TradingView's backtest:** same as the T2R and T2X scripts.
+
+**Fixed Oct 10 2026: positions not closing at 15:55.** The first version sent its 15:55 flatten and then cancelled all resting orders in the same bar. On days when a held-back cancel was still waiting (Aug 7, Aug 12 and Sep 2 2026), the cancel also removed the flatten order and the trade's stop and target. The trade then stayed open, and no new trades were placed afterwards. The script now cancels first and then flattens. Re-add or update the script if you added the first version.
 
 **Automation:** one alert, "alert() function calls only". Messages:
 - **Place:** limit entry with stop and target.

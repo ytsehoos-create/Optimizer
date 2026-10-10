@@ -62,6 +62,8 @@ if not (timeframe.isminutes and timeframe.multiplier == 5)
 
 TZ        = "America/New_York"
 hm        = hour(time, TZ) * 100 + minute(time, TZ)
+// Charts without extended hours have no bar after 15:55: flatten there at the latest.
+flatAt    = syminfo.session == session.regular ? math.min(flatHM, 1555) : flatHM
 isRTH     = hm >= 930 and hm < 1600
 newRTH    = hm == 930
 inIB      = hm >= 930 and hm < 1030
@@ -110,6 +112,10 @@ if newRTH
     qty := 0
     status := "building IB"
     strategy.cancel_all()
+    if strategy.position_size != 0       // safety net: never carry a position into a new session
+        strategy.close_all(comment = "carried over: closed", immediately = true)
+        if sendAlerts
+            alert(f_msgExit(), alert.freq_once_per_bar_close)
 else if inIB
     if high > ibH
         ibH := high
@@ -166,7 +172,7 @@ if lastIBBar and not na(ibH)
              color = side != 0 ? color.new(color.purple, 20) : color.new(color.gray, 30), textcolor = color.white, size = size.small)
 
 // ── Flatten at 15:55 bar close ──────────────────────────────────────────────
-if hm == flatHM and strategy.position_size != 0
+if hm == flatAt and strategy.position_size != 0
     strategy.close_all(comment = "EOD")
     if sendAlerts
         alert(f_msgExit(), alert.freq_once_per_bar_close)
