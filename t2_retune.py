@@ -58,7 +58,7 @@ CURRENT = dict(
           ("T2X", 1, 4): (.50, .60, .20),
           ("T2X", -1, 1): (.30, .60, .25), ("T2X", -1, 2): (.50, .60, .25), ("T2X", -1, 4): (.40, .60, .25)},
     risk={("T2R", 1, 2): 300, ("T2X", 1, 2): 300},     # $ per trade; everything else DEFAULT_RISK
-    t2r_ib_mult=None,                                  # optional (lo %, hi %, x): T2R risk x when IB in [lo, hi) % of price
+    t2r_ib_mult=(0.4, 0.6, 1.5),                       # IB-size sizing (lo %, hi %, x): T2R risk x when IB in [lo, hi) % of price
 )
 DEFAULT_RISK, MAX_RISK, CUT_R, CUT_X, LARGE_IB, FILTER_B, ALIGN = 200, 300, 1400, 1300, 0.9, 0.20, True
 # Levels a row starts from when the search switches it on.
@@ -67,6 +67,7 @@ NEW_ROW = {("T2R", 1): (.20, .30, .25), ("T2R", -1): (.20, .30, .25),
 # The original v1 rows (before any fitting on this data), the walk-forward's starting point.
 V1 = dict(CURRENT, rows={k: v for k, v in CURRENT["rows"].items() if k not in {("T2R", -1, 2), ("T2R", -1, 4)}})
 V1["rows"].update({k: v[:2] + (.20,) for k, v in V1["rows"].items() if k[:2] == ("T2X", -1)})
+V1["t2r_ib_mult"] = None
 
 
 # ----------------------------------------------------------------------------- data
@@ -105,12 +106,13 @@ def closer(d, own, lvl):
     return own if lvl is None else (min(own, lvl) if d > 0 else max(own, lvl))
 
 
-def run(df, P):
+def run(df, P, full_only=True):
+    """full_only=False also trades holiday half-days; a trade still open at their early close exits there."""
     rows, out, prev_close = P["rows"], [], None
     days = {k[2] for k in rows}
     for d, g in df.groupby("date", sort=True):
         g = g.reset_index(drop=True)
-        if len(g) != 78:                     # holiday half-days (flattened by hand)
+        if full_only and len(g) != 78:       # holiday half-days (flattened by hand)
             continue
         o, h, l, c, vw, hmv = (g[k].to_numpy() for k in ("open", "high", "low", "close", "vwap", "hm"))
         dow = int(g.dow.iloc[0]); n = len(g)
@@ -267,6 +269,8 @@ def run(df, P):
                         x["tout"] = tX
             if hm == 1555:
                 r["at"] = x["at"] = False
+        if pos is not None:                  # only on a half-day: still open at the early close
+            pos.update(exit=c[-1], why="session end", xi=n - 1); trades.append(pos)
         for p in trades:
             sd = p["side"]; pnl = (p["exit"] - p["px"]) * sd * p["lots"] * PV
             cost = p["lots"] * (COMM + (p["why"] == "stop") * SLIP * PV)
@@ -477,11 +481,12 @@ if __name__ == "__main__":
     for line in diff(CURRENT, P) or ["(none)"]:
         print("  ", line)
     yr = T[T.date.isin(W[0])]; recent = T[T.date.isin(set().union(*W[2]))]
-    x0 = score(T, W)
-    x1 = score(run(df[df.date <= end], dict(P, t2r_ib_mult=(0.4, 0.6, 1.5))), W)
-    d = x1 - x0
-    print(f"\nIB-size layer (T2R 1.5x risk when the IB is 0.4-0.59% of price): last 6 mo {d[1:].sum():+,.0f} "
-          f"(blocks {' '.join(f'{v:+,.0f}' for v in d[1:])}), 12 mo {d.sum():+,.0f}")
+    on = dict(P, t2r_ib_mult=P.get("t2r_ib_mult") or (0.4, 0.6, 1.5))
+    lo, hi, mult = on["t2r_ib_mult"]
+    d = score(run(df[df.date <= end], on), W) - score(run(df[df.date <= end], dict(P, t2r_ib_mult=None)), W)
+    print(f"\nIB-size sizing (T2R {mult}x risk when the IB is {lo}-{hi}% of price), on minus off: last 6 mo {d[1:].sum():+,.0f} "
+          f"(blocks {' '.join(f'{v:+,.0f}' for v in d[1:])}), 12 mo {d.sum():+,.0f}"
+          f"  -> {'keep it on' if d[1:].sum() > 0 and d.sum() > 0 else 'consider switching it off'}")
     print("\nrows, 12-month and last-6-month net:")
     for k, lv in sorted(P["rows"].items(), key=lambda kv: (kv[0][0], -kv[0][1], kv[0][2])):
         a = yr[(yr.setup == k[0]) & (yr.brk == k[1]) & (yr.dow == k[2])]

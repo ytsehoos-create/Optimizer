@@ -223,20 +223,32 @@ The point of rule 2: every cancel the script sends happens while the account is 
 
 **Sizing:** "Risk per trade" applies to every row unless the row sets its own. Two Wednesday rows default to $300, as in the standalone scripts: T2R break-up (short fade) and T2X break-up (long).
 
-**Reference results** (script logic with the backtest's fill rules, defaults: $200, with Wednesday T2R and T2X breakouts at $300, net of costs):
+**IB-size sizing (added Oct 11 2026, on by default):** when the IB at 10:30 is 0.40–0.60% of price, T2R risks 1.5× its row's risk.
+- **New risk on those days:** $300 instead of $200, and $450 instead of $300 on Wednesday breakouts.
+- **What scales with it:** the "skip if the trade risks more than" ceiling, on those days only.
+- **What doesn't change:** entries, stops, targets, gates and every T2X trade. The bridge just receives a larger quantity.
+- **Settings:** Risk → "T2R IB-size sizing" turns it off. The band and the multiplier are inputs beside it.
+- **Why:** over Oct 2025 – Oct 2026, T2R on these days averaged +2.80R in the first 6 months and +1.03R in the last 6. On 0.6–0.89% days it averaged +0.69R in both halves. T2X showed no such difference, so it isn't sized.
+- **Keeping it current:** the monthly `t2_retune.py` run says whether to keep it on.
 
-| Window | Trades | Win rate | PF | Net | Max drawdown |
-|---|---|---|---|---|---|
-| Sep 23 2025 – Sep 22 2026 (uploaded data) | 99 | 53.5% | 3.34 | +$20,139 | $677 |
-| Oct 13 2025 – Oct 8 2026 | 99 | 54.5% | 3.51 | +$21,065 | $677 |
+**Reference results** (script logic with the backtest's fill rules: $200, Wednesday T2R and T2X breakouts at $300, net of costs, max drawdown on daily closes):
 
-- **Half-days:** TradingView will also trade the two holiday half-days, which add 3 trades and +$1,752. Expect about 102 trades and +$22,817 for Oct 13 – Oct 8.
-- **Trade list:** `output/2026.09.24-mnq-ib-v3/T2_combined_expected_trades.csv`, including 6 trades from live TradingView bars (Sep 24 – Oct 7 2026).
+| Window | IB-size sizing | Trades | Win rate | PF | Net | Max drawdown |
+|---|---|---|---|---|---|---|
+| Sep 23 2025 – Sep 22 2026 (uploaded data) | on | 99 | 53.5% | 3.53 | +$24,452 | $780 |
+| Oct 13 2025 – Oct 9 2026 | on | 99 | 54.5% | 3.64 | +$25,285 | $774 |
+| Oct 13 2025 – Oct 9 2026 | off | 99 | 54.5% | 3.51 | +$21,065 | $677 |
+
+- **The sized trades:** 22 trades in Oct 13 – Oct 9 (12 winners). Largest single loss −$469 instead of −$312; most contracts 20 instead of 15.
+- **Half-days:** TradingView also trades the two holiday half-days. Both had IBs under 0.40%, so they're unchanged: 3 trades, +$1,752. Expect 102 trades and +$27,036.92 for Oct 13 – Oct 9 with the switch on, or +$22,816.88 with it off.
+- **Trade list:** `output/2026.09.24-mnq-ib-v3/T2_combined_expected_trades.csv`, with the switch on and the half-day trades included (marked in the `data` column).
+  - Trades after Sep 22 2026 come from TradingView bars, Sep 23 – Oct 9.
+  - With the switch off, the same simulation reproduces the previous list trade-for-trade.
 - **Checks:** on days when only one setup trades, the script's trades match the standalone T2R and T2X scripts exactly (36 and 23 trades). On the 20 days both traded, no two positions were ever open at once.
 
 **Expected differences in TradingView's backtest:** same as the T2R and T2X scripts.
 
-**Checked against TradingView** (Oct 13 2025 – Oct 8 2026, export of Oct 10): 101 trades, +$22,157.86, against 102 expected trades and +$22,816.88. 89 of 102 day-by-setup results matched to the dollar.
+**Checked against TradingView** before IB-size sizing was added (Oct 13 2025 – Oct 8 2026, export of Oct 10; with the switch off the script trades exactly as checked here): 101 trades, +$22,157.86, against 102 expected trades and +$22,816.88. 89 of 102 day-by-setup results matched to the dollar.
 - **The 15:55 closes:** the two 15:55 closes differed only by TradingView's 1-tick slippage.
 - **Every other difference came from handoffs.** TradingView sized the resting order as it was when placed (while flat), so on a handoff it spent part of that order closing the open trade.
   - On Nov 4, Nov 5, Mar 24, Apr 14, May 5, May 20, Jul 21 and Sep 22, the new trade opened smaller than it should have.
@@ -314,7 +326,7 @@ The script's default bridge is **NinjaView** (TradingView → NinjaView → Ninj
    - the current levels' 12-month and last-6-month results;
    - each change it accepts;
    - the Pine inputs to edit;
-   - whether the optional IB-size layer still helps;
+   - whether IB-size sizing still pays (on minus off) and whether to keep it on;
    - each row's 12-month and last-6-month result.
 
 **What it may change:**
@@ -329,10 +341,10 @@ The script's default bridge is **NinjaView** (TradingView → NinjaView → Ninj
 
 The minimum-trades rule is there because most single rows trade only 2–5 times in 6 months. Without it, the search "found" +$4,700 in the last 6 months on Oct 9, 2026, mostly by tightening stops on rows with 2 trades. That is luck, not edge.
 
-**Oct 9, 2026 run:**
+**Oct 9, 2026 run** (before IB-size sizing was switched on; with it on, the 12 months make +$25,285 and the same single change passes):
 - **Current levels:** +$21,065 over 12 months, and +$8,333 over the last 6 months (+$2,228, +$2,053 and +$4,052 by 2-month block). Every row made money over the 12 months.
 - **Only change that passed:** T2R breakout Thursday entry, 0.30 → 0.35, worth +$329 over the last 6 months. The July 31 re-tune moved the same input the other way, so treat it as noise.
-- **IB-size layer** (T2R 1.5× when the IB is 0.4–0.59% of price): +$1,810 over the last 6 months, +$4,511 over 12 months. Its edge is shrinking:
+- **IB-size sizing** (T2R 1.5× when the IB is 0.4–0.59% of price; now on by default in the script): +$1,810 over the last 6 months, +$4,511 over 12 months. Its edge is shrinking:
 
   | T2R trades | IB 0.4–0.59% | IB 0.6–0.89% |
   |---|---|---|

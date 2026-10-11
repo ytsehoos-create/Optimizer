@@ -32,7 +32,9 @@
 //
 //   Flatten everything at the 15:55 bar close. Size = max(1, floor(risk $ ÷ stop $)).
 //   Defaults: $200 per trade; Wednesday T2R breakout fades and Wednesday T2X
-//   breakout longs $300.
+//   breakout longs $300. IB-size sizing (on by default): T2R risks 1.5× its
+//   row's risk when the IB is 0.40–0.60% of price ($300, or $450 on Wednesday
+//   breakouts). Switch it off in Risk to trade every row at its own risk.
 //   Orders are processed from the bar after they are placed, as in the backtest.
 //
 // Automation: ONE alert, "alert() function calls only", Webhook URL = your
@@ -54,6 +56,11 @@ G1 = "Risk"
 riskCap   = input.float(200, "Risk per trade ($)", minval = 1, group = G1)
 maxRisk   = input.float(300, "Skip if the trade risks more than ($, 0 = off)", minval = 0, group = G1,
      tooltip = "1 contract can risk more than the risk setting on wide-IB days. Above this ceiling the trade is skipped.")
+ibSizeOn  = input.bool(true, "T2R IB-size sizing", group = G1,
+     tooltip = "On days whose IB range (at 10:30) is in this band, T2R risks this multiple of its row's risk, and the skip ceiling scales with it. Entries, stops, targets and T2X are unchanged. Check it each month with t2_retune.py.")
+ibSizeLo  = input.float(0.40, "   IB from (% of price)", step = 0.05, inline = "ibs", group = G1)
+ibSizeHi  = input.float(0.60, "to under", step = 0.05, inline = "ibs", group = G1)
+ibSizeX   = input.float(1.5,  "   T2R risk ×", minval = 0.25, step = 0.25, group = G1)
 
 G2 = "Rules (v3 defaults)"
 largeIB   = input.float(0.9,  "Skip if IB range > (% of price)",            step = 0.05, group = G2)
@@ -292,6 +299,7 @@ var float ibL          = na
 var int   ibHBar       = na
 var int   ibLBar       = na
 var float c1030        = na
+var float ibPctDay     = na      // IB range as % of the 10:30 price
 var bool  dayLive      = false   // large-IB check passed at 10:30
 var int   brk          = 0       // first break: +1 up, −1 down, 2 both sides, 0 none yet
 var int   brkBar       = na
@@ -352,6 +360,7 @@ if newRTH
     ibHBar := bar_index
     ibLBar := bar_index
     c1030 := na
+    ibPctDay := na
     dayLive := false
     brk := 0
     brkBar := na
@@ -394,6 +403,7 @@ R = ibH - ibL
 if lastIBBar and not na(ibH)
     c1030 := close
     ibPct = R / close * 100
+    ibPctDay := ibPct
     anyOn = false
     if isWeekday
         anyOn := array.get(ruOn, dIdx) or array.get(rdOn, dIdx) or array.get(xuOn, dIdx) or array.get(xdOn, dIdx)
@@ -598,14 +608,16 @@ if afterIB and brk == 0 and not na(c1030)
                     s = array.get(isUp ? ruS : rdS, dIdx)
                     t = array.get(isUp ? ruT : rdT, dIdx)
                     rk = array.get(isUp ? ruRk : rdRk, dIdx)
+                    // IB-size sizing: more risk when the IB is in the chosen band
+                    rMult = ibSizeOn and ibPctDay >= ibSizeLo and ibPctDay < ibSizeHi ? ibSizeX : 1.0
                     eN = isUp ? f_tickUp(ibH + e * R) : f_tickDn(ibL - e * R)
                     sN = isUp ? f_tickUp(ibH + s * R) : f_tickDn(ibL - s * R)
                     tN = isUp ? f_tickDn(ibH - t * R) : f_tickUp(ibL + t * R)
-                    n = f_lots(rk > 0 ? rk : riskCap, math.abs(eN - sN))
+                    n = f_lots((rk > 0 ? rk : riskCap) * rMult, math.abs(eN - sN))
                     rkN = n * math.abs(eN - sN) * syminfo.pointvalue
                     if isUp ? high >= eN : low <= eN
                         rNote := "no T2R: the breaking bar already hit the entry"
-                    else if maxRisk > 0 and rkN > maxRisk
+                    else if maxRisk > 0 and rkN > maxRisk * rMult
                         rNote := "no T2R: " + str.tostring(n) + " lot risks $" + str.tostring(rkN, "#")
                     else
                         rSt := 1
@@ -615,7 +627,8 @@ if afterIB and brk == 0 and not na(c1030)
                         rT := tN
                         rQty := n
                         rRisk := rkN
-                        rNote := f_side(rSide) + " " + str.tostring(n) + " @ " + f_px(eN) + " · S " + f_px(sN) + " · T " + f_px(tN) + " · risk $" + str.tostring(rkN, "#")
+                        rNote := f_side(rSide) + " " + str.tostring(n) + " @ " + f_px(eN) + " · S " + f_px(sN) + " · T " + f_px(tN) + " · risk $" + str.tostring(rkN, "#") +
+                             (rMult != 1.0 ? " (IB " + str.tostring(ibPctDay, "#.##") + "%: ×" + str.tostring(rMult) + ")" : "")
                 // T2X
                 if not array.get(isUp ? xuOn : xdOn, dIdx)
                     xNote := "no T2X: break " + (isUp ? "up" : "down") + " is off on " + dayName
