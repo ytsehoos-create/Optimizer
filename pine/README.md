@@ -244,6 +244,12 @@ The point of rule 2: every cancel the script sends happens while the account is 
 - **Trade list:** `output/2026.09.24-mnq-ib-v3/T2_combined_expected_trades.csv`, with the switch on and the half-day trades included (marked in the `data` column).
   - Trades after Sep 22 2026 come from TradingView bars, Sep 23 – Oct 9.
   - With the switch off, the same simulation reproduces the previous list trade-for-trade.
+
+**Checked against TradingView with the switch on** (export of Oct 11 2026, trades Oct 15 2025 – Oct 7 2026):
+- **Totals:** 102 trades, 56 wins, +$27,017.92, against the expected +$27,036.92.
+- **Every trade matches** on date, setup, side, size, entry price and entry time, including all 22 sized-up T2R trades. For example, Nov 26 is 15 contracts and Jan 7 is 20.
+- **Stop exits:** identical net. TradingView prints the stop price after its 1-tick slippage, which the expected list charges as a cost instead.
+- **The $19 gap:** TradingView's 1 tick of slippage on the 38 contracts closed at market (7 closes at 15:55 and 5 cancelled orders that filled). The expected list doesn't charge it.
 - **Checks:** on days when only one setup trades, the script's trades match the standalone T2R and T2X scripts exactly (36 and 23 trades). On the 20 days both traded, no two positions were ever open at once.
 
 **Expected differences in TradingView's backtest:** same as the T2R and T2X scripts.
