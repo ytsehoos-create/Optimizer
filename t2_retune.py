@@ -5,8 +5,8 @@ over the whole 12 months, and levels are tuned to the last 6 months. Re-run ever
 1-2 months on a fresh chart export.
 
 Data: TradingView exports of CME_MINI:MNQ1! 5-min bars in data/mnq_5m_rth*.csv
-(columns time, open, high, low, close, RTH VWAP). Files are read oldest first; a
-later file only adds bars after the earlier ones end.
+(columns time, open, high, low, close, and RTH VWAP or volume). Files are read oldest
+first; a later file only adds bars after the earlier ones end.
 
 Simulator: run() is the Python port of the Pine script that reproduced TradingView's
 Strategy Tester trade-for-trade (Oct 2025 - Oct 2026: 102 trades, within $18).
@@ -21,6 +21,12 @@ Selection, greedy, one change at a time, best first:
               and every row the change touches is still net positive over the 12 months,
               and those rows had >= MIN_TRADES trades in the last 6 months (single rows rarely
               do, so most changes move a whole setup+direction; this blocks 2-trade "edges").
+
+Walk-forward check (Oct 11 2026; re-tune every 2 months from the original v1 levels,
+trade the next 2 months blind, Apr 1 - Oct 9 2026):
+  6-month objective   +$10,483, max DD $866     v1 never tuned   +$9,521, max DD $666
+  12-month objective  +$11,162, max DD $666
+Re-tuning added about $1-1.6K over 6 months; the two objectives differ by a trade or two.
 
 Usage:
   python3 t2_retune.py                   re-tune as of the last session in the data
@@ -72,6 +78,11 @@ def load_bars(pattern="data/mnq_5m_rth*.csv"):
         if raw.empty:
             continue
         last = raw.time.max()
+        if "RTH VWAP" not in raw:                # session VWAP from volume (only the T1 gate reads it)
+            vol = raw["volume" if "volume" in raw else "Volume"]
+            day = pd.to_datetime(raw.time, unit="s", utc=True).dt.tz_convert("America/New_York").dt.date
+            pv = (raw.high + raw.low + raw.close) / 3 * vol
+            raw = raw.assign(**{"RTH VWAP": pv.groupby(day).cumsum() / vol.groupby(day).cumsum()})
         parts.append(raw[["time", "open", "high", "low", "close", "RTH VWAP"]])
     raw = pd.concat(parts, ignore_index=True)
     dt = pd.to_datetime(raw.time, unit="s", utc=True).dt.tz_convert("America/New_York")
@@ -466,6 +477,11 @@ if __name__ == "__main__":
     for line in diff(CURRENT, P) or ["(none)"]:
         print("  ", line)
     yr = T[T.date.isin(W[0])]; recent = T[T.date.isin(set().union(*W[2]))]
+    x0 = score(T, W)
+    x1 = score(run(df[df.date <= end], dict(P, t2r_ib_mult=(0.4, 0.6, 1.5))), W)
+    d = x1 - x0
+    print(f"\nIB-size layer (T2R 1.5x risk when the IB is 0.4-0.59% of price): last 6 mo {d[1:].sum():+,.0f} "
+          f"(blocks {' '.join(f'{v:+,.0f}' for v in d[1:])}), 12 mo {d.sum():+,.0f}")
     print("\nrows, 12-month and last-6-month net:")
     for k, lv in sorted(P["rows"].items(), key=lambda kv: (kv[0][0], -kv[0][1], kv[0][2])):
         a = yr[(yr.setup == k[0]) & (yr.brk == k[1]) & (yr.dow == k[2])]

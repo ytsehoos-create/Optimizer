@@ -299,3 +299,52 @@ The script's default bridge is **NinjaView** (TradingView → NinjaView → Ninj
 - Set the instrument to `MNQ 03-27`.
 - Re-create the alert (an alert stays tied to the chart symbol it was made on).
 - Do it with no trade open, after 16:00 or before 9:30.
+
+### Re-tuning the levels every 1–2 months
+
+**Rule:** only the last 12 months count. A level must have made money over the whole 12 months, and levels are tuned to the last 6. `t2_retune.py` applies this rule to the combined script. It simulates the script's own logic, which reproduced TradingView's results trade-for-trade.
+
+**Run it:**
+1. **Bring the data up to date.** Either:
+   - add a TradingView export of `CME_MINI:MNQ1!` 5-minute bars to `data/` named `mnq_5m_rth_<from>_<to>.csv`, or
+   - ask Claude to pull the latest bars from TradingView. Only about a month of 5-minute history is available that way, so do it at least monthly.
+
+   Newer files only add bars after the older ones end.
+2. **Run** `python3 t2_retune.py`. It prints:
+   - the current levels' 12-month and last-6-month results;
+   - each change it accepts;
+   - the Pine inputs to edit;
+   - whether the optional IB-size layer still helps;
+   - each row's 12-month and last-6-month result.
+
+**What it may change:**
+- **Rows:** each row's on/off, and its entry, stop and target by 0.05 IB at a time.
+- **Setups:** a whole setup and direction at once, by the same 0.05 IB steps.
+
+**When it keeps a change:**
+- the last 6 months gain at least $150, and gain in at least 2 of their three 2-month blocks;
+- the full 12 months gain too;
+- every row the change touches is still profitable over the 12 months;
+- the rows involved had at least 6 trades in the last 6 months.
+
+The minimum-trades rule is there because most single rows trade only 2–5 times in 6 months. Without it, the search "found" +$4,700 in the last 6 months on Oct 9, 2026, mostly by tightening stops on rows with 2 trades. That is luck, not edge.
+
+**Oct 9, 2026 run:**
+- **Current levels:** +$21,065 over 12 months, and +$8,333 over the last 6 months (+$2,228, +$2,053 and +$4,052 by 2-month block). Every row made money over the 12 months.
+- **Only change that passed:** T2R breakout Thursday entry, 0.30 → 0.35, worth +$329 over the last 6 months. The July 31 re-tune moved the same input the other way, so treat it as noise.
+- **IB-size layer** (T2R 1.5× when the IB is 0.4–0.59% of price): +$1,810 over the last 6 months, +$4,511 over 12 months. Its edge is shrinking:
+
+  | T2R trades | IB 0.4–0.59% | IB 0.6–0.89% |
+  |---|---|---|
+  | First 6 months | avg +2.80R | avg +0.69R |
+  | Last 6 months | avg +1.03R | avg +0.69R |
+
+**Does re-tuning help?** Tested blind with `python3 t2_retune.py --walkforward`. Starting from the original v1 levels, it re-tuned every 2 months from Mar 31 and traded each following 2 months unseen, through Oct 9, 2026:
+
+| Process | Net | Max drawdown |
+|---|---|---|
+| Never re-tuned | +$9,521 | $666 |
+| Re-tuned on the last 6 months | +$10,483 | $866 |
+| Re-tuned on the full 12 months | +$11,162 | $666 |
+
+Re-tuning added about $1,000–1,600 over the 6 months. The two tuning windows differ by only a trade or two.
