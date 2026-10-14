@@ -348,7 +348,7 @@ destination=tradovate;
 
 **Settings → Automation**
 - **Bridge:** CrossTrade.
-- **Secret key** and **account:** from your CrossTrade dashboard. The script stops with an error if either is blank while alerts are on.
+- **Secret key** and **account:** from your CrossTrade dashboard. If either is blank, the backtest still runs but no alerts are sent, and the status table on the chart shows an orange warning.
 - **Instrument:** blank sends the chart's ticker, the same as CrossTrade's `{{ticker}}`.
 - **Destination:** Tradovate, or NinjaTrader to route through NinjaTrader instead.
 

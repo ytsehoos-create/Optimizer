@@ -219,8 +219,10 @@ ctInstr    = input.string("", "CrossTrade: instrument (blank = this chart's tick
 ctDest     = input.string("Tradovate", "CrossTrade: destination", options = ["Tradovate", "NinjaTrader"], group = G6)
 tickerOut  = input.string("MNQ1!", "TradersPost: ticker sent to bridge", group = G6)
 
-if sendAlerts and bridge == "CrossTrade" and (ctKey == "" or ctAccount == "")
-    runtime.error("CrossTrade: enter your secret key and account in Settings → Automation, or turn off Send webhook alerts.")
+// A blank CrossTrade key or account holds back every alert (the backtest still runs);
+// the status table on the chart says so.
+ctMissing = bridge == "CrossTrade" and (ctKey == "" or ctAccount == "")
+alertsOn  = sendAlerts and not ctMissing
 
 // ── Session clock (America/New_York) ────────────────────────────────────────
 if not (timeframe.isminutes and timeframe.multiplier == 5)
@@ -405,7 +407,7 @@ if newRTH
     strategy.cancel_all()
     if strategy.position_size != 0       // safety net: never carry a position into a new session
         strategy.close_all(comment = "carried over: closed", immediately = true)
-        if sendAlerts
+        if alertsOn
             alert(f_msgExit(""), alert.freq_once_per_bar_close)
     rId := ""
     xId := ""
@@ -553,7 +555,7 @@ if openId == "T2X" and xSt != 3
 exitedDead = false
 if openId == "T2R" and rDead
     strategy.close("T2R", comment = "cancelled order filled", immediately = true)
-    if sendAlerts
+    if alertsOn
         alert(f_msgExit(rId), alert.freq_once_per_bar_close)
     rSt := 3
     rDead := false
@@ -562,7 +564,7 @@ if openId == "T2R" and rDead
     evt := evt + (evt == "" ? "" : " · ") + rNote
 if openId == "T2X" and xDead
     strategy.close("T2X", comment = "cancelled order filled", immediately = true)
-    if sendAlerts
+    if alertsOn
         alert(f_msgExit(xId), alert.freq_once_per_bar_close)
     xSt := 4
     xDead := false
@@ -704,12 +706,12 @@ if not inTrade and not exitedDead and afterIB and nextHm >= 930 and nextHm < 160
         // Bridge: cancel everything resting, then re-place what is still valid.
         // Strategy: cancel what is no longer wanted; re-calling entry/exit with
         // the same id updates the rest in place.
-        if sendAlerts and bridge != "TradersPost"
+        if alertsOn and bridge != "TradersPost"
             if rAtBroker
                 alert(f_msgCancel(rId), alert.freq_once_per_bar_close)
             if xAtBroker
                 alert(f_msgCancel(xId), alert.freq_once_per_bar_close)
-        else if sendAlerts and (rAtBroker or xAtBroker)
+        else if alertsOn and (rAtBroker or xAtBroker)
             alert(f_msgCancel(""), alert.freq_once_per_bar_close)
         if not wantR
             strategy.cancel("T2R")
@@ -733,7 +735,7 @@ if not inTrade and not exitedDead and afterIB and nextHm >= 930 and nextHm < 160
             rQtyPine := rQty
             ordSeq += 1
             rId := "T2R-" + str.format_time(time, "yyMMdd", TZ) + "-" + str.tostring(ordSeq)
-            if sendAlerts
+            if alertsOn
                 alert(f_msgPlace(rSide, rQty, rE, rS, tgtR, rId), alert.freq_once_per_bar_close)
             rAtBroker := true
             rTgtOut := tgtR
@@ -744,7 +746,7 @@ if not inTrade and not exitedDead and afterIB and nextHm >= 930 and nextHm < 160
             xQtyPine := xQty
             ordSeq += 1
             xId := "T2X-" + str.format_time(time, "yyMMdd", TZ) + "-" + str.tostring(ordSeq)
-            if sendAlerts
+            if alertsOn
                 alert(f_msgPlace(xSide, xQty, xE, xS, tgtX, xId), alert.freq_once_per_bar_close)
             xAtBroker := true
             xTgtOut := tgtX
@@ -791,14 +793,14 @@ if hm == flatAt
     strategy.cancel_all()
     if strategy.position_size != 0
         strategy.close_all(comment = "EOD", immediately = true)
-        if sendAlerts
+        if alertsOn
             alert(f_msgExit(openId == "T2R" ? rId : openId == "T2X" ? xId : ""), alert.freq_once_per_bar_close)
-    if sendAlerts and bridge != "TradersPost"
+    if alertsOn and bridge != "TradersPost"
         if rAtBroker
             alert(f_msgCancel(rId), alert.freq_once_per_bar_close)
         if xAtBroker
             alert(f_msgCancel(xId), alert.freq_once_per_bar_close)
-    else if sendAlerts and (rAtBroker or xAtBroker)
+    else if alertsOn and (rAtBroker or xAtBroker)
         alert(f_msgCancel(""), alert.freq_once_per_bar_close)
     rAtBroker := false
     xAtBroker := false
@@ -816,8 +818,10 @@ plot(showDay and rSide != 0 ? rS : na, "T2R stop",  color.new(color.red, 30), 1,
 plot(showDay and xSide != 0 ? xE : na, "T2X entry", color.new(color.orange, 0), 2, plot.style_linebr)
 plot(showDay and xSide != 0 ? xS : na, "T2X stop",  color.new(color.red, 30), 1, plot.style_linebr)
 
-var table tb = table.new(position.top_right, 1, 3, bgcolor = color.new(color.black, 20))
+var table tb = table.new(position.top_right, 1, 4, bgcolor = color.new(color.black, 20))
 if barstate.islast
+    alertNote = not sendAlerts ? "Alerts off" : ctMissing ? "⚠ CrossTrade key or account is blank: NO alerts are sent" : "Alerts on · " + bridge
+    table.cell(tb, 0, 3, alertNote, text_color = ctMissing and sendAlerts ? color.orange : color.silver, text_size = size.small, text_halign = text.align_left)
     table.cell(tb, 0, 0, "T2R · " + rNote, text_color = color.white, text_size = size.small, text_halign = text.align_left)
     table.cell(tb, 0, 1, "T2X · " + xNote, text_color = color.white, text_size = size.small, text_halign = text.align_left)
     table.cell(tb, 0, 2, "T1 (gates only) · " + t1Note, text_color = color.silver, text_size = size.small, text_halign = text.align_left)
