@@ -318,6 +318,52 @@ The script's default bridge is **NinjaView** (TradingView → NinjaView → Ninj
 - Re-create the alert (an alert stays tied to the chart symbol it was made on).
 - Do it with no trade open, after 16:00 or before 9:30.
 
+### Automating the combined script with CrossTrade (Tradovate)
+
+Set **Bridge** to **CrossTrade**. The script then sends the same three kinds of orders it sends NinjaView, in CrossTrade's `key=value;` format. With destination Tradovate they go straight to Tradovate, so NinjaTrader doesn't need to run.
+
+| When | CrossTrade command | What it does |
+|---|---|---|
+| An order is placed (flat account) | `place` with `order_type=limit`, `limit_price`, `take_profit`, `stop_loss`, `order_id`, `tif=day` | Rests the limit entry. Tradovate holds the bracket on its own servers and arms it when the entry fills |
+| An order is withdrawn (flat account) | `cancel` with that order's `order_id` | Cancels that one order |
+| 15:55, a cancelled order that filled, or a position carried to the next 9:30 | `flatten` for the account and instrument | Closes the position and cancels the instrument's working orders |
+
+Example: today's T2X order would go out as:
+
+```
+key=YOUR-SECRET-KEY;
+command=place;
+account=YOUR-ACCOUNT;
+instrument=MNQ1!;
+action=sell;
+qty=4;
+order_type=limit;
+limit_price=30556;
+tif=day;
+take_profit=30398.5;
+stop_loss=30577;
+order_id=T2X-261014-3;
+destination=tradovate;
+```
+
+**Settings → Automation**
+- **Bridge:** CrossTrade.
+- **Secret key** and **account:** from your CrossTrade dashboard. The script stops with an error if either is blank while alerts are on.
+- **Instrument:** blank sends the chart's ticker, the same as CrossTrade's `{{ticker}}`.
+- **Destination:** Tradovate, or NinjaTrader to route through NinjaTrader instead.
+
+**The alert:** the same as for NinjaView. Use "alert() function calls only" and leave the Message blank. Paste CrossTrade's webhook URL from their dashboard as the Webhook URL.
+- **Don't use CrossTrade's sample strategy template.** It sends a market order whenever TradingView's simulated order fills, and keeps no stop at the broker.
+- **Don't run both alerts at once.** Running it alongside this one would double every order.
+
+**Before going live, on an uncopied sim account:**
+- **Placing:** at the first IB break, a limit order should rest in Tradovate. Once it fills, a take-profit limit and a stop should appear.
+- **Cancelling:** at the 14:00/13:00 cutoffs the unfilled order should disappear, including its unarmed bracket.
+- **Flattening:** at 15:55 the position should close, and both bracket orders should be cancelled.
+- **Instrument name:** check that CrossTrade accepts the instrument as sent (`MNQ1!` or the dated chart symbol) and maps it to the contract you trade.
+
+**Security:** the secret key travels inside every alert message. Keep the chart and its alerts private, and regenerate the key if it's ever exposed.
+
 ### Re-tuning the levels every 1–2 months
 
 **Rule:** only the last 12 months count. A level must have made money over the whole 12 months, and levels are tuned to the last 6. `t2_retune.py` applies this rule to the combined script. It simulates the script's own logic, which reproduced TradingView's results trade-for-trade.

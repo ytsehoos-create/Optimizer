@@ -38,12 +38,14 @@
 //   Orders are processed from the bar after they are placed, as in the backtest.
 //
 // Automation: ONE alert, "alert() function calls only", Webhook URL = your
-//   bridge, Message = blank. Bridge = NinjaView (default) or TradersPost:
-//     PLACE  → NinjaView "oco limit buy/sell": limit entry with TP/SL bracket
-//              that arms on fill, each order with its own oco_id
-//     CANCEL → NinjaView "cancel oco" for that order's oco_id only
+//   bridge, Message = blank. Bridge = NinjaView (default), CrossTrade or TradersPost:
+//     PLACE  → NinjaView "oco limit buy/sell" / CrossTrade "place" limit: limit
+//              entry with TP/SL bracket that arms on fill, each order with its
+//              own id (oco_id / order_id)
+//     CANCEL → NinjaView "cancel oco" / CrossTrade "cancel" for that id only
 //              (TradersPost: cancel the ticker's resting orders)
-//     EXIT   → NinjaView "cancel oco and flatten" for the open trade's oco_id
+//     EXIT   → NinjaView "cancel oco and flatten" for the open trade's oco_id;
+//              CrossTrade "flatten" for the instrument
 //              (15:55, or a cancelled order that filled)
 // ============================================================================
 strategy("MNQ v3 · T2R + T2X (one account)", shorttitle = "T2", overlay = true, pyramiding = 0,
@@ -207,10 +209,18 @@ t1Fri = input.bool(true, "Fri", inline = "t1d", group = G5)
 G6 = "Automation"
 sendAlerts = input.bool(true, "Send webhook alerts", group = G6)
 showLabels = input.bool(true, "Show status labels on the chart", group = G6)
-bridge     = input.string("NinjaView", "Bridge", options = ["NinjaView", "TradersPost"], group = G6)
+bridge     = input.string("NinjaView", "Bridge", options = ["NinjaView", "CrossTrade", "TradersPost"], group = G6)
 ntAccount  = input.string("Sim101", "NinjaView: NinjaTrader account (exact name; comma-separate for several)", group = G6)
 ntTicker   = input.string("MNQ 12-26", "NinjaView: NinjaTrader instrument (update at each quarterly roll)", group = G6)
+ctKey      = input.string("", "CrossTrade: secret key", group = G6,
+     tooltip = "From your CrossTrade dashboard. It is stored in this chart's settings and sent inside every alert, so keep the chart private.")
+ctAccount  = input.string("", "CrossTrade: account (exact name)", group = G6)
+ctInstr    = input.string("", "CrossTrade: instrument (blank = this chart's ticker)", group = G6)
+ctDest     = input.string("Tradovate", "CrossTrade: destination", options = ["Tradovate", "NinjaTrader"], group = G6)
 tickerOut  = input.string("MNQ1!", "TradersPost: ticker sent to bridge", group = G6)
+
+if sendAlerts and bridge == "CrossTrade" and (ctKey == "" or ctAccount == "")
+    runtime.error("CrossTrade: enter your secret key and account in Settings → Automation, or turn off Send webhook alerts.")
 
 // ── Session clock (America/New_York) ────────────────────────────────────────
 if not (timeframe.isminutes and timeframe.multiplier == 5)
@@ -270,23 +280,36 @@ f_closer(d, own, lvl) => na(lvl) ? own : d > 0 ? math.min(own, lvl) : math.max(o
 f_lots(rk, pts) => math.max(1, math.floor(rk / (pts * syminfo.pointvalue)))
 f_nv(a) =>
     '{"alert":"' + a + '","account":"' + ntAccount + '","ticker":"' + ntTicker + '"'
+// CrossTrade: key=value; lines. The destination line routes straight to Tradovate.
+ctTicker = ctInstr == "" ? syminfo.ticker : ctInstr
+f_ct(cmd) =>
+    'key=' + ctKey + ';\ncommand=' + cmd + ';\naccount=' + ctAccount + ';\n'
+ctTail = ctDest == "Tradovate" ? '\ndestination=tradovate;' : ''
 // Resting limit entry with a take-profit / stop-loss bracket that arms on fill.
 f_msgPlace(d, n, e, stp, tp, id) =>
     string m = na
     if bridge == "NinjaView"
         m := f_nv("oco limit " + (d > 0 ? "buy" : "sell")) + ',"qty":"' + str.tostring(n) + '","limit_price":"' + f_px(e) +
              '","take_profit_price":"' + f_px(tp) + '","stop_loss_price":"' + f_px(stp) + '","oco_id":"' + id + '","tif":"DAY"}'
+    else if bridge == "CrossTrade"
+        m := f_ct("place") + 'instrument=' + ctTicker + ';\naction=' + (d > 0 ? "buy" : "sell") + ';\nqty=' + str.tostring(n) +
+             ';\norder_type=limit;\nlimit_price=' + f_px(e) + ';\ntif=day;\ntake_profit=' + f_px(tp) + ';\nstop_loss=' + f_px(stp) +
+             ';\norder_id=' + id + ';' + ctTail
     else
         m := '{"ticker":"' + tickerOut + '","action":"' + (d > 0 ? "buy" : "sell") +
              '","orderType":"limit","limitPrice":' + f_px(e) + ',"quantity":' + str.tostring(n) +
              ',"stopLoss":{"type":"stop","stopPrice":' + f_px(stp) + '},"takeProfit":{"limitPrice":' + f_px(tp) + '}}'
     m
-// Cancel one resting order (NinjaView, by oco_id) or the ticker's resting orders (TradersPost).
+// Cancel one resting order (NinjaView by oco_id, CrossTrade by order_id) or the ticker's resting orders (TradersPost).
 f_msgCancel(id) =>
-    bridge == "NinjaView" ? f_nv("cancel oco") + ',"oco_id":"' + id + '"}' : '{"ticker":"' + tickerOut + '","action":"cancel"}'
+    bridge == "NinjaView" ? f_nv("cancel oco") + ',"oco_id":"' + id + '"}' :
+         bridge == "CrossTrade" ? f_ct("cancel") + 'order_id=' + id + ';' + ctTail :
+         '{"ticker":"' + tickerOut + '","action":"cancel"}'
 // Close the trade opened by order `id` and cancel its bracket; with no id, flatten the instrument.
+// CrossTrade: flatten closes the instrument's position and cancels its working orders.
 f_msgExit(id) =>
     bridge == "NinjaView" ? (id == "" ? f_nv("market flat") + '}' : f_nv("cancel oco and flatten") + ',"oco_id":"' + id + '"}') :
+         bridge == "CrossTrade" ? f_ct("flatten") + 'instrument=' + ctTicker + ';' + ctTail :
          '{"ticker":"' + tickerOut + '","action":"exit"}'
 f_side(d) => d > 0 ? "LONG" : "SHORT"
 
@@ -681,7 +704,7 @@ if not inTrade and not exitedDead and afterIB and nextHm >= 930 and nextHm < 160
         // Bridge: cancel everything resting, then re-place what is still valid.
         // Strategy: cancel what is no longer wanted; re-calling entry/exit with
         // the same id updates the rest in place.
-        if sendAlerts and bridge == "NinjaView"
+        if sendAlerts and bridge != "TradersPost"
             if rAtBroker
                 alert(f_msgCancel(rId), alert.freq_once_per_bar_close)
             if xAtBroker
@@ -770,7 +793,7 @@ if hm == flatAt
         strategy.close_all(comment = "EOD", immediately = true)
         if sendAlerts
             alert(f_msgExit(openId == "T2R" ? rId : openId == "T2X" ? xId : ""), alert.freq_once_per_bar_close)
-    if sendAlerts and bridge == "NinjaView"
+    if sendAlerts and bridge != "TradersPost"
         if rAtBroker
             alert(f_msgCancel(rId), alert.freq_once_per_bar_close)
         if xAtBroker
