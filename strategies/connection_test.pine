@@ -1,0 +1,151 @@
+//@version=6
+// ─────────────────────────────────────────────────────────────────────────────
+// Connection Test — sends one order alert every N minutes (default 2)
+//
+// Not a trading strategy. It exercises the whole chain the live strategy uses
+//   TradingView alert → webhook → bridge / copier → funded accounts
+// by alternating ENTRY and EXIT on a fixed clock: entry, 2 min, exit, 2 min,
+// entry … Every alert is exactly one order and every round trip ends flat.
+//
+// Setup
+//   1. Open a 1-minute chart of the symbol the live strategy trades (e.g. MNQ1!).
+//   2. Add this strategy. Set contracts and direction, and paste the live
+//      strategy's webhook message format into the two message templates.
+//   3. Create Alert → Condition: "Connection Test", Order fills only
+//        Message:     {{strategy.order.alert_message}}
+//        Webhook URL: the same URL the live strategy's alert posts to
+//      (If the live alert uses TradingView placeholders such as
+//      {{strategy.order.action}} instead, paste that exact message — this
+//      script places real strategy orders, so those placeholders work too.)
+//   4. Watch every account: one order per alert, on even minutes.
+//   5. Delete the alert when done and confirm every account is flat.
+//
+// Safety
+//   • Orders only on live bars. History never trades, so the alert always
+//     starts flat and its first order is an entry.
+//   • Stops after "Max round trips" (default 5 = 10 alerts, about 20 min).
+//   • Only enters when the matching exit also lands inside the window; a
+//     position still open outside the window is closed on the next bar.
+//   • Alerts snapshot inputs: after changing a setting, recreate the alert.
+// ─────────────────────────────────────────────────────────────────────────────
+strategy("Connection Test", shorttitle = "CONN TEST", overlay = true,
+     default_qty_type = strategy.fixed, default_qty_value = 1,
+     process_orders_on_close = true, calc_on_every_tick = false,
+     margin_long = 0, margin_short = 0)
+
+// ── Inputs ──────────────────────────────────────────────────────────────────
+G_TIME = "Timing"
+G_ORD  = "Orders"
+G_SAFE = "Safety"
+G_MSG  = "Alert messages"
+
+intervalMin = input.int(2, "Fire every (minutes)", minval = 1, group = G_TIME)
+tz          = input.string("America/New_York", "Time zone", group = G_TIME,
+     tooltip = "Used for the window, %time% and the status table.")
+
+contracts = input.int(1, "Contracts per order", minval = 1, group = G_ORD)
+dirMode   = input.string("Long only", "Direction", options = ["Long only", "Short only", "Alternate long/short"], group = G_ORD)
+
+maxTrips  = input.int(5, "Max round trips (0 = unlimited)", minval = 0, group = G_SAFE,
+     tooltip = "One round trip = entry + exit = 2 alerts. No new entries once this many have been sent.")
+useWindow = input.bool(true, "Only trade inside window", group = G_SAFE)
+window    = input.session("1800-1555", "Window", group = G_SAFE,
+     tooltip = "Clock window in the time zone above; overnight windows are fine. The default stays out of 15:55–18:00 ET (prop-firm flat-by rules and the CME daily halt).")
+
+TOKENS   = "Tokens: %ticker% (e.g. MNQ1!), %root% (e.g. MNQ), %action% (buy/sell), %sentiment% (bullish/bearish/flat), %qty%, %price% (bar close), %time%, %seq% (alert number)."
+entryTpl = input.text_area('{"ticker":"%ticker%","action":"%action%","sentiment":"%sentiment%","quantity":%qty%,"price":%price%,"comment":"CONNECTION TEST #%seq%"}',
+     "Entry message", group = G_MSG, tooltip = TOKENS)
+exitTpl  = input.text_area('{"ticker":"%ticker%","action":"%action%","sentiment":"flat","quantity":%qty%,"price":%price%,"comment":"CONNECTION TEST #%seq%"}',
+     "Exit message", group = G_MSG, tooltip = TOKENS)
+
+// ── Guards ──────────────────────────────────────────────────────────────────
+tfSec = timeframe.in_seconds()
+if timeframe.isdwm or timeframe.isticks or (intervalMin * 60) % tfSec != 0
+    runtime.error("Connection Test: use a 1-minute chart. The chart timeframe must divide the " + str.tostring(intervalMin) + "-minute interval evenly.")
+
+// ── Helpers ─────────────────────────────────────────────────────────────────
+// "HHMM" → minutes after midnight
+hhmmToMin(string hhmm) =>
+    int v = int(str.tonumber(hhmm))
+    math.floor(v / 100) * 60 + v % 100
+
+winStart = hhmmToMin(str.substring(window, 0, 4))
+winEnd   = hhmmToMin(str.substring(window, 5, 9))
+
+// True when the timestamp is inside the window (inclusive, overnight-safe).
+inWindow(int ms) =>
+    int  m      = hour(ms, tz) * 60 + minute(ms, tz)
+    bool inside = winStart < winEnd ? m >= winStart and m <= winEnd : m >= winStart or m <= winEnd
+    not useWindow or winStart == winEnd or inside
+
+// Direction of the n-th entry (0-based).
+entryIsLong(int n) =>
+    dirMode == "Long only" or (dirMode == "Alternate long/short" and n % 2 == 0)
+
+// Fill %tokens% in a message template.
+buildMsg(string tpl, string action, string sentiment, int seq) =>
+    string s = str.replace_all(tpl, "%ticker%", syminfo.ticker)
+    s := str.replace_all(s, "%root%",      syminfo.root)
+    s := str.replace_all(s, "%action%",    action)
+    s := str.replace_all(s, "%sentiment%", sentiment)
+    s := str.replace_all(s, "%qty%",       str.tostring(contracts))
+    s := str.replace_all(s, "%price%",     str.tostring(close, format.mintick))
+    s := str.replace_all(s, "%time%",      str.format_time(time_close, "yyyy-MM-dd HH:mm:ss", tz))
+    str.replace_all(s, "%seq%", str.tostring(seq))
+
+// ── State ───────────────────────────────────────────────────────────────────
+var int side       = 0    // position this script has sent: 1 long, -1 short, 0 flat
+var int lastFireMs = na   // close time of the bar that sent the last alert
+var int alerts     = 0    // alerts sent (entries + exits)
+var int entries    = 0    // entries sent = round trips started
+
+intervalMs = intervalMin * 60000
+
+bool live       = barstate.isrealtime and barstate.isconfirmed
+bool onBoundary = math.floor(time_close / 60000.0) % intervalMin == 0
+bool due        = na(lastFireMs) ? onBoundary : time_close - lastFireMs >= intervalMs
+bool tripsLeft  = maxTrips == 0 or entries < maxTrips
+bool windowNow  = inWindow(time_close)
+bool canEnter   = windowNow and inWindow(time_close + intervalMs)
+
+// ── Orders (live bars only) ─────────────────────────────────────────────────
+if live
+    if side != 0 and (due or not windowNow)
+        // Scheduled exit, or backstop flatten once outside the window.
+        alerts += 1
+        strategy.close_all(comment = "TEST EXIT #" + str.tostring(alerts),
+             alert_message = buildMsg(exitTpl, side > 0 ? "sell" : "buy", "flat", alerts))
+        side       := 0
+        lastFireMs := time_close
+    else if side == 0 and due and tripsLeft and canEnter
+        bool goLong = entryIsLong(entries)
+        alerts  += 1
+        entries += 1
+        strategy.entry(goLong ? "TEST L" : "TEST S", goLong ? strategy.long : strategy.short, qty = contracts,
+             comment = (goLong ? "TEST LONG #" : "TEST SHORT #") + str.tostring(alerts),
+             alert_message = buildMsg(entryTpl, goLong ? "buy" : "sell", goLong ? "bullish" : "bearish", alerts))
+        side       := goLong ? 1 : -1
+        lastFireMs := time_close
+
+// ── Status table ────────────────────────────────────────────────────────────
+var table panel = table.new(position.top_right, 2, 7, bgcolor = color.new(#131722, 0),
+     border_color = color.new(#363a45, 0), border_width = 1)
+
+row(int r, string label, string value, color valueColor) =>
+    table.cell(panel, 0, r, label, text_color = color.gray,  text_size = size.small, text_halign = text.align_left)
+    table.cell(panel, 1, r, value, text_color = valueColor, text_size = size.small, text_halign = text.align_right)
+
+if barstate.islast
+    bool   done   = maxTrips > 0 and entries >= maxTrips and side == 0
+    string status = not barstate.isrealtime ? "WAITING FOR LIVE DATA" : done ? "COMPLETE" : side == 0 and not canEnter ? "OUTSIDE WINDOW" : "LIVE"
+    color  statusColor = status == "LIVE" ? color.new(#26a69a, 0) : status == "COMPLETE" ? color.new(#5b9cf6, 0) : color.new(#ff9800, 0)
+    int    nextMs = na(lastFireMs) ? (math.floor(time_close / float(intervalMs)) + 1) * intervalMs : lastFireMs + intervalMs
+    string nextOrder = side != 0 ? "EXIT" : entryIsLong(entries) ? "BUY " + str.tostring(contracts) : "SELL " + str.tostring(contracts)
+
+    row(0, "CONNECTION TEST", status, statusColor)
+    row(1, "Every",       str.tostring(intervalMin) + " min", color.white)
+    row(2, "Next order",  status == "LIVE" ? str.format_time(nextMs, "HH:mm", tz) + "  " + nextOrder : "—", color.white)
+    row(3, "Alerts sent", str.tostring(alerts), color.white)
+    row(4, "Round trips", str.tostring(entries) + " / " + (maxTrips == 0 ? "∞" : str.tostring(maxTrips)), color.white)
+    row(5, "Position",    side == 0 ? "FLAT" : (side > 0 ? "LONG " : "SHORT ") + str.tostring(contracts), color.white)
+    row(6, "Window",      useWindow ? window + "  " + tz : "off", color.white)

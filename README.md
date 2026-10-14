@@ -152,6 +152,16 @@ reporting:
 4. Scores each trial, tracks the best, and moves on
 5. Generates an HTML report and CSV when done
 
+## Connection Test Strategy
+
+`strategies/connection_test.pine` is not a trading strategy. It checks the alert → webhook → bridge → funded-account chain before you run the live strategy. On a 1-minute chart it sends one order alert every 2 minutes, alternating entry and exit. It stops flat after 5 round trips.
+
+1. Add it to a 1-minute chart of the live symbol. Paste the live strategy's webhook message format into the **Entry message** and **Exit message** inputs. Tokens such as `%ticker%`, `%action%` and `%qty%` are filled in by the script.
+2. Create an alert on it: **Order fills only**. Set the message to `{{strategy.order.alert_message}}` and use the same webhook URL as the live alert.
+3. Confirm each account receives every order. Then delete the alert and check that every account is flat.
+
+It trades only on live bars, never in history. It also respects a trading window (default 18:00–15:55 ET) and closes any position left open outside that window.
+
 ## Notes
 
 - **TradingView account required** — a free account works for some strategies; Pro/Pro+ removes the 1-bar limit on backtests
