@@ -212,7 +212,7 @@ showLabels = input.bool(true, "Show status labels on the chart", group = G6)
 bridge     = input.string("NinjaView", "Bridge", options = ["NinjaView", "CrossTrade", "TradersPost"], group = G6)
 ntAccount  = input.string("Sim101", "NinjaView: NinjaTrader account (exact name; comma-separate for several)", group = G6)
 ntTicker   = input.string("MNQ 12-26", "NinjaView: NinjaTrader instrument (update at each quarterly roll)", group = G6)
-ctKey      = input.string("", "CrossTrade: secret key", group = G6,
+ctKey      = input.string("", "CrossTrade: secret key", group = G6, display = display.none,
      tooltip = "From your CrossTrade dashboard. It is stored in this chart's settings and sent inside every alert, so keep the chart private.")
 ctAccount  = input.string("", "CrossTrade: account (exact name)", group = G6)
 ctInstr    = input.string("", "CrossTrade: instrument (blank = this chart's ticker)", group = G6)
