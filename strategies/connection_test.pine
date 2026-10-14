@@ -9,16 +9,18 @@
 //
 // Setup
 //   1. Open a 1-minute chart of the symbol the live strategy trades (e.g. MNQ1!).
-//   2. Add this strategy. Set contracts and direction, and paste the live
-//      strategy's webhook message format into the two message templates.
+//   2. Add this strategy. The default messages are NinjaView JSON: set
+//      "NinjaTrader account(s)" and "NinjaTrader instrument" (e.g. MNQ 12-26,
+//      never MNQ1!). For another bridge, replace both message templates.
 //   3. Create Alert → Condition: "Connection Test", Order fills only
 //        Message:     {{strategy.order.alert_message}}
-//        Webhook URL: the same URL the live strategy's alert posts to
+//        Webhook URL: your NinjaView webhook URL (or the live alert's URL)
 //      (If the live alert uses TradingView placeholders such as
 //      {{strategy.order.action}} instead, paste that exact message — this
 //      script places real strategy orders, so those placeholders work too.)
 //   4. Watch every account: one order per alert, on even minutes.
 //   5. Delete the alert when done and confirm every account is flat.
+//   Check a message before sending: python tools/ninjaview_check.py lint '<message>'
 //
 // Safety
 //   • History shows a PREVIEW of the schedule (last few hours) so the Strategy
@@ -57,11 +59,16 @@ useWindow = input.bool(true, "Only trade inside window", group = G_SAFE)
 window    = input.session("1800-1555", "Window", group = G_SAFE,
      tooltip = "Clock window in the time zone above; overnight windows are fine. The default stays out of 15:55–18:00 ET (prop-firm flat-by rules and the CME daily halt).")
 
-TOKENS   = "Tokens: %ticker% (e.g. MNQ1!), %root% (e.g. MNQ), %action% (buy/sell), %sentiment% (bullish/bearish/flat), %qty%, %price% (bar close), %time%, %seq% (alert number)."
-entryTpl = input.text_area('{"ticker":"%ticker%","action":"%action%","sentiment":"%sentiment%","quantity":%qty%,"price":%price%,"comment":"CONNECTION TEST #%seq%"}',
-     "Entry message", group = G_MSG, tooltip = TOKENS)
-exitTpl  = input.text_area('{"ticker":"%ticker%","action":"%action%","sentiment":"flat","quantity":%qty%,"price":%price%,"comment":"CONNECTION TEST #%seq%"}',
-     "Exit message", group = G_MSG, tooltip = TOKENS)
+ntAccount    = input.string("Sim101", "NinjaTrader account(s)", group = G_MSG,
+     tooltip = "%account% — the account Name exactly as NinjaTrader shows it (prop-firm accounts: Name, not Display Name). Several: Sim101,Sim102. Start on Sim.")
+ntInstrument = input.string("MNQ 12-26", "NinjaTrader instrument", group = G_MSG,
+     tooltip = "%instrument% — NinjaTrader's contract name, ROOT MM-YY (e.g. MNQ 12-26). TradingView's MNQ1! is not valid in NinjaTrader. Update it at each roll.")
+
+TOKENS   = "Tokens: %account%, %instrument% (the two inputs above), %ticker% (TradingView, e.g. MNQ1!), %root% (e.g. MNQ), %action% (buy/sell), %sentiment% (bullish/bearish/flat), %qty%, %price% (bar close), %time%, %seq% (alert number)."
+entryTpl = input.text_area('{"alert":"market %action%","account":"%account%","ticker":"%instrument%","qty":"%qty%"}',
+     "Entry message", group = G_MSG, tooltip = "Default is NinjaView JSON. " + TOKENS)
+exitTpl  = input.text_area('{"alert":"market close","account":"%account%","ticker":"%instrument%"}',
+     "Exit message", group = G_MSG, tooltip = "Default is NinjaView JSON. " + TOKENS)
 
 // ── Guards ──────────────────────────────────────────────────────────────────
 tfSec = timeframe.in_seconds()
@@ -90,6 +97,8 @@ entryIsLong(int n) =>
 // Fill %tokens% in a message template.
 buildMsg(string tpl, string action, string sentiment, int seq) =>
     string s = str.replace_all(tpl, "%ticker%", syminfo.ticker)
+    s := str.replace_all(s, "%account%",    ntAccount)
+    s := str.replace_all(s, "%instrument%", ntInstrument)
     s := str.replace_all(s, "%root%",      syminfo.root)
     s := str.replace_all(s, "%action%",    action)
     s := str.replace_all(s, "%sentiment%", sentiment)
@@ -143,7 +152,7 @@ if histEnd
     entries    := 0
 
 // ── Status table ────────────────────────────────────────────────────────────
-var table panel = table.new(position.top_right, 2, 7, bgcolor = color.new(#131722, 0),
+var table panel = table.new(position.top_right, 2, 9, bgcolor = color.new(#131722, 0),
      border_color = color.new(#363a45, 0), border_width = 1)
 
 row(int r, string label, string value, color valueColor) =>
@@ -164,3 +173,8 @@ if barstate.islast
     row(4, "Round trips", str.tostring(entries) + " / " + (maxTrips == 0 ? "∞" : str.tostring(maxTrips)), color.white)
     row(5, "Position",    side == 0 ? "FLAT" : (side > 0 ? "LONG " : "SHORT ") + str.tostring(contracts), color.white)
     row(6, "Window",      useWindow ? window + "  " + tz : "off", color.white)
+    row(7, "Target",      ntAccount + "  ·  " + ntInstrument, color.white)
+    // Exactly what the next alert will post — compare it with the bridge's docs.
+    bool nextLong = entryIsLong(entries)
+    string nextMsg = side != 0 ? buildMsg(exitTpl, side > 0 ? "sell" : "buy", "flat", alerts + 1) : buildMsg(entryTpl, nextLong ? "buy" : "sell", nextLong ? "bullish" : "bearish", alerts + 1)
+    row(8, "Next message", nextMsg, color.new(#b2b5be, 0))
