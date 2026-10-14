@@ -21,8 +21,10 @@
 //   5. Delete the alert when done and confirm every account is flat.
 //
 // Safety
-//   • Orders only on live bars. History never trades, so the alert always
-//     starts flat and its first order is an entry.
+//   • History shows a PREVIEW of the schedule (last few hours) so the Strategy
+//     Tester has trades to inspect. Historical fills never send alerts, and
+//     the preview is closed flat on the last historical bar, so the live test
+//     always starts flat and its first webhook is an entry.
 //   • Stops after "Max round trips" (default 5 = 10 alerts, about 20 min).
 //   • Only enters when the matching exit also lands inside the window; a
 //     position still open outside the window is closed on the next bar.
@@ -42,6 +44,9 @@ G_MSG  = "Alert messages"
 intervalMin = input.int(2, "Fire every (minutes)", minval = 1, group = G_TIME)
 tz          = input.string("America/New_York", "Time zone", group = G_TIME,
      tooltip = "Used for the window, %time% and the status table.")
+showPreview  = input.bool(true, "Preview trades on history", group = G_TIME,
+     tooltip = "Fills the Strategy Tester with the schedule the live test follows (round-trip limit not applied). Historical fills never send alerts.")
+previewHours = input.int(4, "Preview hours", minval = 1, group = G_TIME)
 
 contracts = input.int(1, "Contracts per order", minval = 1, group = G_ORD)
 dirMode   = input.string("Long only", "Direction", options = ["Long only", "Short only", "Alternate long/short"], group = G_ORD)
@@ -102,18 +107,21 @@ var int entries    = 0    // entries sent = round trips started
 intervalMs = intervalMin * 60000
 
 bool live       = barstate.isrealtime and barstate.isconfirmed
+bool preview    = showPreview and not barstate.isrealtime and time >= last_bar_time - previewHours * 3600000
+bool histEnd    = barstate.islastconfirmedhistory   // preview must be flat by this bar's close
 bool onBoundary = math.floor(time_close / 60000.0) % intervalMin == 0
 bool due        = na(lastFireMs) ? onBoundary : time_close - lastFireMs >= intervalMs
-bool tripsLeft  = maxTrips == 0 or entries < maxTrips
+bool tripsLeft  = live ? maxTrips == 0 or entries < maxTrips : not histEnd
 bool windowNow  = inWindow(time_close)
 bool canEnter   = windowNow and inWindow(time_close + intervalMs)
+string tag      = live ? "TEST" : "PREVIEW"
 
-// ── Orders (live bars only) ─────────────────────────────────────────────────
-if live
-    if side != 0 and (due or not windowNow)
-        // Scheduled exit, or backstop flatten once outside the window.
+// ── Orders (live bars; history only as a preview) ───────────────────────────
+if live or preview
+    if side != 0 and (due or not windowNow or histEnd)
+        // Scheduled exit, backstop flatten outside the window, or end of preview.
         alerts += 1
-        strategy.close_all(comment = "TEST EXIT #" + str.tostring(alerts),
+        strategy.close_all(comment = tag + " EXIT #" + str.tostring(alerts),
              alert_message = buildMsg(exitTpl, side > 0 ? "sell" : "buy", "flat", alerts))
         side       := 0
         lastFireMs := time_close
@@ -122,10 +130,17 @@ if live
         alerts  += 1
         entries += 1
         strategy.entry(goLong ? "TEST L" : "TEST S", goLong ? strategy.long : strategy.short, qty = contracts,
-             comment = (goLong ? "TEST LONG #" : "TEST SHORT #") + str.tostring(alerts),
+             comment = tag + (goLong ? " LONG #" : " SHORT #") + str.tostring(alerts),
              alert_message = buildMsg(entryTpl, goLong ? "buy" : "sell", goLong ? "bullish" : "bearish", alerts))
         side       := goLong ? 1 : -1
         lastFireMs := time_close
+
+// The live test starts from zero: counters and clock don't carry over from the preview.
+if histEnd
+    side       := 0
+    lastFireMs := na
+    alerts     := 0
+    entries    := 0
 
 // ── Status table ────────────────────────────────────────────────────────────
 var table panel = table.new(position.top_right, 2, 7, bgcolor = color.new(#131722, 0),

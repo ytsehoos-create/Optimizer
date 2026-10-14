@@ -160,7 +160,7 @@ reporting:
 2. Create an alert on it: **Order fills only**. Set the message to `{{strategy.order.alert_message}}` and use the same webhook URL as the live alert.
 3. Confirm each account receives every order. Then delete the alert and check that every account is flat.
 
-It trades only on live bars, never in history. It also respects a trading window (default 18:00–15:55 ET) and closes any position left open outside that window.
+On history it shows a preview of the last 4 hours of the schedule so the Strategy Tester has trades to inspect. Historical fills never send alerts, and the preview is closed flat before live bars begin. It also respects a trading window (default 18:00–15:55 ET) and closes any position left open outside that window.
 
 ## Notes
 
