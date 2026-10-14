@@ -206,15 +206,18 @@ def run(df, P, full_only=True):
             # gates (deferred while in a trade)
             if x["st"] == 2 and x["held"] and ((x["side"] > 0 and l[i] <= x["e"]) or (x["side"] < 0 and h[i] >= x["e"])):
                 x["st"] = 4
+            # optional: an unfilled order is withdrawn once price reaches its own target
+            cot = P.get("cancel_on_target") or ()
+            hit = lambda st: (st["side"] > 0 and h[i] >= st["t"]) or (st["side"] < 0 and l[i] <= st["t"])
             if r["st"] == 1 and not r["dead"]:
-                if t1Won or nxt >= CUT_R:
+                if t1Won or nxt >= CUT_R or ("T2R" in cot and hit(r)):
                     if inTrade and r["at"]:
                         r["dead"] = True
                     else:
                         r["st"] = 3
             if x["st"] in (1, 2) and not x["dead"]:
                 kill = t1Lost or (t1Won and t1Side != x["side"]) or nxt >= CUT_X or \
-                       (x["st"] == 2 and dow == 0 and not t1In and t1st != 1)
+                       (x["st"] == 2 and dow == 0 and not t1In and t1st != 1) or ("T2X" in cot and hit(x))
                 if kill:
                     if inTrade and x["at"]:
                         x["dead"] = True
@@ -243,6 +246,8 @@ def run(df, P, full_only=True):
                             nl = lots_of(abs(E - S_), P["risk"].get(("T2X", brk, dow), DEFAULT_RISK))
                             if not nl * abs(E - S_) * PV > MAX_RISK:
                                 x.update(st=1, side=1 if isUp else -1, e=E, s=S_, t=T, lots=nl, brk=brk)
+                                if "T2X" in cot and P.get("cot_break_bar") and hit(x):
+                                    x["st"] = 4          # the break bar itself already reached the target
             # T2X arming
             if x["st"] == 1 and i > brk_i and ((x["side"] > 0 and c[i] < ibH) or (x["side"] < 0 and c[i] > ibL)):
                 x["st"] = 2
