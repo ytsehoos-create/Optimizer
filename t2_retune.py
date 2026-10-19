@@ -217,7 +217,7 @@ def run(df, P, full_only=True):
                         r["st"] = 3
             if x["st"] in (1, 2) and not x["dead"]:
                 kill = t1Lost or (t1Won and t1Side != x["side"]) or nxt >= CUT_X or \
-                       (x["st"] == 2 and dow == 0 and not t1In and t1st != 1) or ("T2X" in cot and hit(x))
+                       (dow == 0 and t1st == 5) or ("T2X" in cot and hit(x))
                 if kill:
                     if inTrade and x["at"]:
                         x["dead"] = True
@@ -239,7 +239,8 @@ def run(df, P, full_only=True):
                             if not (h[i] >= E if isUp else l[i] <= E) and not nl * abs(E - S_) * PV > MAX_RISK * rmult:
                                 r.update(st=1, side=-1 if isUp else 1, e=E, s=S_, t=T, lots=nl, brk=brk)
                         lv = rows.get(("T2X", brk, dow))
-                        if lv and nxt < CUT_X and not t1Lost and not (t1Won and t1Side != (1 if isUp else -1)):
+                        if lv and nxt < CUT_X and not t1Lost and not (t1Won and t1Side != (1 if isUp else -1)) \
+                                and not (dow == 0 and t1st == 5):       # R7: Monday with no T1 trade
                             e, s_, t = lv
                             E = fl(ibH - e * R) if isUp else cu(ibL + e * R); S_ = fl(ibH - s_ * R) if isUp else cu(ibL + s_ * R)
                             T = cu(ibH + t * R) if isUp else fl(ibL - t * R)

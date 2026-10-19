@@ -16,7 +16,8 @@
 //     up   → LONG  IBH − e·R · stop IBH − s·R · target IBH + t·R
 //     down → SHORT IBL + e·R · stop IBL + s·R · target IBL − t·R
 //   Skip: large IB. R3: T1 lost → cancel. R2: T1 won at the opposite edge →
-//   cancel. R7: Monday, held back until T1 is in. Cancel unfilled at 13:00.
+//   cancel. R7: Monday, held back until T1 is in (cancelled at once when there
+//   is no T1 trade that day). Cancel unfilled at 13:00.
 //
 // One account, one position at a time:
 //   • While the account is flat and both orders rest, each order's target is the
@@ -595,7 +596,7 @@ if rSt == 1 and not rDead
 if (xSt == 1 or xSt == 2) and not xDead
     why = useR3 and t1Lost ? "T1 lost (R3)" : useR2 and t1Won and t1Side != xSide ? "T1 won at the opposite edge (R2)" :
          (nextHm >= cutX or nextHm < 930) ? (xSt == 2 ? "not filled by cutoff" : "no close back inside the IB before cutoff") :
-         xSt == 2 and useR7 and isMonday and not t1In and t1St != 1 ? "Monday without a T1 trade (R7)" : ""
+         useR7 and isMonday and t1St == 5 ? "Monday without a T1 trade (R7)" : ""
     if why != ""
         if inTrade and xAtBroker
             xDead := true
@@ -663,6 +664,8 @@ if afterIB and brk == 0 and not na(c1030)
                     xNote := "no T2X: T1 already lost (R3)"
                 else if useR2 and t1Won and t1Side != (isUp ? 1 : -1)
                     xNote := "no T2X: T1 already won at the opposite edge (R2)"
+                else if useR7 and isMonday and t1St == 5
+                    xNote := "no T2X: Monday without a T1 trade (R7)"
                 else
                     e = array.get(isUp ? xuE : xdE, dIdx)
                     s = array.get(isUp ? xuS : xdS, dIdx)
