@@ -1,0 +1,83 @@
+# NinjaView payload test
+#
+# Sends ONE test message straight to the NinjaView add-on on this machine, the same way the
+# Chrome extension forwards a TradingView alert. It takes TradingView and the extension out of
+# the picture: if NinjaTrader acts on a message sent here, that JSON format works.
+#
+# Before you run it:
+#   - NinjaTrader 8 running; TradeSync NinjaView window CONNECTED (Localhost mode, port 5001)
+#   - Auto-Trade ticked; account Sim101
+#   - Every test is 1 MNQ on Sim101. The entry rests 400 points below the price you give,
+#     the target 100 above it and the stop 500 below it, so nothing fills even if the
+#     add-on sends the bracket legs straight away.
+#
+# Run it in PowerShell from the folder you saved it to:
+#   powershell -ExecutionPolicy Bypass -File .\ninjaview_payload_test.ps1                  (lists the tests)
+#   powershell -ExecutionPolicy Bypass -File .\ninjaview_payload_test.ps1 1 -Price 29900   (test 1 at MNQ 29900)
+#   powershell -ExecutionPolicy Bypass -File .\ninjaview_payload_test.ps1 2 -Id NVT-103512 (cancel what test 1 placed)
+#
+# After each test, look at NinjaTrader's Orders tab and the add-on log, and note what happened.
+# Cancel anything left over by hand in NinjaTrader when you are done.
+
+param(
+    [int]$Test = 0,
+    [double]$Price = 0,
+    [string]$Id = "",
+    [string]$Account = "Sim101",
+    [string]$Ticker = "MNQ 12-26",
+    [int]$Port = 5001
+)
+
+$url = "http://localhost:$Port/"
+$inv = [Globalization.CultureInfo]::InvariantCulture
+function Px([double]$x) { return $x.ToString("0.00", $inv) }
+
+$tests = @(
+    "1  bracketed limit entry, the script's format today ('oco limit buy', stop_loss_price)",
+    "2  cancel by oco_id, the script's format today ('cancel oco')",
+    "3  bracketed limit entry, payload-reference style ('OCO Limit Long', order_type, stop_price)",
+    "4  cancel by oco_id, payload-reference style ('Cancel OCO')",
+    "5  plain limit entry, no bracket ('Limit Long'): the baseline; cancel it by hand"
+)
+
+if (@(1, 2, 3, 4, 5) -notcontains $Test) {
+    Write-Host "Tests (send one at a time):"
+    $tests | ForEach-Object { Write-Host "  $_" }
+    Write-Host "Entry tests (1, 3, 5) need -Price <current MNQ price>; cancel tests (2, 4) need -Id <id the entry test printed>."
+    exit 0
+}
+if ((@(1, 3, 5) -contains $Test) -and $Price -le 0) {
+    Write-Host "Give the current MNQ price, for example: -Price 29900"
+    exit 1
+}
+if ((@(2, 4) -contains $Test) -and $Id -eq "") {
+    Write-Host "Give the id the entry test printed, for example: -Id NVT-103512"
+    exit 1
+}
+if ($Id -eq "") { $Id = "NVT-" + (Get-Date -Format "HHmmss") }
+
+$e  = Px ($Price - 400)
+$tp = Px ($Price + 100)
+$sl = Px ($Price - 500)
+$base = '"account":"' + $Account + '","ticker":"' + $Ticker + '"'
+
+switch ($Test) {
+    1 { $body = '{"alert":"oco limit buy",' + $base + ',"qty":"1","limit_price":"' + $e + '","take_profit_price":"' + $tp +
+                '","stop_loss_price":"' + $sl + '","oco_id":"' + $Id + '","tif":"DAY"}' }
+    2 { $body = '{"alert":"cancel oco",' + $base + ',"oco_id":"' + $Id + '"}' }
+    3 { $body = '{"alert":"OCO Limit Long",' + $base + ',"qty":"1","order_type":"LIMIT","limit_price":"' + $e +
+                '","take_profit_price":"' + $tp + '","stop_price":"' + $sl + '","oco_id":"' + $Id + '","tif":"DAY"}' }
+    4 { $body = '{"alert":"Cancel OCO",' + $base + ',"oco_id":"' + $Id + '"}' }
+    5 { $body = '{"alert":"Limit Long",' + $base + ',"qty":"1","order_type":"LIMIT","limit_price":"' + $e + '","tif":"DAY"}' }
+}
+
+Write-Host ("Test " + $tests[$Test - 1])
+Write-Host "Sending: $body"
+try {
+    $r = Invoke-WebRequest -UseBasicParsing -Uri $url -Method Post -Body $body -ContentType "application/json"
+    Write-Host ("Add-on replied " + $r.StatusCode + ": " + $r.Content)
+} catch {
+    Write-Host ("Could not reach the add-on at " + $url + ": " + $_.Exception.Message)
+}
+if (@(1, 3, 5) -contains $Test) { Write-Host "Id used: $Id  (entry $e, target $tp, stop $sl)" }
+Write-Host "Now check NinjaTrader's Orders tab and the add-on log."
