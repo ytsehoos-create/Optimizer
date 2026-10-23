@@ -24,6 +24,15 @@
 #     15:55 = test 8 then test 4.
 #   Tests 1, 2 and 6 are the older formats from NinjaView's setup page, for comparison.
 #
+# What NinjaView's open-source bridge (github.com/NinjaView/ninjaview-oss) does with these:
+#   OCO Market      market entry + take-profit limit + stop-market, the last two linked as OCO
+#   Close Then OCO  close the position, then the same
+#   OCO Limit       entry sent WITHOUT its limit price, target and stop placed at once (not on fill)
+#   Market Close    close the position
+#   Cancel OCO      close the position AND cancel the orders with that id
+# In test 3, note whether the entry shows its price and whether the target and stop appear
+# before the entry fills: that shows whether the paid add-on behaves the same way.
+#
 # Run it in PowerShell from the folder you saved it to:
 #   powershell -ExecutionPolicy Bypass -File .\ninjaview_payload_test.ps1                  (lists the tests)
 #   powershell -ExecutionPolicy Bypass -File .\ninjaview_payload_test.ps1 1 -Price 29900   (test 1 at MNQ 29900)
@@ -49,7 +58,7 @@ $tests = @(
     "1  bracketed limit entry, the script's format today ('oco limit buy', stop_loss_price)",
     "2  cancel by oco_id, the script's format today ('cancel oco')",
     "3  bracketed limit entry, payload-reference style ('OCO Limit Long', order_type, stop_price)",
-    "4  cancel by oco_id, payload-reference style ('Cancel OCO')",
+    "4  cancel by oco_id, payload-reference style ('Cancel OCO'): may also close any open position",
     "5  plain limit entry, no bracket ('Limit Long'): the baseline; cancel it by hand",
     "6  bracketed MARKET entry, setup-guide style ('oco market buy', stop_loss_price): fills 1 lot",
     "7  bracketed MARKET entry, NinjaView's GitHub example ('OCO Market Long', stop_price): fills 1 lot",

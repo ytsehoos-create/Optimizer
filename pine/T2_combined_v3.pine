@@ -46,11 +46,14 @@
 //     the alert sends a market entry with its stop and target:
 //       ENTRY   → "OCO Market Long/Short" (take_profit_price, stop_price, oco_id);
 //                 "Close Then OCO Market …" when a trade may still be open (handoff)
-//       EXIT    → "Market Close", then "Cancel OCO" for that trade's leftover bracket
-//                 (15:55)
+//       EXIT    → "Market Close", then "Cancel OCO" for that trade's id (15:55)
+//     In NinjaView's code (github.com/NinjaView/ninjaview-oss) "Market Close" is
+//     CLOSEPOSITION and "Cancel OCO" is CLOSEPOSITION + cancel by id.
 //     Skipped if price is already past the stop when the level is reached.
 //     Needs Properties → Recalculate → "On every tick" (on by default here).
-//   NinjaView, "Resting limit", CrossTrade, TradersPost: the order rests at the broker:
+//   NinjaView, "Resting limit" (not safe per NinjaView's code: its "OCO Limit" leaves out
+//     the entry price and places the target and stop at once), CrossTrade, TradersPost:
+//     the order rests at the broker:
 //     PLACE  → NinjaView "OCO Limit Long/Short" / CrossTrade "place" limit: limit
 //              entry with TP/SL bracket that arms on fill, each order with its
 //              own id (oco_id / order_id)
@@ -225,7 +228,7 @@ bridge     = input.string("NinjaView", "Bridge", options = ["NinjaView", "CrossT
 ntAccount  = input.string("Sim101", "NinjaView: NinjaTrader account (exact name; comma-separate for several)", group = G6)
 ntTicker   = input.string("MNQ 12-26", "NinjaView: NinjaTrader instrument (update at each quarterly roll)", group = G6)
 nvMode     = input.string("Market at the level", "NinjaView: entries", options = ["Market at the level", "Resting limit"], group = G6,
-     tooltip = "Market at the level: nothing rests at NinjaTrader; the moment price reaches an entry, a market order with its stop and target is sent (NinjaView's 'OCO Market'). Needs Properties → Recalculate → On every tick. Resting limit: the limit and its bracket rest at NinjaTrader ('OCO Limit'); use it only if the NinjaView payload test showed that it works.")
+     tooltip = "Market at the level: nothing rests at NinjaTrader; the moment price reaches an entry, a market order with its stop and target is sent (NinjaView's 'OCO Market'). Needs Properties → Recalculate → On every tick. Resting limit ('OCO Limit'): do not use unless the payload test shows the entry resting at its price with no target or stop until it fills. NinjaView's open-source code leaves out the entry price and places the target and stop straight away, which could open a trade from the target or stop alone.")
 ctKey      = input.string("", "CrossTrade: secret key", group = G6, display = display.none,
      tooltip = "From your CrossTrade dashboard. It is stored in this chart's settings and sent inside every alert, so keep the chart private.")
 ctAccount  = input.string("", "CrossTrade: account (exact name)", group = G6)
@@ -300,7 +303,9 @@ f_closer(d, own, lvl) => na(lvl) ? own : d > 0 ? math.min(own, lvl) : math.max(o
 f_lots(rk, pts) => math.max(1, math.floor(rk / (pts * syminfo.pointvalue)))
 f_nv(a) =>
     '{"alert":"' + a + '","account":"' + ntAccount + '","ticker":"' + ntTicker + '"'
-// NinjaView market entry with its bracket (their "OCO Market" example); handoff closes any open trade first.
+// NinjaView market entry with its bracket (their "OCO Market" example). For a handoff, "Close Then OCO"
+// closes the position (and, in NinjaTrader, its working bracket) before entering. Never follow it with
+// "Cancel OCO": in NinjaView's code that also closes the position, i.e. the new trade.
 f_nvMarket(d, n, stp, tp, id, handoff) =>
     f_nv((handoff ? "Close Then OCO Market " : "OCO Market ") + (d > 0 ? "Long" : "Short")) + ',"qty":"' + str.tostring(n) +
          '","take_profit_price":"' + f_px(tp) + '","stop_price":"' + f_px(stp) + '","tif":"DAY","oco_id":"' + id + '"}'
@@ -413,8 +418,6 @@ if nvMarket and alertsOn and barstate.isrealtime and not newRTH
         nvSentR := rId
         if rSide > 0 ? close > rS : close < rS
             alert(f_nvMarket(rSide, rQty, rS, rTgtOut, rId, nvOpenId != ""), alert.freq_all)
-            if nvOpenId != ""
-                alert(f_msgCancel(nvOpenId), alert.freq_all)
             nvOpenId := rId
             nvLast := "sent T2R " + f_side(rSide) + " " + str.tostring(rQty) + " at " + f_px(close) + " (" + str.format_time(timenow, "HH:mm:ss", TZ) + ")"
         else
@@ -423,8 +426,6 @@ if nvMarket and alertsOn and barstate.isrealtime and not newRTH
         nvSentX := xId
         if xSide > 0 ? close > xS : close < xS
             alert(f_nvMarket(xSide, xQty, xS, xTgtOut, xId, nvOpenId != ""), alert.freq_all)
-            if nvOpenId != ""
-                alert(f_msgCancel(nvOpenId), alert.freq_all)
             nvOpenId := xId
             nvLast := "sent T2X " + f_side(xSide) + " " + str.tostring(xQty) + " at " + f_px(close) + " (" + str.format_time(timenow, "HH:mm:ss", TZ) + ")"
         else

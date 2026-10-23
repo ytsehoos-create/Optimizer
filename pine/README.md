@@ -273,16 +273,18 @@ The point of rule 2: every cancel the script sends happens while the account is 
 
 ### Automating the combined script with NinjaView
 
-The script's default bridge is **NinjaView** (TradingView → NinjaView Chrome extension → NinjaView add-on → NinjaTrader 8 → your account). NinjaView's webhook only journals trades; orders reach NinjaTrader through the extension, which picks the alerts up in a logged-in TradingView tab on the same machine. The messages follow NinjaView's own examples ([github.com/NinjaView/Pinescript](https://github.com/NinjaView/Pinescript)).
+The script's default bridge is **NinjaView** (TradingView → NinjaView Chrome extension → NinjaView add-on → NinjaTrader 8 → your account). NinjaView's webhook only journals trades; orders reach NinjaTrader through the extension, which picks the alerts up in a logged-in TradingView tab on the same machine. The messages follow NinjaView's own examples ([github.com/NinjaView/Pinescript](https://github.com/NinjaView/Pinescript)) and their open-source bridge's payload catalog ([github.com/NinjaView/ninjaview-oss](https://github.com/NinjaView/ninjaview-oss)).
 
 **Entries: Settings → Automation → "NinjaView: entries"**
 
 | Option | How it trades | Messages |
 |---|---|---|
-| **Market at the level** (default) | Nothing rests at NinjaTrader. The strategy keeps its orders internally; the moment price reaches one (any tick), the alert sends a market entry with its stop and target. If price is already past the stop by then, the entry is skipped. | Entry `OCO Market Long` / `OCO Market Short` with `qty`, `take_profit_price`, `stop_price`, `tif: DAY`, `oco_id`. Handoff (a trade may still be open): `Close Then OCO Market …`, then `Cancel OCO` for the old trade's id. |
-| **Resting limit** | The limit entry and its bracket rest at NinjaTrader, as in the backtest (no slippage). Use it only if the payload test shows NinjaView accepts it. | Place `OCO Limit Long` / `OCO Limit Short` with `qty`, `order_type: LIMIT`, `limit_price`, `take_profit_price`, `stop_price`, `tif: DAY`, `oco_id`. Withdraw `Cancel OCO` with that order's `oco_id`. |
+| **Market at the level** (default) | Nothing rests at NinjaTrader. The strategy keeps its orders internally; the moment price reaches one (any tick), the alert sends a market entry with its stop and target. If price is already past the stop by then, the entry is skipped. | Entry `OCO Market Long` / `OCO Market Short` with `qty`, `take_profit_price`, `stop_price`, `tif: DAY`, `oco_id`. Handoff (a trade may still be open): `Close Then OCO Market …`, which closes the position before entering. |
+| **Resting limit** | Meant to rest the limit entry with a bracket that arms on fill, as in the backtest. **Not safe with NinjaView as far as their code shows:** its `OCO Limit` leaves out the entry price and places the target and stop straight away, so the target or stop alone could open a trade. Don't use it unless the payload test shows otherwise. | Place `OCO Limit Long` / `OCO Limit Short` with `qty`, `order_type: LIMIT`, `limit_price`, `take_profit_price`, `stop_price`, `tif: DAY`, `oco_id`. Withdraw `Cancel OCO` with that order's `oco_id`. |
 
 Both: at 15:55 (or when a cancelled order filled) `Market Close`, then `Cancel OCO` for the trade's `oco_id` to clear any bracket order left behind. A position still open at the next 9:30 bar gets `Market Close`.
+
+What these do in NinjaView's open-source code (NinjaTrader order-instruction commands): `OCO Market` = market entry plus a take-profit limit and stop-market linked as OCO; `Close Then OCO` = CLOSEPOSITION, then the same; `Market Close` = CLOSEPOSITION; `Cancel OCO` = CLOSEPOSITION **and** cancel by id. Because `Cancel OCO` closes the position, the script never sends it while a trade it wants to keep is open.
 
 - **Unique IDs:** every order gets a new `oco_id` (for example `T2R-261021-214`), because NinjaTrader rejects a reused OCO ID.
 - **Market at the level costs slippage:** about $1,000 a year per point of average slippage at the last 12 months' 501 contracts. TradingView's backtest still shows limit fills.
