@@ -12,7 +12,9 @@
 #     if the add-on sends the bracket legs straight away.
 #   - Tests 6 and 7 are MARKET entries: they DO fill 1 MNQ long on Sim101 (needs a live market),
 #     with the target 100 points above and the stop 100 below the price you give. Run test 8
-#     afterwards to close it, then cancel any bracket order left over by hand.
+#     (or 9) afterwards to close it. Note whether the target and stop orders are still working
+#     after the close: if they are, cancel them by hand and tell Claude.
+#   - Test 7 copies NinjaView's own example (github.com/NinjaView/Pinescript) exactly.
 #
 # Run it in PowerShell from the folder you saved it to:
 #   powershell -ExecutionPolicy Bypass -File .\ninjaview_payload_test.ps1                  (lists the tests)
@@ -42,11 +44,12 @@ $tests = @(
     "4  cancel by oco_id, payload-reference style ('Cancel OCO')",
     "5  plain limit entry, no bracket ('Limit Long'): the baseline; cancel it by hand",
     "6  bracketed MARKET entry, setup-guide style ('oco market buy', stop_loss_price): fills 1 lot",
-    "7  bracketed MARKET entry, payload-reference style ('OCO Market Long', order_type, stop_price): fills 1 lot",
-    "8  close the position ('Market Close')"
+    "7  bracketed MARKET entry, NinjaView's GitHub example ('OCO Market Long', stop_price): fills 1 lot",
+    "8  close the position ('Market Close')",
+    "9  close everything ('Close All')"
 )
 
-if (@(1, 2, 3, 4, 5, 6, 7, 8) -notcontains $Test) {
+if (@(1, 2, 3, 4, 5, 6, 7, 8, 9) -notcontains $Test) {
     Write-Host "Tests (send one at a time):"
     $tests | ForEach-Object { Write-Host "  $_" }
     Write-Host "Entry tests (1, 3, 5, 6, 7) need -Price <current MNQ price>; cancel tests (2, 4) need -Id <id the entry test printed>."
@@ -78,9 +81,10 @@ switch ($Test) {
     5 { $body = '{"alert":"Limit Long",' + $base + ',"qty":"1","order_type":"LIMIT","limit_price":"' + $e + '","tif":"DAY"}' }
     6 { $body = '{"alert":"oco market buy",' + $base + ',"qty":"1","take_profit_price":"' + $tp + '","stop_loss_price":"' + $sl +
                 '","oco_id":"' + $Id + '"}' }
-    7 { $body = '{"alert":"OCO Market Long",' + $base + ',"qty":"1","order_type":"MARKET","take_profit_price":"' + $tp +
-                '","stop_price":"' + $sl + '","oco_id":"' + $Id + '","tif":"DAY"}' }
-    8 { $body = '{"alert":"Market Close",' + $base + ',"qty":"1"}' }
+    7 { $body = '{"alert":"OCO Market Long",' + $base + ',"qty":"1","take_profit_price":"' + $tp + '","stop_price":"' + $sl +
+                '","tif":"DAY","oco_id":"' + $Id + '"}' }
+    8 { $body = '{"alert":"Market Close",' + $base + '}' }
+    9 { $body = '{"alert":"Close All",' + $base + '}' }
 }
 
 Write-Host ("Test " + $tests[$Test - 1])
@@ -92,5 +96,5 @@ try {
     Write-Host ("Could not reach the add-on at " + $url + ": " + $_.Exception.Message)
 }
 if (@(1, 3, 5) -contains $Test) { Write-Host "Id used: $Id  (entry $e, target $tp, stop $sl)" }
-if (@(6, 7) -contains $Test) { Write-Host "Id used: $Id  (market entry, target $tp, stop $sl). Run test 8 to close it." }
+if (@(6, 7) -contains $Test) { Write-Host "Id used: $Id  (market entry, target $tp, stop $sl). Run test 8 or 9 to close it." }
 Write-Host "Now check NinjaTrader's Orders tab and the add-on log."
