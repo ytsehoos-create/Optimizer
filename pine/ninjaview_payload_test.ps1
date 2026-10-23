@@ -10,11 +10,19 @@
 #   - Every test is 1 MNQ on Sim101. In tests 1, 3 and 5 the entry rests 400 points below the
 #     price you give, the target 100 above it and the stop 500 below it, so nothing fills even
 #     if the add-on sends the bracket legs straight away.
-#   - Tests 6 and 7 are MARKET entries: they DO fill 1 MNQ long on Sim101 (needs a live market),
+#   - Tests 6, 7 and 10 are MARKET entries: they DO fill 1 MNQ long on Sim101 (needs a live market),
 #     with the target 100 points above and the stop 100 below the price you give. Run test 8
 #     (or 9) afterwards to close it. Note whether the target and stop orders are still working
 #     after the close: if they are, cancel them by hand and tell Claude.
 #   - Test 7 copies NinjaView's own example (github.com/NinjaView/Pinescript) exactly.
+#
+# Which tests match what T2_combined_v3.pine sends to NinjaView:
+#   "Market at the level" (default): entry = test 7 (OCO Market Long/Short), handoff = test 10
+#     (Close Then OCO Market), 15:55 = test 8 (Market Close) then test 4 (Cancel OCO) with the
+#     trade's id to clear any bracket order left behind.
+#   "Resting limit": place = test 3 (OCO Limit Long/Short), cancel = test 4 (Cancel OCO),
+#     15:55 = test 8 then test 4.
+#   Tests 1, 2 and 6 are the older formats from NinjaView's setup page, for comparison.
 #
 # Run it in PowerShell from the folder you saved it to:
 #   powershell -ExecutionPolicy Bypass -File .\ninjaview_payload_test.ps1                  (lists the tests)
@@ -46,16 +54,17 @@ $tests = @(
     "6  bracketed MARKET entry, setup-guide style ('oco market buy', stop_loss_price): fills 1 lot",
     "7  bracketed MARKET entry, NinjaView's GitHub example ('OCO Market Long', stop_price): fills 1 lot",
     "8  close the position ('Market Close')",
-    "9  close everything ('Close All')"
+    "9  close everything ('Close All')",
+    "10 close any position, then bracketed MARKET entry ('Close Then OCO Market Long'): fills 1 lot"
 )
 
-if (@(1, 2, 3, 4, 5, 6, 7, 8, 9) -notcontains $Test) {
+if (@(1, 2, 3, 4, 5, 6, 7, 8, 9, 10) -notcontains $Test) {
     Write-Host "Tests (send one at a time):"
     $tests | ForEach-Object { Write-Host "  $_" }
-    Write-Host "Entry tests (1, 3, 5, 6, 7) need -Price <current MNQ price>; cancel tests (2, 4) need -Id <id the entry test printed>."
+    Write-Host "Entry tests (1, 3, 5, 6, 7, 10) need -Price <current MNQ price>; cancel tests (2, 4) need -Id <id the entry test printed>."
     exit 0
 }
-if ((@(1, 3, 5, 6, 7) -contains $Test) -and $Price -le 0) {
+if ((@(1, 3, 5, 6, 7, 10) -contains $Test) -and $Price -le 0) {
     Write-Host "Give the current MNQ price, for example: -Price 29900"
     exit 1
 }
@@ -68,7 +77,7 @@ if ($Id -eq "") { $Id = "NVT-" + (Get-Date -Format "HHmmss") }
 $e  = Px ($Price - 400)
 $tp = Px ($Price + 100)
 $sl = Px ($Price - 500)
-if (@(6, 7) -contains $Test) { $sl = Px ($Price - 100) }
+if (@(6, 7, 10) -contains $Test) { $sl = Px ($Price - 100) }
 $base = '"account":"' + $Account + '","ticker":"' + $Ticker + '"'
 
 switch ($Test) {
@@ -85,6 +94,8 @@ switch ($Test) {
                 '","tif":"DAY","oco_id":"' + $Id + '"}' }
     8 { $body = '{"alert":"Market Close",' + $base + '}' }
     9 { $body = '{"alert":"Close All",' + $base + '}' }
+    10 { $body = '{"alert":"Close Then OCO Market Long",' + $base + ',"qty":"1","take_profit_price":"' + $tp + '","stop_price":"' + $sl +
+                 '","tif":"DAY","oco_id":"' + $Id + '"}' }
 }
 
 Write-Host ("Test " + $tests[$Test - 1])
@@ -96,5 +107,5 @@ try {
     Write-Host ("Could not reach the add-on at " + $url + ": " + $_.Exception.Message)
 }
 if (@(1, 3, 5) -contains $Test) { Write-Host "Id used: $Id  (entry $e, target $tp, stop $sl)" }
-if (@(6, 7) -contains $Test) { Write-Host "Id used: $Id  (market entry, target $tp, stop $sl). Run test 8 or 9 to close it." }
+if (@(6, 7, 10) -contains $Test) { Write-Host "Id used: $Id  (market entry, target $tp, stop $sl). Run test 8 or 9 to close it." }
 Write-Host "Now check NinjaTrader's Orders tab and the add-on log."

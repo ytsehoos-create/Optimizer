@@ -273,43 +273,45 @@ The point of rule 2: every cancel the script sends happens while the account is 
 
 ### Automating the combined script with NinjaView
 
-The script's default bridge is **NinjaView** (TradingView → NinjaView → NinjaTrader 8 → your account). It sends three kinds of messages:
+The script's default bridge is **NinjaView** (TradingView → NinjaView Chrome extension → NinjaView add-on → NinjaTrader 8 → your account). NinjaView's webhook only journals trades; orders reach NinjaTrader through the extension, which picks the alerts up in a logged-in TradingView tab on the same machine. The messages follow NinjaView's own examples ([github.com/NinjaView/Pinescript](https://github.com/NinjaView/Pinescript)).
 
-| When | NinjaView alert | What it does |
+**Entries: Settings → Automation → "NinjaView: entries"**
+
+| Option | How it trades | Messages |
 |---|---|---|
-| An order is placed (flat account) | `oco limit buy` / `oco limit sell` with `qty`, `limit_price`, `take_profit_price`, `stop_loss_price`, `oco_id`, `tif: DAY` | Rests the limit entry; the take-profit and stop-loss arm when it fills |
-| An order is withdrawn (flat account) | `cancel oco` with that order's `oco_id` | Cancels that one order only |
-| 15:55, or a cancelled order that filled | `cancel oco and flatten` with the open trade's `oco_id` | Cancels the trade's bracket and closes it |
+| **Market at the level** (default) | Nothing rests at NinjaTrader. The strategy keeps its orders internally; the moment price reaches one (any tick), the alert sends a market entry with its stop and target. If price is already past the stop by then, the entry is skipped. | Entry `OCO Market Long` / `OCO Market Short` with `qty`, `take_profit_price`, `stop_price`, `tif: DAY`, `oco_id`. Handoff (a trade may still be open): `Close Then OCO Market …`, then `Cancel OCO` for the old trade's id. |
+| **Resting limit** | The limit entry and its bracket rest at NinjaTrader, as in the backtest (no slippage). Use it only if the payload test shows NinjaView accepts it. | Place `OCO Limit Long` / `OCO Limit Short` with `qty`, `order_type: LIMIT`, `limit_price`, `take_profit_price`, `stop_price`, `tif: DAY`, `oco_id`. Withdraw `Cancel OCO` with that order's `oco_id`. |
 
-- **Unique IDs:** every order gets a new `oco_id` (for example `T2R-251128-14`), because NinjaTrader rejects a reused OCO ID.
-- **Carried-over safety net:** if a position is still open at the next 9:30 bar, the script sends `market flat`.
+Both: at 15:55 (or when a cancelled order filled) `Market Close`, then `Cancel OCO` for the trade's `oco_id` to clear any bracket order left behind. A position still open at the next 9:30 bar gets `Market Close`.
+
+- **Unique IDs:** every order gets a new `oco_id` (for example `T2R-261021-214`), because NinjaTrader rejects a reused OCO ID.
+- **Market at the level costs slippage:** about $1,000 a year per point of average slippage at the last 12 months' 501 contracts. TradingView's backtest still shows limit fills.
+- **Check the formats first:** `pine/ninjaview_payload_test.ps1` sends each message straight to the add-on on the VPS. Test 7 is the market entry, 10 the handoff, 3 and 4 the resting limit and its cancel, 8 the close.
 
 **One-time setup**
-1. **Install:** NinjaTrader 8 and the NinjaView add-on (Easy Installer from the NinjaView Downloads page). Restart NinjaTrader; you should see New → Ninjaview → TradeSync.
-2. **Activate:** in NinjaTrader, Help → About → copy the Machine ID, then paste it on NinjaView's Licenses page.
-3. **Connect:** your account in NinjaTrader, with live data for MNQ. NinjaTrader must stay running during the session (your PC or a Windows VPS).
-4. **Copy the webhook:** on NinjaView's Webhook Setup page, copy your webhook URL.
+1. **Install:** NinjaTrader 8 and the NinjaView add-on (Downloads page). Restart NinjaTrader; you should see New → TradeSync NinjaView.
+2. **Activate:** copy the Machine ID from the add-on window and activate it on NinjaView's Licenses page.
+3. **Add-on window:** Mode `Localhost (Chrome Extension)`, port 5001, account `Sim101`, Auto-Trade ticked, Symbol / Filter `MNQ` (every message names `MNQ 12-26`), default instrument `MNQ 12-26`. Click CONNECT.
+4. **Chrome extension:** install the latest from Downloads, sign in, NT8 URL `http://localhost:5001/`. Keep a logged-in TradingView tab open in that Chrome and refresh it once after the extension loads.
+5. NinjaTrader must stay connected with live MNQ data during the session (your PC or a Windows VPS).
 
 **TradingView**
-1. Open a 5-minute chart of the **dated contract** that matches NinjaTrader (for Dec 2026, `CME_MINI:MNQZ2026`) and add "MNQ v3 · T2R + T2X (one account)".
-   - Charting the same contract you trade keeps the prices identical on both sides.
-   - MNQ1! switches contracts on TradingView's schedule, which may not match the day you change contracts in NinjaTrader.
-2. Settings → Automation:
-   - **Bridge:** NinjaView.
-   - **NinjaTrader account:** the exact account name. Start with `Sim101`.
-   - **NinjaTrader instrument:** `MNQ 12-26`.
-3. Create one alert:
+1. Open a 5-minute MNQ chart and add "MNQ v3 · T2R + T2X (one account)".
+2. Settings → Automation: **Bridge** NinjaView, **NinjaTrader account** `Sim101`, **instrument** `MNQ 12-26`, **entries** as above.
+3. Settings → Properties → Recalculate: **On every tick** must be ticked (the script turns it on by default). Without it, market entries would wait for the bar close.
+4. Create one alert:
    - **Condition:** the strategy → "alert() function calls only".
-   - **Expiration:** open-ended.
-   - **Notifications:** Webhook URL = your NinjaView URL.
+   - **Name:** for example "T2 NinjaView".
+   - **Notifications:** Show pop-up on; Webhook URL = your NinjaView URL (journal only).
    - **Message:** leave blank (the script writes it).
+5. Re-create the alert after every script update or settings change: an alert keeps the version and settings it was made with.
 
 **Before going live**
 - **Test on Sim101 for several sessions.**
-  - At the first IB break you should see a limit order with its bracket in NinjaTrader.
-  - At the 14:00/13:00 cutoffs the unfilled order should be cancelled.
-  - At 15:55 any open trade should close.
-- **Compare logs:** check NinjaView's Trade Log against TradingView's List of Trades.
+  - Market at the level: when price reaches an entry, NinjaTrader should show a market fill with its target and stop; the status table's last line shows what was sent and when.
+  - Resting limit: at the first IB break you should see the limit order with its bracket; at the 14:00/13:00 cutoffs it should be cancelled.
+  - At 15:55 any open trade should close, with no target or stop left working.
+- **Compare logs:** NinjaView's Trade Log against TradingView's List of Trades.
 - **Check your prop firm's automation rules.** Then change the account name to your prop account and re-create the alert.
 
 **Each quarterly roll** (about a week before expiration, e.g. around Dec 10 2026):
@@ -320,7 +322,7 @@ The script's default bridge is **NinjaView** (TradingView → NinjaView → Ninj
 
 ### Automating the combined script with CrossTrade (Tradovate)
 
-Set **Bridge** to **CrossTrade**. The script then sends the same three kinds of orders it sends NinjaView, in CrossTrade's `key=value;` format. With destination Tradovate they go straight to Tradovate, so NinjaTrader doesn't need to run.
+Set **Bridge** to **CrossTrade**. The script then sends resting limit orders (place, cancel, flatten) in CrossTrade's `key=value;` format. With destination Tradovate they go straight to Tradovate, so NinjaTrader doesn't need to run.
 
 | When | CrossTrade command | What it does |
 |---|---|---|

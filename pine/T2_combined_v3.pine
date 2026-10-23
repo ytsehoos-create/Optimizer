@@ -39,20 +39,31 @@
 //   Orders are processed from the bar after they are placed, as in the backtest.
 //
 // Automation: ONE alert, "alert() function calls only", Webhook URL = your
-//   bridge, Message = blank. Bridge = NinjaView (default), CrossTrade or TradersPost:
-//     PLACE  → NinjaView "oco limit buy/sell" / CrossTrade "place" limit: limit
+//   bridge, Message = blank. Bridge = NinjaView (default), CrossTrade or TradersPost.
+//   NinjaView messages follow NinjaView's own examples (github.com/NinjaView/Pinescript).
+//   NinjaView, "Market at the level" (default): nothing rests at NinjaTrader. The
+//     strategy keeps its orders internally; the moment price reaches one (any tick),
+//     the alert sends a market entry with its stop and target:
+//       ENTRY   → "OCO Market Long/Short" (take_profit_price, stop_price, oco_id);
+//                 "Close Then OCO Market …" when a trade may still be open (handoff)
+//       EXIT    → "Market Close", then "Cancel OCO" for that trade's leftover bracket
+//                 (15:55)
+//     Skipped if price is already past the stop when the level is reached.
+//     Needs Properties → Recalculate → "On every tick" (on by default here).
+//   NinjaView, "Resting limit", CrossTrade, TradersPost: the order rests at the broker:
+//     PLACE  → NinjaView "OCO Limit Long/Short" / CrossTrade "place" limit: limit
 //              entry with TP/SL bracket that arms on fill, each order with its
 //              own id (oco_id / order_id)
-//     CANCEL → NinjaView "cancel oco" / CrossTrade "cancel" for that id only
+//     CANCEL → NinjaView "Cancel OCO" / CrossTrade "cancel" for that id only
 //              (TradersPost: cancel the ticker's resting orders)
-//     EXIT   → NinjaView "cancel oco and flatten" for the open trade's oco_id;
+//     EXIT   → NinjaView "Market Close" + "Cancel OCO" for the open trade's oco_id;
 //              CrossTrade "flatten" for the instrument
 //              (15:55, or a cancelled order that filled)
 // ============================================================================
 strategy("MNQ v3 · T2R + T2X (one account)", shorttitle = "T2", overlay = true, pyramiding = 0,
      process_orders_on_close = false, initial_capital = 50000, margin_long = 0, margin_short = 0,
      commission_type = strategy.commission.cash_per_contract, commission_value = 0.62,
-     slippage = 1, max_lines_count = 500, max_labels_count = 500)
+     slippage = 1, max_lines_count = 500, max_labels_count = 500, calc_on_every_tick = true)
 
 // ── Inputs ──────────────────────────────────────────────────────────────────
 G1 = "Risk"
@@ -213,6 +224,8 @@ showLabels = input.bool(true, "Show status labels on the chart", group = G6)
 bridge     = input.string("NinjaView", "Bridge", options = ["NinjaView", "CrossTrade", "TradersPost"], group = G6)
 ntAccount  = input.string("Sim101", "NinjaView: NinjaTrader account (exact name; comma-separate for several)", group = G6)
 ntTicker   = input.string("MNQ 12-26", "NinjaView: NinjaTrader instrument (update at each quarterly roll)", group = G6)
+nvMode     = input.string("Market at the level", "NinjaView: entries", options = ["Market at the level", "Resting limit"], group = G6,
+     tooltip = "Market at the level: nothing rests at NinjaTrader; the moment price reaches an entry, a market order with its stop and target is sent (NinjaView's 'OCO Market'). Needs Properties → Recalculate → On every tick. Resting limit: the limit and its bracket rest at NinjaTrader ('OCO Limit'); use it only if the NinjaView payload test showed that it works.")
 ctKey      = input.string("", "CrossTrade: secret key", group = G6, display = display.none,
      tooltip = "From your CrossTrade dashboard. It is stored in this chart's settings and sent inside every alert, so keep the chart private.")
 ctAccount  = input.string("", "CrossTrade: account (exact name)", group = G6)
@@ -224,6 +237,10 @@ tickerOut  = input.string("MNQ1!", "TradersPost: ticker sent to bridge", group =
 // the status table on the chart says so.
 ctMissing = bridge == "CrossTrade" and (ctKey == "" or ctAccount == "")
 alertsOn  = sendAlerts and not ctMissing
+nvMarket  = bridge == "NinjaView" and nvMode == "Market at the level"
+// The script runs on every realtime tick (for NinjaView's market entries). Everything
+// that changes the strategy's own orders runs only at the bar's close, as in the backtest.
+conf      = barstate.isconfirmed
 
 // ── Session clock (America/New_York) ────────────────────────────────────────
 if not (timeframe.isminutes and timeframe.multiplier == 5)
@@ -283,6 +300,10 @@ f_closer(d, own, lvl) => na(lvl) ? own : d > 0 ? math.min(own, lvl) : math.max(o
 f_lots(rk, pts) => math.max(1, math.floor(rk / (pts * syminfo.pointvalue)))
 f_nv(a) =>
     '{"alert":"' + a + '","account":"' + ntAccount + '","ticker":"' + ntTicker + '"'
+// NinjaView market entry with its bracket (their "OCO Market" example); handoff closes any open trade first.
+f_nvMarket(d, n, stp, tp, id, handoff) =>
+    f_nv((handoff ? "Close Then OCO Market " : "OCO Market ") + (d > 0 ? "Long" : "Short")) + ',"qty":"' + str.tostring(n) +
+         '","take_profit_price":"' + f_px(tp) + '","stop_price":"' + f_px(stp) + '","tif":"DAY","oco_id":"' + id + '"}'
 // CrossTrade: key=value; lines. The destination line routes straight to Tradovate.
 ctTicker = ctInstr == "" ? syminfo.ticker : ctInstr
 f_ct(cmd) =>
@@ -292,8 +313,8 @@ ctTail = ctDest == "Tradovate" ? '\ndestination=tradovate;' : ''
 f_msgPlace(d, n, e, stp, tp, id) =>
     string m = na
     if bridge == "NinjaView"
-        m := f_nv("oco limit " + (d > 0 ? "buy" : "sell")) + ',"qty":"' + str.tostring(n) + '","limit_price":"' + f_px(e) +
-             '","take_profit_price":"' + f_px(tp) + '","stop_loss_price":"' + f_px(stp) + '","oco_id":"' + id + '","tif":"DAY"}'
+        m := f_nv("OCO Limit " + (d > 0 ? "Long" : "Short")) + ',"qty":"' + str.tostring(n) + '","order_type":"LIMIT","limit_price":"' + f_px(e) +
+             '","take_profit_price":"' + f_px(tp) + '","stop_price":"' + f_px(stp) + '","tif":"DAY","oco_id":"' + id + '"}'
     else if bridge == "CrossTrade"
         m := f_ct("place") + 'instrument=' + ctTicker + ';\naction=' + (d > 0 ? "buy" : "sell") + ';\nqty=' + str.tostring(n) +
              ';\norder_type=limit;\nlimit_price=' + f_px(e) + ';\ntif=day;\ntake_profit=' + f_px(tp) + ';\nstop_loss=' + f_px(stp) +
@@ -305,13 +326,13 @@ f_msgPlace(d, n, e, stp, tp, id) =>
     m
 // Cancel one resting order (NinjaView by oco_id, CrossTrade by order_id) or the ticker's resting orders (TradersPost).
 f_msgCancel(id) =>
-    bridge == "NinjaView" ? f_nv("cancel oco") + ',"oco_id":"' + id + '"}' :
+    bridge == "NinjaView" ? f_nv("Cancel OCO") + ',"oco_id":"' + id + '"}' :
          bridge == "CrossTrade" ? f_ct("cancel") + 'order_id=' + id + ';' + ctTail :
          '{"ticker":"' + tickerOut + '","action":"cancel"}'
-// Close the trade opened by order `id` and cancel its bracket; with no id, flatten the instrument.
+// Close the position. NinjaView: "Market Close" (then f_msgCancel(id) clears the trade's bracket);
 // CrossTrade: flatten closes the instrument's position and cancels its working orders.
 f_msgExit(id) =>
-    bridge == "NinjaView" ? (id == "" ? f_nv("market flat") + '}' : f_nv("cancel oco and flatten") + ',"oco_id":"' + id + '"}') :
+    bridge == "NinjaView" ? f_nv("Market Close") + '}' :
          bridge == "CrossTrade" ? f_ct("flatten") + 'instrument=' + ctTicker + ';' + ctTail :
          '{"ticker":"' + tickerOut + '","action":"exit"}'
 f_side(d) => d > 0 ? "LONG" : "SHORT"
@@ -377,6 +398,38 @@ var string t1Note = "waiting for IB"
 
 evt = ""                          // this bar's events, shown as one label
 
+// ── NinjaView "market at the level": send the entry the moment price reaches it ──
+// Runs on every realtime tick, before anything below updates: it reads the orders the
+// strategy holds as of the last bar close (orders count from the bar after they are
+// placed, as in the backtest). Each order is sent at most once.
+varip string nvSentR  = ""        // id of the T2R order already sent (or skipped)
+varip string nvSentX  = ""
+varip string nvOpenId = ""        // entry sent whose trade may still be open
+varip string nvLast   = ""        // last entry sent or skipped, for the status table
+if newRTH
+    nvOpenId := ""
+if nvMarket and alertsOn and barstate.isrealtime and not newRTH
+    if rAtBroker and not rDead and rId != nvSentR and (rSide > 0 ? low <= rE : high >= rE)
+        nvSentR := rId
+        if rSide > 0 ? close > rS : close < rS
+            alert(f_nvMarket(rSide, rQty, rS, rTgtOut, rId, nvOpenId != ""), alert.freq_all)
+            if nvOpenId != ""
+                alert(f_msgCancel(nvOpenId), alert.freq_all)
+            nvOpenId := rId
+            nvLast := "sent T2R " + f_side(rSide) + " " + str.tostring(rQty) + " at " + f_px(close) + " (" + str.format_time(timenow, "HH:mm:ss", TZ) + ")"
+        else
+            nvLast := "skipped T2R: price already past the stop (" + str.format_time(timenow, "HH:mm:ss", TZ) + ")"
+    if xAtBroker and not xDead and xId != nvSentX and (xSide > 0 ? low <= xE : high >= xE)
+        nvSentX := xId
+        if xSide > 0 ? close > xS : close < xS
+            alert(f_nvMarket(xSide, xQty, xS, xTgtOut, xId, nvOpenId != ""), alert.freq_all)
+            if nvOpenId != ""
+                alert(f_msgCancel(nvOpenId), alert.freq_all)
+            nvOpenId := xId
+            nvLast := "sent T2X " + f_side(xSide) + " " + str.tostring(xQty) + " at " + f_px(close) + " (" + str.format_time(timenow, "HH:mm:ss", TZ) + ")"
+        else
+            nvLast := "skipped T2X: price already past the stop (" + str.format_time(timenow, "HH:mm:ss", TZ) + ")"
+
 // New RTH session: roll the prior close, reset the day.
 if newRTH
     prevRthClose := lastRthClose
@@ -405,9 +458,11 @@ if newRTH
     t1Side := 0
     t1Tag := ""
     t1Note := "building IB"
-    strategy.cancel_all()
+    if conf
+        strategy.cancel_all()
     if strategy.position_size != 0       // safety net: never carry a position into a new session
-        strategy.close_all(comment = "carried over: closed", immediately = true)
+        if conf
+            strategy.close_all(comment = "carried over: closed", immediately = true)
         if alertsOn
             alert(f_msgExit(""), alert.freq_once_per_bar_close)
     rId := ""
@@ -555,18 +610,24 @@ if openId == "T2X" and xSt != 3
 // exit it at this bar's close.
 exitedDead = false
 if openId == "T2R" and rDead
-    strategy.close("T2R", comment = "cancelled order filled", immediately = true)
-    if alertsOn
+    if conf
+        strategy.close("T2R", comment = "cancelled order filled", immediately = true)
+    if alertsOn and not nvMarket          // market mode never sent a cancelled order
         alert(f_msgExit(rId), alert.freq_once_per_bar_close)
+        if bridge == "NinjaView"
+            alert(f_msgCancel(rId), alert.freq_once_per_bar_close)
     rSt := 3
     rDead := false
     exitedDead := true
     rNote := "exited: filled after it was cancelled"
     evt := evt + (evt == "" ? "" : " · ") + rNote
 if openId == "T2X" and xDead
-    strategy.close("T2X", comment = "cancelled order filled", immediately = true)
-    if alertsOn
+    if conf
+        strategy.close("T2X", comment = "cancelled order filled", immediately = true)
+    if alertsOn and not nvMarket
         alert(f_msgExit(xId), alert.freq_once_per_bar_close)
+        if bridge == "NinjaView"
+            alert(f_msgCancel(xId), alert.freq_once_per_bar_close)
     xSt := 4
     xDead := false
     exitedDead := true
@@ -709,17 +770,18 @@ if not inTrade and not exitedDead and afterIB and nextHm >= 930 and nextHm < 160
         // Bridge: cancel everything resting, then re-place what is still valid.
         // Strategy: cancel what is no longer wanted; re-calling entry/exit with
         // the same id updates the rest in place.
-        if alertsOn and bridge != "TradersPost"
+        // NinjaView market mode: nothing rests at NinjaTrader, so nothing to cancel or place.
+        if alertsOn and not nvMarket and bridge != "TradersPost"
             if rAtBroker
                 alert(f_msgCancel(rId), alert.freq_once_per_bar_close)
             if xAtBroker
                 alert(f_msgCancel(xId), alert.freq_once_per_bar_close)
-        else if alertsOn and (rAtBroker or xAtBroker)
+        else if alertsOn and bridge == "TradersPost" and (rAtBroker or xAtBroker)
             alert(f_msgCancel(""), alert.freq_once_per_bar_close)
-        if not wantR
+        if not wantR and conf
             strategy.cancel("T2R")
             strategy.cancel("T2R exit")
-        if not wantX
+        if not wantX and conf
             strategy.cancel("T2X")
             strategy.cancel("T2X exit")
         if rDead
@@ -733,23 +795,25 @@ if not inTrade and not exitedDead and afterIB and nextHm >= 930 and nextHm < 160
         rAtBroker := false
         xAtBroker := false
         if wantR
-            strategy.order("T2R", rSide > 0 ? strategy.long : strategy.short, qty = rQty, limit = rE)
-            strategy.exit("T2R exit", from_entry = "T2R", stop = rS, limit = tgtR)
+            if conf
+                strategy.order("T2R", rSide > 0 ? strategy.long : strategy.short, qty = rQty, limit = rE)
+                strategy.exit("T2R exit", from_entry = "T2R", stop = rS, limit = tgtR)
             rQtyPine := rQty
             ordSeq += 1
             rId := "T2R-" + str.format_time(time, "yyMMdd", TZ) + "-" + str.tostring(ordSeq)
-            if alertsOn
+            if alertsOn and not nvMarket
                 alert(f_msgPlace(rSide, rQty, rE, rS, tgtR, rId), alert.freq_once_per_bar_close)
             rAtBroker := true
             rTgtOut := tgtR
             rNote := "working: " + f_side(rSide) + " " + str.tostring(rQty) + " @ " + f_px(rE) + " · S " + f_px(rS) + " · T " + f_px(tgtR) + (tgtR != rT ? " (aligned)" : "")
         if wantX
-            strategy.order("T2X", xSide > 0 ? strategy.long : strategy.short, qty = xQty, limit = xE)
-            strategy.exit("T2X exit", from_entry = "T2X", stop = xS, limit = tgtX)
+            if conf
+                strategy.order("T2X", xSide > 0 ? strategy.long : strategy.short, qty = xQty, limit = xE)
+                strategy.exit("T2X exit", from_entry = "T2X", stop = xS, limit = tgtX)
             xQtyPine := xQty
             ordSeq += 1
             xId := "T2X-" + str.format_time(time, "yyMMdd", TZ) + "-" + str.tostring(ordSeq)
-            if alertsOn
+            if alertsOn and not nvMarket
                 alert(f_msgPlace(xSide, xQty, xE, xS, tgtX, xId), alert.freq_once_per_bar_close)
             xAtBroker := true
             xTgtOut := tgtX
@@ -770,7 +834,7 @@ else if inTrade and xSt == 2 and not xAtBroker and not xDead and xNote != "waiti
 // TradingView's emulator would instead let the resting order spend part of its
 // size closing the trade. So while a trade is on and the other order rests at
 // its target, that order also carries the trade's size and does the closing.
-if inTrade
+if conf and inTrade
     posQty = int(math.abs(strategy.position_size))
     if openId == "T2X" and rAtBroker and xTgtOut == rE
         strategy.order("T2R", rSide > 0 ? strategy.long : strategy.short, qty = rQty + posQty, limit = rE)
@@ -780,7 +844,7 @@ if inTrade
         strategy.order("T2X", xSide > 0 ? strategy.long : strategy.short, qty = xQty + posQty, limit = xE)
         strategy.exit("T2R exit", from_entry = "T2R", stop = rS, limit = na)
         xQtyPine := xQty + posQty
-else if not exitedDead
+else if conf and not exitedDead
     // Flat again without a handoff: the resting order goes back to its own size.
     if rAtBroker and rQtyPine != rQty
         strategy.order("T2R", rSide > 0 ? strategy.long : strategy.short, qty = rQty, limit = rE)
@@ -793,20 +857,31 @@ else if not exitedDead
 if hm == flatAt
     // Cancel resting orders first, then flatten: a cancel issued after the close
     // order in the same bar would cancel the close itself (and the trade's bracket).
-    strategy.cancel_all()
-    if strategy.position_size != 0
-        strategy.close_all(comment = "EOD", immediately = true)
+    if conf
+        strategy.cancel_all()
+    exitId = nvMarket ? nvOpenId : openId == "T2R" ? rId : openId == "T2X" ? xId : ""
+    if strategy.position_size != 0 or (nvMarket and nvOpenId != "")
+        if conf and strategy.position_size != 0
+            strategy.close_all(comment = "EOD", immediately = true)
         if alertsOn
-            alert(f_msgExit(openId == "T2R" ? rId : openId == "T2X" ? xId : ""), alert.freq_once_per_bar_close)
-    if alertsOn and bridge != "TradersPost"
+            alert(f_msgExit(exitId), alert.freq_once_per_bar_close)
+            if bridge == "NinjaView" and exitId != ""
+                alert(f_msgCancel(exitId), alert.freq_once_per_bar_close)
+    if alertsOn and not nvMarket and bridge != "TradersPost"
         if rAtBroker
             alert(f_msgCancel(rId), alert.freq_once_per_bar_close)
         if xAtBroker
             alert(f_msgCancel(xId), alert.freq_once_per_bar_close)
-    else if alertsOn and (rAtBroker or xAtBroker)
+    else if alertsOn and bridge == "TradersPost" and (rAtBroker or xAtBroker)
         alert(f_msgCancel(""), alert.freq_once_per_bar_close)
     rAtBroker := false
     xAtBroker := false
+    if conf
+        nvOpenId := ""
+
+// Flat at a bar close: no NinjaView trade can still be open (its bracket closed it).
+if conf and strategy.position_size == 0
+    nvOpenId := ""
 
 if showLabels and evt != ""
     label.new(bar_index, high, "T2 · " + evt, yloc = yloc.abovebar, style = label.style_label_down,
@@ -823,7 +898,9 @@ plot(showDay and xSide != 0 ? xS : na, "T2X stop",  color.new(color.red, 30), 1,
 
 var table tb = table.new(position.top_right, 1, 4, bgcolor = color.new(color.black, 20))
 if barstate.islast
-    alertNote = not sendAlerts ? "Alerts off" : ctMissing ? "⚠ CrossTrade key or account is blank: NO alerts are sent" : "Alerts on · " + bridge
+    alertNote = not sendAlerts ? "Alerts off" : ctMissing ? "⚠ CrossTrade key or account is blank: NO alerts are sent" :
+         "Alerts on · " + bridge + (bridge == "NinjaView" ? " · " + (nvMarket ? "market at the level" : "resting limit") : "") +
+         (nvMarket and nvLast != "" ? " · " + nvLast : "")
     table.cell(tb, 0, 3, alertNote, text_color = ctMissing and sendAlerts ? color.orange : color.silver, text_size = size.small, text_halign = text.align_left)
     table.cell(tb, 0, 0, "T2R · " + rNote, text_color = color.white, text_size = size.small, text_halign = text.align_left)
     table.cell(tb, 0, 1, "T2X · " + xNote, text_color = color.white, text_size = size.small, text_halign = text.align_left)
