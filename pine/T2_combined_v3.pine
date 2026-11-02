@@ -40,27 +40,25 @@
 //
 // Automation: ONE alert, "alert() function calls only", Webhook URL = your
 //   bridge, Message = blank. Bridge = NinjaView (default), CrossTrade or TradersPost.
-//   NinjaView messages follow NinjaView's own examples (github.com/NinjaView/Pinescript).
+//   NinjaView messages are exactly what the NinjaView Bridge extension's Payload
+//   generator (v5.2) builds: lowercase alert names, stop_loss_price, prices x.xx.
 //   NinjaView, "Market at the level" (default): nothing rests at NinjaTrader. The
 //     strategy keeps its orders internally; the moment price reaches one (any tick),
 //     the alert sends a market entry with its stop and target:
-//       ENTRY   → "OCO Market Long/Short" (take_profit_price, stop_price, oco_id);
-//                 "Close Then OCO Market …" when a trade may still be open (handoff)
-//       EXIT    → "Market Close", then "Cancel OCO" for that trade's id (15:55)
-//     In NinjaView's code (github.com/NinjaView/ninjaview-oss) "Market Close" is
-//     CLOSEPOSITION and "Cancel OCO" is CLOSEPOSITION + cancel by id.
+//       ENTRY   → "oco market buy/sell" (qty, take_profit_price, stop_loss_price, oco_id);
+//                 "close then oco market buy/sell" when a trade may still be open (handoff)
+//       EXIT    → "cancel oco and flatten" for that trade's oco_id, then "market close" (15:55)
 //     Skipped if price is already past the stop when the level is reached.
 //     Needs Properties → Recalculate → "On every tick" (on by default here).
-//   NinjaView, "Resting limit" (not safe per NinjaView's code: its "OCO Limit" leaves out
-//     the entry price and places the target and stop at once), CrossTrade, TradersPost:
-//     the order rests at the broker:
-//     PLACE  → NinjaView "OCO Limit Long/Short" / CrossTrade "place" limit: limit
+//   NinjaView "Resting limit" (only once a Send to NT8 test shows the bracket arms on
+//     fill), CrossTrade, TradersPost: the order rests at the broker:
+//     PLACE  → NinjaView "oco limit buy/sell" / CrossTrade "place" limit: limit
 //              entry with TP/SL bracket that arms on fill, each order with its
 //              own id (oco_id / order_id)
-//     CANCEL → NinjaView "Cancel OCO" / CrossTrade "cancel" for that id only
+//     CANCEL → NinjaView "cancel oco" / CrossTrade "cancel" for that id only
 //              (TradersPost: cancel the ticker's resting orders)
-//     EXIT   → NinjaView "Market Close" + "Cancel OCO" for the open trade's oco_id;
-//              CrossTrade "flatten" for the instrument
+//     EXIT   → NinjaView "cancel oco and flatten" for the open trade's oco_id, then
+//              "market close"; CrossTrade "flatten" for the instrument
 //              (15:55, or a cancelled order that filled)
 // ============================================================================
 strategy("MNQ v3 · T2R + T2X (one account)", shorttitle = "T2", overlay = true, pyramiding = 0,
@@ -228,7 +226,7 @@ bridge     = input.string("NinjaView", "Bridge", options = ["NinjaView", "CrossT
 ntAccount  = input.string("Sim101", "NinjaView: NinjaTrader account (exact name; comma-separate for several)", group = G6)
 ntTicker   = input.string("MNQ 12-26", "NinjaView: NinjaTrader instrument (update at each quarterly roll)", group = G6)
 nvMode     = input.string("Market at the level", "NinjaView: entries", options = ["Market at the level", "Resting limit"], group = G6,
-     tooltip = "Market at the level: nothing rests at NinjaTrader; the moment price reaches an entry, a market order with its stop and target is sent (NinjaView's 'OCO Market'). Needs Properties → Recalculate → On every tick. Resting limit ('OCO Limit'): do not use unless the payload test shows the entry resting at its price with no target or stop until it fills. NinjaView's open-source code leaves out the entry price and places the target and stop straight away, which could open a trade from the target or stop alone.")
+     tooltip = "Market at the level: nothing rests at NinjaTrader; the moment price reaches an entry, a market order with its stop and target is sent (NinjaView's 'OCO Market'). Needs Properties → Recalculate → On every tick. Resting limit ('oco limit'): use only once a Send to NT8 test from the extension's Payload tab shows the entry resting at its price with no target or stop until it fills; a target or stop placed before the fill could open a trade on its own.")
 ctKey      = input.string("", "CrossTrade: secret key", group = G6, display = display.none,
      tooltip = "From your CrossTrade dashboard. It is stored in this chart's settings and sent inside every alert, so keep the chart private.")
 ctAccount  = input.string("", "CrossTrade: account (exact name)", group = G6)
@@ -294,6 +292,7 @@ xdRk = array.from(xdMonRk, xdTueRk, xdWedRk, xdThuRk, xdFriRk)
 
 // ── Helpers and webhook messages (edit f_msg* for a different bridge) ───────
 f_px(x) => str.tostring(x, "#.##")
+f_nvPx(x) => str.tostring(x, "0.00")      // NinjaView prices as its payload generator writes them
 // Levels are rounded to a tick away from the side price reaches them from, so a
 // touch triggers on exactly the bar it does in the backtest's exact-price levels.
 f_tickUp(x) => math.ceil(x / syminfo.mintick - 1e-6) * syminfo.mintick
@@ -303,12 +302,13 @@ f_closer(d, own, lvl) => na(lvl) ? own : d > 0 ? math.min(own, lvl) : math.max(o
 f_lots(rk, pts) => math.max(1, math.floor(rk / (pts * syminfo.pointvalue)))
 f_nv(a) =>
     '{"alert":"' + a + '","account":"' + ntAccount + '","ticker":"' + ntTicker + '"'
-// NinjaView market entry with its bracket (their "OCO Market" example). For a handoff, "Close Then OCO"
-// closes the position (and, in NinjaTrader, its working bracket) before entering. Never follow it with
-// "Cancel OCO": in NinjaView's code that also closes the position, i.e. the new trade.
+// NinjaView market entry with its bracket ("oco market buy/sell"). For a handoff, "close then oco
+// market …" closes the open position before entering; nothing that flattens is sent after it.
 f_nvMarket(d, n, stp, tp, id, handoff) =>
-    f_nv((handoff ? "Close Then OCO Market " : "OCO Market ") + (d > 0 ? "Long" : "Short")) + ',"qty":"' + str.tostring(n) +
-         '","take_profit_price":"' + f_px(tp) + '","stop_price":"' + f_px(stp) + '","tif":"DAY","oco_id":"' + id + '"}'
+    f_nv((handoff ? "close then oco market " : "oco market ") + (d > 0 ? "buy" : "sell")) + ',"qty":"' + str.tostring(n) +
+         '","take_profit_price":"' + f_nvPx(tp) + '","stop_loss_price":"' + f_nvPx(stp) + '","oco_id":"' + id + '"}'
+// NinjaView: flatten the instrument (no id) as a backstop after "cancel oco and flatten".
+nvClose = '{"alert":"market close","account":"' + ntAccount + '","ticker":"' + ntTicker + '"}'
 // CrossTrade: key=value; lines. The destination line routes straight to Tradovate.
 ctTicker = ctInstr == "" ? syminfo.ticker : ctInstr
 f_ct(cmd) =>
@@ -318,8 +318,8 @@ ctTail = ctDest == "Tradovate" ? '\ndestination=tradovate;' : ''
 f_msgPlace(d, n, e, stp, tp, id) =>
     string m = na
     if bridge == "NinjaView"
-        m := f_nv("OCO Limit " + (d > 0 ? "Long" : "Short")) + ',"qty":"' + str.tostring(n) + '","order_type":"LIMIT","limit_price":"' + f_px(e) +
-             '","take_profit_price":"' + f_px(tp) + '","stop_price":"' + f_px(stp) + '","tif":"DAY","oco_id":"' + id + '"}'
+        m := f_nv("oco limit " + (d > 0 ? "buy" : "sell")) + ',"qty":"' + str.tostring(n) + '","limit_price":"' + f_nvPx(e) +
+             '","take_profit_price":"' + f_nvPx(tp) + '","stop_loss_price":"' + f_nvPx(stp) + '","oco_id":"' + id + '"}'
     else if bridge == "CrossTrade"
         m := f_ct("place") + 'instrument=' + ctTicker + ';\naction=' + (d > 0 ? "buy" : "sell") + ';\nqty=' + str.tostring(n) +
              ';\norder_type=limit;\nlimit_price=' + f_px(e) + ';\ntif=day;\ntake_profit=' + f_px(tp) + ';\nstop_loss=' + f_px(stp) +
@@ -331,13 +331,13 @@ f_msgPlace(d, n, e, stp, tp, id) =>
     m
 // Cancel one resting order (NinjaView by oco_id, CrossTrade by order_id) or the ticker's resting orders (TradersPost).
 f_msgCancel(id) =>
-    bridge == "NinjaView" ? f_nv("Cancel OCO") + ',"oco_id":"' + id + '"}' :
+    bridge == "NinjaView" ? f_nv("cancel oco") + ',"oco_id":"' + id + '"}' :
          bridge == "CrossTrade" ? f_ct("cancel") + 'order_id=' + id + ';' + ctTail :
          '{"ticker":"' + tickerOut + '","action":"cancel"}'
-// Close the position. NinjaView: "Market Close" (then f_msgCancel(id) clears the trade's bracket);
-// CrossTrade: flatten closes the instrument's position and cancels its working orders.
+// Close the position. NinjaView: "cancel oco and flatten" for the trade's id (cancels its bracket and
+// closes it), or "market close" with no id; CrossTrade: flatten closes the position and cancels its orders.
 f_msgExit(id) =>
-    bridge == "NinjaView" ? f_nv("Market Close") + '}' :
+    bridge == "NinjaView" ? (id == "" ? nvClose : f_nv("cancel oco and flatten") + ',"oco_id":"' + id + '"}') :
          bridge == "CrossTrade" ? f_ct("flatten") + 'instrument=' + ctTicker + ';' + ctTail :
          '{"ticker":"' + tickerOut + '","action":"exit"}'
 f_side(d) => d > 0 ? "LONG" : "SHORT"
@@ -616,7 +616,7 @@ if openId == "T2R" and rDead
     if alertsOn and not nvMarket          // market mode never sent a cancelled order
         alert(f_msgExit(rId), alert.freq_once_per_bar_close)
         if bridge == "NinjaView"
-            alert(f_msgCancel(rId), alert.freq_once_per_bar_close)
+            alert(nvClose, alert.freq_once_per_bar_close)
     rSt := 3
     rDead := false
     exitedDead := true
@@ -628,7 +628,7 @@ if openId == "T2X" and xDead
     if alertsOn and not nvMarket
         alert(f_msgExit(xId), alert.freq_once_per_bar_close)
         if bridge == "NinjaView"
-            alert(f_msgCancel(xId), alert.freq_once_per_bar_close)
+            alert(nvClose, alert.freq_once_per_bar_close)
     xSt := 4
     xDead := false
     exitedDead := true
@@ -867,7 +867,7 @@ if hm == flatAt
         if alertsOn
             alert(f_msgExit(exitId), alert.freq_once_per_bar_close)
             if bridge == "NinjaView" and exitId != ""
-                alert(f_msgCancel(exitId), alert.freq_once_per_bar_close)
+                alert(nvClose, alert.freq_once_per_bar_close)
     if alertsOn and not nvMarket and bridge != "TradersPost"
         if rAtBroker
             alert(f_msgCancel(rId), alert.freq_once_per_bar_close)

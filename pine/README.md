@@ -273,22 +273,20 @@ The point of rule 2: every cancel the script sends happens while the account is 
 
 ### Automating the combined script with NinjaView
 
-The script's default bridge is **NinjaView** (TradingView → NinjaView Chrome extension → NinjaView add-on → NinjaTrader 8 → your account). NinjaView's webhook only journals trades; orders reach NinjaTrader through the extension, which picks the alerts up in a logged-in TradingView tab on the same machine. The messages follow NinjaView's own examples ([github.com/NinjaView/Pinescript](https://github.com/NinjaView/Pinescript)) and their open-source bridge's payload catalog ([github.com/NinjaView/ninjaview-oss](https://github.com/NinjaView/ninjaview-oss)).
+The script's default bridge is **NinjaView** (TradingView → NinjaView Chrome extension → NinjaView add-on → NinjaTrader 8 → your account). NinjaView's webhook only journals trades; orders reach NinjaTrader through the extension, which picks the alerts up in a logged-in TradingView tab on the same machine. The messages are exactly what the extension's own **Payload** tab (NinjaView Bridge v5.2) builds: lowercase alert names, `stop_loss_price`, prices written `x.xx`. NinjaView's older docs, GitHub examples and open-source bridge use other names; the paid add-on follows the extension.
 
 **Entries: Settings → Automation → "NinjaView: entries"**
 
 | Option | How it trades | Messages |
 |---|---|---|
-| **Market at the level** (default) | Nothing rests at NinjaTrader. The strategy keeps its orders internally; the moment price reaches one (any tick), the alert sends a market entry with its stop and target. If price is already past the stop by then, the entry is skipped. | Entry `OCO Market Long` / `OCO Market Short` with `qty`, `take_profit_price`, `stop_price`, `tif: DAY`, `oco_id`. Handoff (a trade may still be open): `Close Then OCO Market …`, which closes the position before entering. |
-| **Resting limit** | Meant to rest the limit entry with a bracket that arms on fill, as in the backtest. **Not safe with NinjaView as far as their code shows:** its `OCO Limit` leaves out the entry price and places the target and stop straight away, so the target or stop alone could open a trade. Don't use it unless the payload test shows otherwise. | Place `OCO Limit Long` / `OCO Limit Short` with `qty`, `order_type: LIMIT`, `limit_price`, `take_profit_price`, `stop_price`, `tif: DAY`, `oco_id`. Withdraw `Cancel OCO` with that order's `oco_id`. |
+| **Market at the level** (default) | Nothing rests at NinjaTrader. The strategy keeps its orders internally; the moment price reaches one (any tick), the alert sends a market entry with its stop and target. If price is already past the stop by then, the entry is skipped. | Entry `oco market buy` / `oco market sell` with `qty`, `take_profit_price`, `stop_loss_price`, `oco_id`. Handoff (a trade may still be open): `close then oco market buy/sell`, which closes the position before entering. |
+| **Resting limit** | The limit entry and its bracket rest at NinjaTrader, as in the backtest (no slippage). Use it only once a **Send to NT8** test shows the target and stop wait for the fill; placed early, either could open a trade on its own. | Place `oco limit buy` / `oco limit sell` with `qty`, `limit_price`, `take_profit_price`, `stop_loss_price`, `oco_id`. Withdraw `cancel oco` with that order's `oco_id`. |
 
-Both: at 15:55 (or when a cancelled order filled) `Market Close`, then `Cancel OCO` for the trade's `oco_id` to clear any bracket order left behind. A position still open at the next 9:30 bar gets `Market Close`.
-
-What these do in NinjaView's open-source code (NinjaTrader order-instruction commands): `OCO Market` = market entry plus a take-profit limit and stop-market linked as OCO; `Close Then OCO` = CLOSEPOSITION, then the same; `Market Close` = CLOSEPOSITION; `Cancel OCO` = CLOSEPOSITION **and** cancel by id. Because `Cancel OCO` closes the position, the script never sends it while a trade it wants to keep is open.
+Both: at 15:55 (or when a cancelled order filled) `cancel oco and flatten` for the trade's `oco_id`, then `market close` as a backstop. A position still open at the next 9:30 bar gets `market close`.
 
 - **Unique IDs:** every order gets a new `oco_id` (for example `T2R-261021-214`), because NinjaTrader rejects a reused OCO ID.
 - **Market at the level costs slippage:** about $1,000 a year per point of average slippage at the last 12 months' 501 contracts. TradingView's backtest still shows limit fills.
-- **Check the formats first:** `pine/ninjaview_payload_test.ps1` sends each message straight to the add-on on the VPS. Test 7 is the market entry, 10 the handoff, 3 and 4 the resting limit and its cancel, 8 the close.
+- **Test the messages:** in the extension, Payload tab → pick the order type → **Send to NT8**. `pine/ninjaview_payload_test.ps1` sends the same seven messages from PowerShell on the VPS.
 
 **One-time setup**
 1. **Install:** NinjaTrader 8 and the NinjaView add-on (Downloads page). Restart NinjaTrader; you should see New → TradeSync NinjaView.
@@ -304,7 +302,7 @@ What these do in NinjaView's open-source code (NinjaTrader order-instruction com
 4. Create one alert:
    - **Condition:** the strategy → "alert() function calls only".
    - **Name:** for example "T2 NinjaView".
-   - **Notifications:** Show pop-up on; Webhook URL = your NinjaView URL (journal only).
+   - **Notifications:** Show toast notification on; Webhook URL = your NinjaView URL (journal only); notification schedule Always if offered.
    - **Message:** leave blank (the script writes it).
 5. Re-create the alert after every script update or settings change: an alert keeps the version and settings it was made with.
 
