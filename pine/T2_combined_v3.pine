@@ -60,6 +60,8 @@
 //     EXIT   → NinjaView "cancel oco and flatten" for the open trade's oco_id, then
 //              "market close"; CrossTrade "flatten" for the instrument
 //              (15:55, or a cancelled order that filled)
+//     CrossTrade also sends "cancelorders" (account + instrument) at 9:30 and 15:55:
+//              its bracket legs are GTC, so nothing is left working overnight.
 // ============================================================================
 strategy("MNQ v3 · T2R + T2X (one account)", shorttitle = "T2", overlay = true, pyramiding = 0,
      process_orders_on_close = false, initial_capital = 50000, margin_long = 0, margin_short = 0,
@@ -314,6 +316,9 @@ ctTicker = ctInstr == "" ? syminfo.ticker : ctInstr
 f_ct(cmd) =>
     'key=' + ctKey + ';\ncommand=' + cmd + ';\naccount=' + ctAccount + ';\n'
 ctTail = ctDest == "Tradovate" ? '\ndestination=tradovate;' : ''
+// CrossTrade: cancel every working order for this account and instrument. Bracket legs are sent GTC
+// and nothing documented cancels them when an entry is cancelled, so this clears them each day.
+ctSweep = f_ct("cancelorders") + 'instrument=' + ctTicker + ';' + ctTail
 // Resting limit entry with a take-profit / stop-loss bracket that arms on fill.
 f_msgPlace(d, n, e, stp, tp, id) =>
     string m = na
@@ -466,6 +471,8 @@ if newRTH
             strategy.close_all(comment = "carried over: closed", immediately = true)
         if alertsOn
             alert(f_msgExit(""), alert.freq_once_per_bar_close)
+    if alertsOn and bridge == "CrossTrade"      // clean slate: no order outlives its day
+        alert(ctSweep, alert.freq_once_per_bar_close)
     rId := ""
     xId := ""
 else if inIB
@@ -617,6 +624,8 @@ if openId == "T2R" and rDead
         alert(f_msgExit(rId), alert.freq_once_per_bar_close)
         if bridge == "NinjaView"
             alert(nvClose, alert.freq_once_per_bar_close)
+        if bridge == "CrossTrade"           // its flatten also cancels the other resting order:
+            xAtBroker := false              // re-place it at the next flat bar close
     rSt := 3
     rDead := false
     exitedDead := true
@@ -629,6 +638,8 @@ if openId == "T2X" and xDead
         alert(f_msgExit(xId), alert.freq_once_per_bar_close)
         if bridge == "NinjaView"
             alert(nvClose, alert.freq_once_per_bar_close)
+        if bridge == "CrossTrade"
+            rAtBroker := false
     xSt := 4
     xDead := false
     exitedDead := true
@@ -875,6 +886,8 @@ if hm == flatAt
             alert(f_msgCancel(xId), alert.freq_once_per_bar_close)
     else if alertsOn and bridge == "TradersPost" and (rAtBroker or xAtBroker)
         alert(f_msgCancel(""), alert.freq_once_per_bar_close)
+    if alertsOn and bridge == "CrossTrade"      // clear any bracket leg left working (they are GTC)
+        alert(ctSweep, alert.freq_once_per_bar_close)
     rAtBroker := false
     xAtBroker := false
     if conf

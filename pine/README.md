@@ -328,7 +328,10 @@ Set **Bridge** to **CrossTrade**. The script then sends resting limit orders (pl
 |---|---|---|
 | An order is placed (flat account) | `place` with `order_type=limit`, `limit_price`, `take_profit`, `stop_loss`, `order_id`, `tif=day` | Rests the limit entry. Tradovate holds the bracket on its own servers and arms it when the entry fills |
 | An order is withdrawn (flat account) | `cancel` with that order's `order_id` | Cancels that one order |
-| 15:55, a cancelled order that filled, or a position carried to the next 9:30 | `flatten` for the account and instrument | Closes the position and cancels the instrument's working orders |
+| 15:55, a cancelled order that filled, or a position carried to the next 9:30 | `flatten` for the account and instrument | Closes the position (Tradovate's liquidate, which also cancels the contract's working orders) |
+| 9:30 and 15:55, every day | `cancelorders` for the account and instrument | Clears any working order left over. CrossTrade sends bracket legs GTC, and its docs don't say that cancelling an unfilled entry also cancels its suspended bracket |
+
+CrossTrade records every signal it receives, with Tradovate's reason for any rejection, under **Alert History** in its dashboard. Check it after the first live orders.
 
 Example: today's T2X order would go out as:
 
@@ -360,8 +363,8 @@ destination=tradovate;
 
 **Before going live, on an uncopied sim account:**
 - **Placing:** at the first IB break, a limit order should rest in Tradovate. Once it fills, a take-profit limit and a stop should appear.
-- **Cancelling:** at the 14:00/13:00 cutoffs the unfilled order should disappear, including its unarmed bracket.
-- **Flattening:** at 15:55 the position should close, and both bracket orders should be cancelled.
+- **Cancelling:** at the 14:00/13:00 cutoffs the unfilled order should disappear. Note whether its suspended bracket goes with it; if not, the 15:55 `cancelorders` clears it.
+- **Flattening:** at 15:55 the position should close, and nothing should be left working after the `cancelorders` that follows.
 - **Instrument name:** check that CrossTrade accepts the instrument as sent (`MNQ1!` or the dated chart symbol) and maps it to the contract you trade.
 
 **Security:** the secret key travels inside every alert message. Keep the chart and its alerts private, and regenerate the key if it's ever exposed.
