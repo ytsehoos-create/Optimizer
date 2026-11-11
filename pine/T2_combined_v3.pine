@@ -361,6 +361,13 @@ f_msgExit(id) =>
          bridge == "CrossTrade" ? f_ct("flatten") + 'instrument=' + ctTicker + ';' + ctTail :
          '{"ticker":"' + tickerOut + '","action":"exit"}'
 f_side(d) => d > 0 ? "LONG" : "SHORT"
+// Chart label: one line each for the day, T2R, T2X and T3; events on the same line are joined by " · ".
+f_add(cur, e) => cur == "" ? e : cur + " · " + e
+f_line(txt, tag, cur) => cur == "" ? txt : (txt == "" ? "" : txt + "\n") + tag + cur
+// An order now working: its levels, unless this bar's line already shows them.
+f_placed(shown, e, t, aligned) =>
+    shown ? "working" + (aligned ? " · T " + f_px(t) + " (aligned)" : "") :
+         "working @ " + f_px(e) + " · T " + f_px(t) + (aligned ? " (aligned)" : "")
 // Market entry with a take-profit / stop-loss bracket (T3 at 10:30).
 f_msgMarket(d, n, stp, tp, id) =>
     string m = na
@@ -442,7 +449,12 @@ var int    t3Qty  = 0
 var string t3Id   = ""
 var string t3Note = "off"
 
-evt = ""                          // this bar's events, shown as one label
+evt  = ""                         // this bar's events, shown as one label: the day's line,
+evtR = ""                         // then T2R, T2X and T3 on lines of their own
+evtX = ""
+evt3 = ""
+lvR  = false                      // this bar's T2R / T2X line already shows the order's levels
+lvX  = false
 
 // ── NinjaView "market at the level": send the entry the moment price reaches it ──
 // Runs on every realtime tick, before anything below updates: it reads the orders the
@@ -580,7 +592,7 @@ if lastIBBar and not na(ibH)
                     if alertsOn
                         alert(f_msgMarket(sd3, n3, s3, tg3, t3Id), alert.freq_once_per_bar_close)
                     t3Note := f_side(sd3) + " " + str.tostring(n3) + " at the 10:30 open · S " + f_px(s3) + " · T " + f_px(tg3) + " · risk $" + str.tostring(rk3, "#")
-                    evt := evt + (evt == "" ? "" : " · ") + "T3 " + t3Note
+                    evt3 := f_add(evt3, t3Note)
 
     gapPct = na(prevRthClose) ? na : math.abs(rthOpen - prevRthClose) / prevRthClose * 100
     ib2Hi = ibHBar > ibLBar
@@ -684,16 +696,16 @@ if openId == "T2R" and rSt != 2
     rSt := 2
     rAtBroker := false
     rNote := "in trade: " + f_side(rSide) + " " + str.tostring(rQty)
-    evt := evt + (evt == "" ? "" : " · ") + "T2R filled"
+    evtR := f_add(evtR, "filled")
 if openId == "T2X" and xSt != 3
     xSt := 3
     xAtBroker := false
     xNote := "in trade: " + f_side(xSide) + " " + str.tostring(xQty)
-    evt := evt + (evt == "" ? "" : " · ") + "T2X filled"
+    evtX := f_add(evtX, "filled")
 if openId == "T3" and t3St == 1
     t3St := 2
     t3Note := "in trade: " + f_side(t3Side) + " " + str.tostring(t3Qty) + " · S " + f_px(t3S) + " · T " + f_px(t3T)
-    evt := evt + (evt == "" ? "" : " · ") + "T3 filled"
+    evt3 := f_add(evt3, "filled")
 
 // An order that should have been cancelled filled (handoff while it waited):
 // exit it at this bar's close.
@@ -711,7 +723,7 @@ if openId == "T2R" and rDead
     rDead := false
     exitedDead := true
     rNote := "exited: filled after it was cancelled"
-    evt := evt + (evt == "" ? "" : " · ") + rNote
+    evtR := f_add(evtR, rNote)
 if openId == "T2X" and xDead
     if conf
         strategy.close("T2X", comment = "cancelled order filled", immediately = true)
@@ -725,7 +737,7 @@ if openId == "T2X" and xDead
     xDead := false
     exitedDead := true
     xNote := "exited: filled after it was cancelled"
-    evt := evt + (evt == "" ? "" : " · ") + xNote
+    evtX := f_add(evtX, xNote)
 
 inTrade = strategy.opentrades > 0 and not exitedDead
 
@@ -734,7 +746,7 @@ inTrade = strategy.opentrades > 0 and not exitedDead
 if xSt == 2 and xHeld and (xSide > 0 ? low <= xE : high >= xE)
     xSt := 4
     xNote := "skipped: entry touched before T1 was in (R7)"
-    evt := evt + (evt == "" ? "" : " · ") + "T2X " + xNote
+    evtX := f_add(evtX, xNote)
 
 if rSt == 1 and not rDead
     why = useR1 and t1Won ? "T1 won (R1)" : (nextHm >= cutR or nextHm < 930) ? "not filled by cutoff" : ""
@@ -745,7 +757,7 @@ if rSt == 1 and not rDead
         else
             rSt := 3
             rNote := "cancelled: " + why
-        evt := evt + (evt == "" ? "" : " · ") + "T2R " + rNote
+        evtR := f_add(evtR, rNote)
 
 if (xSt == 1 or xSt == 2) and not xDead
     why = useR3 and t1Lost ? "T1 lost (R3)" : useR2 and t1Won and t1Side != xSide ? "T1 won at the opposite edge (R2)" :
@@ -758,7 +770,7 @@ if (xSt == 1 or xSt == 2) and not xDead
         else
             xSt := 4
             xNote := "cancelled: " + why
-        evt := evt + (evt == "" ? "" : " · ") + "T2X " + xNote
+        evtX := f_add(evtX, xNote)
 
 // ── First break of the IB (from 10:30): set up both ─────────────────────────
 if afterIB and brk == 0 and not na(c1030)
@@ -841,12 +853,19 @@ if afterIB and brk == 0 and not na(c1030)
                         xQty := n
                         xRisk := rkN
                         xNote := f_side(xSide) + " " + str.tostring(n) + " @ " + f_px(eN) + " · S " + f_px(sN) + " · T " + f_px(tN) + " · waiting for a close back inside the IB"
-            evt := evt + (evt == "" ? "" : " · ") + "break " + (brk == 1 ? "up" : brk == -1 ? "down" : "both") + " · T2R: " + rNote + " · T2X: " + xNote
+            if brk == 2
+                evt := f_add(evt, "IB broken both ways on one bar: no T2 today")
+            else
+                evt := f_add(evt, "IB break " + (brk == 1 ? "up" : "down"))
+                evtR := f_add(evtR, rNote)
+                evtX := f_add(evtX, xNote)
+                lvR := rSt == 1
+                lvX := xSt == 1
 
 // ── T2X arming: first close back inside the IB after the break bar ──────────
 if xSt == 1 and afterIB and bar_index > brkBar and (xSide > 0 ? close < ibH : close > ibL)
     xSt := 2
-    evt := evt + (evt == "" ? "" : " · ") + "T2X armed"
+    evtX := f_add(evtX, "armed")
 
 // ── Broker sync: only while flat ────────────────────────────────────────────
 xHeld := false
@@ -911,15 +930,16 @@ if not inTrade and not exitedDead and afterIB and nextHm >= 930 and nextHm < 160
             xAtBroker := true
             xTgtOut := tgtX
             xNote := "working: " + f_side(xSide) + " " + str.tostring(xQty) + " @ " + f_px(xE) + " · S " + f_px(xS) + " · T " + f_px(tgtX) + (tgtX != xT ? " (aligned)" : "")
-        if wantR or wantX
-            evt := evt + (evt == "" ? "" : " · ") + "orders: " + (wantR ? "T2R " + f_px(rE) + "→" + f_px(tgtR) : "") +
-                 (wantR and wantX ? " · " : "") + (wantX ? "T2X " + f_px(xE) + "→" + f_px(tgtX) : "")
+        if wantR
+            evtR := f_add(evtR, f_placed(lvR, rE, tgtR, tgtR != rT))
+        if wantX
+            evtX := f_add(evtX, f_placed(lvX, xE, tgtX, tgtX != xT))
     if r7Hold and xNote != "held until T1 is in (R7)"
         xNote := "held until T1 is in (R7)"
-        evt := evt + (evt == "" ? "" : " · ") + "T2X " + xNote
+        evtX := f_add(evtX, xNote)
 else if inTrade and xSt == 2 and not xAtBroker and not xDead and xNote != "waiting: T2R is in a trade"
     xNote := "waiting: T2R is in a trade"
-    evt := evt + (evt == "" ? "" : " · ") + "T2X " + xNote
+    evtX := f_add(evtX, xNote)
 
 // ── Handoff emulation (strategy only; nothing is sent to the bridge) ───────
 // At the broker, when a trade's target and the other resting entry sit at the
@@ -978,9 +998,10 @@ if hm == flatAt
 if conf and strategy.position_size == 0
     nvOpenId := ""
 
-if showLabels and evt != ""
-    label.new(bar_index, high, "T2 · " + evt, yloc = yloc.abovebar, style = label.style_label_down,
-         color = color.new(color.teal, 25), textcolor = color.white, size = size.small)
+lblTxt = f_line(f_line(f_line(evt == "" ? "" : "T2 · " + evt, "T2R · ", evtR), "T2X · ", evtX), "T3 · ", evt3)
+if showLabels and lblTxt != ""
+    label.new(bar_index, high, lblTxt, yloc = yloc.abovebar, style = label.style_label_down,
+         color = color.new(color.teal, 25), textcolor = color.white, size = size.small, textalign = text.align_left)
 
 // ── Visuals ─────────────────────────────────────────────────────────────────
 showDay = isRTH and hm >= 1030
