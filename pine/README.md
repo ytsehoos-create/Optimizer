@@ -328,6 +328,7 @@ Set **Bridge** to **CrossTrade**. The script then sends resting limit orders (pl
 |---|---|---|
 | An order is placed (flat account) | `place` with `order_type=limit`, `limit_price`, `take_profit`, `stop_loss`, `order_id`, `tif=day` | Rests the limit entry. Tradovate holds the bracket on its own servers and arms it when the entry fills |
 | An order is withdrawn (flat account) | `cancel` with that order's `order_id` | Cancels that one order |
+| 10:25 close on a T3 day (T3 on) | `place` with `order_type=market`, `take_profit`, `stop_loss`, `order_id`, `tif=day` | Enters at market. Tradovate holds the bracket and arms it on the fill |
 | 15:55, a cancelled order that filled, or a position carried to the next 9:30 | `flatten` for the account and instrument | Closes the position (Tradovate's liquidate, which also cancels the contract's working orders) |
 | 9:30 and 15:55, every day | `cancelorders` for the account and instrument | Clears any working order left over. CrossTrade sends bracket legs GTC, and its docs don't say that cancelling an unfilled entry also cancels its suspended bracket |
 
@@ -368,6 +369,49 @@ destination=tradovate;
 - **Instrument name:** check that CrossTrade accepts the instrument as sent (`MNQ1!` or the dated chart symbol) and maps it to the contract you trade.
 
 **Security:** the secret key travels inside every alert message. Keep the chart and its alerts private, and regenerate the key if it's ever exposed.
+
+### T3: wide-IB fade (optional, off by default)
+
+**What it trades:** only the days T2 skips because the IB is larger than 0.9% of price. On those days price tends to rotate back inside the wide opening range rather than extend it.
+- **Direction:** at the 10:25 close, if price is in the top quarter of the IB, go **short**. If it's in the bottom quarter, go **long**. In between, no trade.
+- **Entry:** market at the 10:30 open.
+- **Stop:** 0.15 IB beyond the edge price is near: IBH + 0.15R for a short, IBL − 0.15R for a long.
+- **Target:** 0.40 IB back inside from that edge: IBH − 0.40R for a short, IBL + 0.40R for a long.
+- **Size:** "Risk per trade" divided by the distance from the 10:25 close to the stop, at least 1 contract. Skipped if that risks more than the $300 ceiling. In the test year it was 1 or 2 contracts.
+- **Exit:** stop, target, or the 15:55 flatten.
+- **No overlap with T2:** T2 never trades on these days.
+
+**Switching it on:** in Settings, under "T3 · wide-IB fade", tick **Trade T3**. The zone, stop, target and risk are inputs beside it. The bottom row of the status table shows T3's decision for the day.
+
+**Results** (Nov 7 2025 – Nov 6 2026, $200 risk, net of costs):
+
+| | Trades | Win rate | PF | Net | Max drawdown |
+|---|---|---|---|---|---|
+| T3, `t2_retune.py` | 55 | 60% | 1.73 | +$2,711 | $648 |
+| T3 longs | 25 | 72% | 2.70 | +$2,140 | |
+| T3 shorts | 30 | 50% | 1.23 | +$570 | |
+| TradingView, T2 only | 99 | | 3.46 | +$25,513 | $1,665 |
+| TradingView, T2 + T3 | 154 | 56.5% | 3.00 | +$28,223 | $1,227 |
+
+- **Agreement:** in TradingView, switching T3 on adds 55 trades and +$2,710. The engine has 55 trades and +$2,711.
+- **By period:** every 2-month block was positive, from +$73 to +$1,053.
+- **Exits:** 31 targets, 22 stops and 2 at 15:55.
+- **Robustness:** nearby stops and zones were all profitable too. The same fade loses on normal-IB days, so the edge is specific to wide IBs.
+
+**Why it's off by default:**
+- **Fitted on one year:** the zone, stop and target were chosen on this year's data.
+- **Thin edge:** about +$49 a trade.
+- **What to do first:** run it on the Tradovate demo through CrossTrade for a few weeks before trading it live.
+
+**Messages:** a market entry with its bracket, sent at the 10:25 bar close.
+- **CrossTrade:** `place` with `order_type=market`, `take_profit`, `stop_loss`, `tif=day` and `order_id=T3-…`.
+- **NinjaView:** "oco market buy/sell" with `take_profit_price`, `stop_loss_price` and `oco_id`.
+- **TradersPost:** a market order with `stopLoss` and `takeProfit`.
+- **At 15:55, if T3 is still open:** the same exit as T2. That's `flatten` and then `cancelorders` on CrossTrade, or "cancel oco and flatten" with T3's id and then "market close" on NinjaView.
+
+**Live fills:** the alert fires at the 10:25 close, a moment before the 10:30 bar opens. The live fill is the market price at that moment, which is usually within a tick or two of the backtest's 10:30 open.
+
+**Re-tuning:** `t2_retune.py` simulates T3 when `t3=T3_DEFAULT` is set, but it doesn't re-tune it.
 
 ### Re-tuning the levels every 1–2 months
 

@@ -59,11 +59,16 @@ CURRENT = dict(
           ("T2X", -1, 1): (.30, .60, .25), ("T2X", -1, 2): (.50, .60, .25), ("T2X", -1, 4): (.40, .60, .25)},
     risk={("T2R", 1, 2): 300, ("T2X", 1, 2): 300},     # $ per trade; everything else DEFAULT_RISK
     t2r_ib_mult=(0.4, 0.6, 1.5),                       # IB-size sizing (lo %, hi %, x): T2R risk x when IB in [lo, hi) % of price
+    t3=None,                                           # wide-IB fade (off): see T3_DEFAULT
 )
 DEFAULT_RISK, MAX_RISK, CUT_R, CUT_X, LARGE_IB, FILTER_B, ALIGN = 200, 300, 1400, 1300, 0.9, 0.20, True
 # Levels a row starts from when the search switches it on.
 NEW_ROW = {("T2R", 1): (.20, .30, .25), ("T2R", -1): (.20, .30, .25),
            ("T2X", 1): (.20, .60, .30), ("T2X", -1): (.40, .60, .25)}
+# T3 wide-IB fade, for the days T2 skips (IB > LARGE_IB % of price). At the 10:25 close, if price is in
+# the outer `zone` of the IB, fade it: market at the 10:30 open (1 tick slippage), stop `stop`·R beyond
+# that IB edge, target `back`·R back inside from it. Sized on the 10:25 close; flat at 15:55.
+T3_DEFAULT = dict(zone=0.25, stop=0.15, back=0.40)
 # The original v1 rows (before any fitting on this data), the walk-forward's starting point.
 V1 = dict(CURRENT, rows={k: v for k, v in CURRENT["rows"].items() if k not in {("T2R", -1, 2), ("T2R", -1, 4)}})
 V1["rows"].update({k: v[:2] + (.20,) for k, v in V1["rows"].items() if k[:2] == ("T2X", -1)})
@@ -277,6 +282,28 @@ def run(df, P, full_only=True):
                 r["at"] = x["at"] = False
         if pos is not None:                  # only on a half-day: still open at the early close
             pos.update(exit=c[-1], why="session end", xi=n - 1); trades.append(pos)
+        t3 = P.get("t3")
+        if t3 and ib_pct > LARGE_IB and dow <= 4 and R > 0:
+            pos0 = (c1030 - ibL) / R
+            if pos0 > 1 - t3["zone"] or pos0 < t3["zone"]:
+                sd = -1 if pos0 > 1 - t3["zone"] else 1
+                S3 = cu(ibH + t3["stop"] * R) if sd < 0 else fl(ibL - t3["stop"] * R)
+                T3t = fl(ibH - t3["back"] * R) if sd < 0 else cu(ibL + t3["back"] * R)
+                nl = lots_of(abs(c1030 - S3), t3.get("risk", DEFAULT_RISK))
+                px = o[i0] + sd * TICK
+                if (T3t - c1030) * sd > 0 and not nl * abs(c1030 - S3) * PV > MAX_RISK:   # the script decides at the 10:25 close
+                    p3 = dict(tag="T3", side=sd, lots=nl, px=px, s=S3, t=T3t, fill=i0, dead=False, brk=0)
+                    for j in range(i0, n):       # entry at the open: the whole bar follows it (stop first)
+                        if (l[j] <= S3) if sd > 0 else (h[j] >= S3):
+                            gp = o[j] if ((sd > 0 and o[j] < S3) or (sd < 0 and o[j] > S3)) else S3
+                            p3.update(exit=gp, why="stop", xi=j); break
+                        if (h[j] >= T3t) if sd > 0 else (l[j] <= T3t):
+                            p3.update(exit=T3t, why="target", xi=j); break
+                        if hmv[j] == 1555:
+                            p3.update(exit=c[j], why="eod", xi=j); break
+                    else:
+                        p3.update(exit=c[-1], why="session end", xi=n - 1)
+                    trades.append(p3)
         for p in trades:
             sd = p["side"]; pnl = (p["exit"] - p["px"]) * sd * p["lots"] * PV
             cost = p["lots"] * (COMM + (p["why"] == "stop") * SLIP * PV)

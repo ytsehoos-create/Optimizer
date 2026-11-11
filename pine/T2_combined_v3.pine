@@ -31,6 +31,13 @@
 //   This keeps every cancel away from a live trade's stop and target, for
 //   bridges whose cancel acts on the whole ticker.
 //
+// T3 (wide-IB fade, off by default) — only on the days T2 skips for a large IB:
+//   at the 10:25 close, if price is in the outer zone of the IB, fade it toward the
+//   middle: market at the 10:30 open, stop beyond that IB edge, target back inside it.
+//     top zone    → SHORT · stop IBH + s·R · target IBH − b·R
+//     bottom zone → LONG  · stop IBL − s·R · target IBL + b·R
+//   Same risk per trade and ceiling as T2. It never overlaps a T2 day.
+//
 //   Flatten everything at the 15:55 bar close. Size = max(1, floor(risk $ ÷ stop $)).
 //   Defaults: $200 per trade; Wednesday T2R breakout fades and Wednesday T2X
 //   breakout longs $300. IB-size sizing (on by default): T2R risks 1.5× its
@@ -236,6 +243,14 @@ ctInstr    = input.string("", "CrossTrade: instrument (blank = this chart's tick
 ctDest     = input.string("Tradovate", "CrossTrade: destination", options = ["Tradovate", "NinjaTrader"], group = G6)
 tickerOut  = input.string("MNQ1!", "TradersPost: ticker sent to bridge", group = G6)
 
+G7 = "T3 · wide-IB fade (only on days T2 skips for a large IB)"
+t3On    = input.bool(false, "Trade T3", group = G7,
+     tooltip = "On days whose IB is larger than the T2 large-IB skip, fade a 10:25 close in the outer zone of the IB back toward the middle. Tested Nov 2025 – Nov 2026: 55 trades, PF 1.73, +$2.7K at $200 risk. Off until it has run on a demo account.")
+t3Zone  = input.float(0.25, "   Outer zone at 10:25 (× R from the edge)", minval = 0.05, maxval = 0.5, step = 0.05, group = G7)
+t3StopX = input.float(0.15, "   Stop beyond the IB edge (× R)", minval = 0, step = 0.05, group = G7)
+t3Back  = input.float(0.40, "   Target back inside from the edge (× R)", minval = 0.05, step = 0.05, group = G7)
+t3Risk  = input.float(0, "   Risk $ (0 = Risk per trade)", minval = 0, step = 25, group = G7)
+
 // A blank CrossTrade key or account holds back every alert (the backtest still runs);
 // the status table on the chart says so.
 ctMissing = bridge == "CrossTrade" and (ctKey == "" or ctAccount == "")
@@ -346,6 +361,18 @@ f_msgExit(id) =>
          bridge == "CrossTrade" ? f_ct("flatten") + 'instrument=' + ctTicker + ';' + ctTail :
          '{"ticker":"' + tickerOut + '","action":"exit"}'
 f_side(d) => d > 0 ? "LONG" : "SHORT"
+// Market entry with a take-profit / stop-loss bracket (T3 at 10:30).
+f_msgMarket(d, n, stp, tp, id) =>
+    string m = na
+    if bridge == "NinjaView"
+        m := f_nvMarket(d, n, stp, tp, id, false)
+    else if bridge == "CrossTrade"
+        m := f_ct("place") + 'instrument=' + ctTicker + ';\naction=' + (d > 0 ? "buy" : "sell") + ';\nqty=' + str.tostring(n) +
+             ';\norder_type=market;\ntif=day;\ntake_profit=' + f_px(tp) + ';\nstop_loss=' + f_px(stp) + ';\norder_id=' + id + ';' + ctTail
+    else
+        m := '{"ticker":"' + tickerOut + '","action":"' + (d > 0 ? "buy" : "sell") + '","orderType":"market","quantity":' + str.tostring(n) +
+             ',"stopLoss":{"type":"stop","stopPrice":' + f_px(stp) + '},"takeProfit":{"limitPrice":' + f_px(tp) + '}}'
+    m
 
 // ── State ───────────────────────────────────────────────────────────────────
 var float prevRthClose = na
@@ -406,6 +433,15 @@ var float t1Px   = na
 var int   t1Fill = na
 var string t1Note = "waiting for IB"
 
+// T3: 0 none, 1 order sent at 10:25 close, 2 in trade, 3 done
+var int    t3St   = 0
+var int    t3Side = 0
+var float  t3S    = na
+var float  t3T    = na
+var int    t3Qty  = 0
+var string t3Id   = ""
+var string t3Note = "off"
+
 evt = ""                          // this bar's events, shown as one label
 
 // ── NinjaView "market at the level": send the entry the moment price reaches it ──
@@ -460,6 +496,10 @@ if newRTH
     xAtBroker := false
     rNote := "building IB"
     xNote := "building IB"
+    t3St := 0
+    t3Side := 0
+    t3Id := ""
+    t3Note := t3On ? "building IB" : "off"
     t1St := 0
     t1Side := 0
     t1Tag := ""
@@ -507,6 +547,40 @@ if lastIBBar and not na(ibH)
         dayLive := true
         rNote := "waiting for the first break"
         xNote := rNote
+
+    // T3: only on the days T2 skips for a large IB
+    if t3On
+        if not (isWeekday and ibPct > largeIB and R > 0)
+            t3Note := "no T3: IB " + str.tostring(ibPct, "#.##") + "% (needs > " + str.tostring(largeIB, "#.##") + "%)"
+        else
+            pos0 = (close - ibL) / R
+            if pos0 >= t3Zone and pos0 <= 1 - t3Zone
+                t3Note := "no T3: 10:25 close is mid-IB (" + str.tostring(pos0 * 100, "#") + "%)"
+            else
+                sd3 = pos0 > 1 - t3Zone ? -1 : 1
+                s3 = sd3 < 0 ? f_tickUp(ibH + t3StopX * R) : f_tickDn(ibL - t3StopX * R)
+                tg3 = sd3 < 0 ? f_tickDn(ibH - t3Back * R) : f_tickUp(ibL + t3Back * R)
+                n3 = f_lots(t3Risk > 0 ? t3Risk : riskCap, math.abs(close - s3))
+                rk3 = n3 * math.abs(close - s3) * syminfo.pointvalue
+                if (tg3 - close) * sd3 <= 0
+                    t3Note := "no T3: price already past the target"
+                else if maxRisk > 0 and rk3 > maxRisk
+                    t3Note := "no T3: " + str.tostring(n3) + " lot risks $" + str.tostring(rk3, "#")
+                else
+                    t3St := 1
+                    t3Side := sd3
+                    t3S := s3
+                    t3T := tg3
+                    t3Qty := n3
+                    ordSeq += 1
+                    t3Id := "T3-" + str.format_time(time, "yyMMdd", TZ) + "-" + str.tostring(ordSeq)
+                    if conf
+                        strategy.entry("T3", sd3 > 0 ? strategy.long : strategy.short, qty = n3)
+                        strategy.exit("T3 exit", from_entry = "T3", stop = s3, limit = tg3)
+                    if alertsOn
+                        alert(f_msgMarket(sd3, n3, s3, tg3, t3Id), alert.freq_once_per_bar_close)
+                    t3Note := f_side(sd3) + " " + str.tostring(n3) + " at the 10:30 open · S " + f_px(s3) + " · T " + f_px(tg3) + " · risk $" + str.tostring(rk3, "#")
+                    evt := evt + (evt == "" ? "" : " · ") + "T3 " + t3Note
 
     gapPct = na(prevRthClose) ? na : math.abs(rthOpen - prevRthClose) / prevRthClose * 100
     ib2Hi = ibHBar > ibLBar
@@ -600,6 +674,9 @@ if strategy.closedtrades > seenClosed
             xSt := 4
             xAtBroker := false
             xNote := "closed " + (strategy.closedtrades.profit(k) > 0 ? "+" : "") + str.tostring(strategy.closedtrades.profit(k), "#") + " $"
+        else if eid == "T3" and t3St != 3
+            t3St := 3
+            t3Note := "closed " + (strategy.closedtrades.profit(k) > 0 ? "+" : "") + str.tostring(strategy.closedtrades.profit(k), "#") + " $"
     seenClosed := strategy.closedtrades
 
 openId = strategy.opentrades > 0 ? strategy.opentrades.entry_id(0) : ""
@@ -613,6 +690,10 @@ if openId == "T2X" and xSt != 3
     xAtBroker := false
     xNote := "in trade: " + f_side(xSide) + " " + str.tostring(xQty)
     evt := evt + (evt == "" ? "" : " · ") + "T2X filled"
+if openId == "T3" and t3St == 1
+    t3St := 2
+    t3Note := "in trade: " + f_side(t3Side) + " " + str.tostring(t3Qty) + " · S " + f_px(t3S) + " · T " + f_px(t3T)
+    evt := evt + (evt == "" ? "" : " · ") + "T3 filled"
 
 // An order that should have been cancelled filled (handoff while it waited):
 // exit it at this bar's close.
@@ -871,7 +952,7 @@ if hm == flatAt
     // order in the same bar would cancel the close itself (and the trade's bracket).
     if conf
         strategy.cancel_all()
-    exitId = nvMarket ? nvOpenId : openId == "T2R" ? rId : openId == "T2X" ? xId : ""
+    exitId = openId == "T3" ? t3Id : nvMarket ? nvOpenId : openId == "T2R" ? rId : openId == "T2X" ? xId : ""
     if strategy.position_size != 0 or (nvMarket and nvOpenId != "")
         if conf and strategy.position_size != 0
             strategy.close_all(comment = "EOD", immediately = true)
@@ -910,7 +991,7 @@ plot(showDay and rSide != 0 ? rS : na, "T2R stop",  color.new(color.red, 30), 1,
 plot(showDay and xSide != 0 ? xE : na, "T2X entry", color.new(color.orange, 0), 2, plot.style_linebr)
 plot(showDay and xSide != 0 ? xS : na, "T2X stop",  color.new(color.red, 30), 1, plot.style_linebr)
 
-var table tb = table.new(position.top_right, 1, 4, bgcolor = color.new(color.black, 20))
+var table tb = table.new(position.top_right, 1, 5, bgcolor = color.new(color.black, 20))
 if barstate.islast
     alertNote = not sendAlerts ? "Alerts off" : ctMissing ? "⚠ CrossTrade key or account is blank: NO alerts are sent" :
          "Alerts on · " + bridge + (bridge == "NinjaView" ? " · " + (nvMarket ? "market at the level" : "resting limit") : "") +
@@ -919,3 +1000,4 @@ if barstate.islast
     table.cell(tb, 0, 0, "T2R · " + rNote, text_color = color.white, text_size = size.small, text_halign = text.align_left)
     table.cell(tb, 0, 1, "T2X · " + xNote, text_color = color.white, text_size = size.small, text_halign = text.align_left)
     table.cell(tb, 0, 2, "T1 (gates only) · " + t1Note, text_color = color.silver, text_size = size.small, text_halign = text.align_left)
+    table.cell(tb, 0, 4, "T3 · " + t3Note, text_color = t3On ? color.white : color.gray, text_size = size.small, text_halign = text.align_left)
