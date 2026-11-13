@@ -30,6 +30,7 @@ def _scan():
         eth = bool((et.dt.hour < 9).any())
         key = {300: "m5", 900: "m15"}.get(step)
         key = (key + ("_eth" if eth else "_rth")) if key else {14400: "h4", 86400: "d1"}.get(step)
+        if key and "MCL" in os.path.basename(p).upper(): key = "mcl_" + key      # other instruments get a prefix
         if key and (key not in found or len(t) > found[key][1]): found[key] = (p, len(t))
     _found = {k: (v if isinstance(v, str) else v[0]) for k, v in found.items()}
     return _found

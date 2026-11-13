@@ -1,0 +1,169 @@
+//@version=6
+// Research probe, not for trading. One opening-range leg at a time, one setting, no gates, and a split of its
+// closed trades by a volume measure. It stops with a runtime error on the report date and prints the split there,
+// which keeps Deep Backtesting answers small. Mirrors research/mnq_t2_review/probe.py.
+//   leg 1 = T2R (fade the first-break extension) · 2 = T2X (retrace continuation) · 3 = T3 (wide-IB zone fade)
+//   measure for legs 1 and 2: volume of the bar that broke the IB ÷ average volume of the 20 bars before it
+//   measure for leg 3: IB volume ÷ average IB volume of the previous 20 sessions
+strategy("IB probe", overlay = true, pyramiding = 0, initial_capital = 50000, margin_long = 0, margin_short = 0,
+     commission_type = strategy.commission.cash_per_contract, commission_value = 0.62, slippage = 1)
+leg     = input.int(3, "Leg: 1 T2R, 2 T2X, 3 T3")
+eIn     = input.float(0.2, "Entry (x R)")
+sIn     = input.float(0.15, "Stop (x R)")
+tIn     = input.float(0.4, "Target (x R)")
+zone    = input.float(0.25, "T3 outer zone")
+cut     = input.int(1400, "Entry cutoff HHMM")
+largeIB = input.float(0.9, "Large IB (% of price)")
+vthr    = input.float(1.0, "Volume measure threshold")
+monOn   = input.bool(true, "Monday on")
+risk    = input.float(200, "Risk $")
+maxRisk = input.float(300, "Risk ceiling $")
+repY    = input.int(2025, "Report year")
+repM    = input.int(11, "Report month")
+repD    = input.int(14, "Report day")
+
+TZ = "America/New_York"
+hm = hour(time, TZ) * 100 + minute(time, TZ)
+nextT = time + 300000
+nextHm = hour(nextT, TZ) * 100 + minute(nextT, TZ)
+dIdx = dayofweek(time, TZ) - dayofweek.monday
+f_up(x) => math.ceil(x / syminfo.mintick - 1e-6) * syminfo.mintick
+f_dn(x) => math.floor(x / syminfo.mintick + 1e-6) * syminfo.mintick
+v20 = ta.sma(volume, 20)[1]
+pv = syminfo.pointvalue
+
+var float ibH = na
+var float ibL = na
+var float ibVol = 0.0
+var array<float> ibHist = array.new<float>()
+var int st = 0
+var int side = 0
+var int brkBar = na
+var float R = na
+var float mv = na
+var float pE = na
+var float pS = na
+var float pT = na
+var int pN = 0
+var bool live = false
+var int seen = 0
+// buckets: 0 all, 1 measure >= threshold, 2 measure < threshold
+var array<int> bn = array.new<int>(3, 0)
+var array<float> bnet = array.new<float>(3, 0.0)
+var array<float> bgp = array.new<float>(3, 0.0)
+var array<float> bgl = array.new<float>(3, 0.0)
+
+f_addTo(i, p) =>
+    array.set(bn, i, array.get(bn, i) + 1)
+    array.set(bnet, i, array.get(bnet, i) + p)
+    if p > 0
+        array.set(bgp, i, array.get(bgp, i) + p)
+    else
+        array.set(bgl, i, array.get(bgl, i) - p)
+
+if strategy.closedtrades > seen
+    for k = seen to strategy.closedtrades - 1
+        p = strategy.closedtrades.profit(k)
+        f_addTo(0, p)
+        if not na(mv)
+            f_addTo(mv >= vthr ? 1 : 2, p)
+    seen := strategy.closedtrades
+
+if hm == 930
+    strategy.cancel_all()
+    if strategy.position_size != 0
+        strategy.close_all(immediately = true)
+    ibH := high
+    ibL := low
+    ibVol := 0.0
+    st := 0
+    side := 0
+    brkBar := na
+    live := false
+
+inIB = hm >= 930 and hm < 1030
+if inIB and not na(ibH)
+    ibH := math.max(ibH, high)
+    ibL := math.min(ibL, low)
+    ibVol += volume
+
+if inIB and not na(ibH) and nextHm == 1030
+    R := ibH - ibL
+    ibPct = R / close * 100
+    relVol = array.size(ibHist) >= 20 ? ibVol / array.avg(ibHist) : na
+    array.push(ibHist, ibVol)
+    if array.size(ibHist) > 20
+        array.shift(ibHist)
+    wd = dIdx >= 0 and dIdx <= 4 and (monOn or dIdx != 0)
+    if leg == 3
+        st := 9
+        if wd and ibPct > largeIB and R > 0
+            p0 = (close - ibL) / R
+            if not (p0 >= zone and p0 <= 1 - zone)
+                sd = p0 > 1 - zone ? -1 : 1
+                S = sd < 0 ? f_up(ibH + sIn * R) : f_dn(ibL - sIn * R)
+                T = sd < 0 ? f_dn(ibH - tIn * R) : f_up(ibL + tIn * R)
+                dist = math.abs(close - S)
+                n = dist > 0 ? math.max(1, math.floor(risk / (dist * pv))) : 0
+                if n > 0 and (T - close) * sd > 0 and not (maxRisk > 0 and n * dist * pv > maxRisk)
+                    mv := relVol
+                    strategy.entry("P", sd > 0 ? strategy.long : strategy.short, qty = n)
+                    strategy.exit("x", from_entry = "P", stop = S, limit = T)
+    else
+        st := wd and ibPct > 0 and ibPct <= largeIB ? 1 : 9
+
+if st == 1 and hm >= 1030 and hm <= 1555
+    up = high > ibH
+    dn = low < ibL
+    if up or dn
+        st := 9
+        if not (up and dn) and nextHm < cut
+            ext = up ? high - ibH : ibL - low
+            vr = volume / v20
+            if leg == 1 and ext < eIn * R
+                side := up ? -1 : 1
+                E = up ? f_up(ibH + eIn * R) : f_dn(ibL - eIn * R)
+                S = up ? f_up(ibH + sIn * R) : f_dn(ibL - sIn * R)
+                T = up ? f_dn(ibH - tIn * R) : f_up(ibL + tIn * R)
+                dist = math.abs(E - S)
+                n = math.max(1, math.floor(risk / (dist * pv)))
+                if not (maxRisk > 0 and n * dist * pv > maxRisk)
+                    mv := vr
+                    strategy.entry("P", side > 0 ? strategy.long : strategy.short, qty = n, limit = E)
+                    strategy.exit("x", from_entry = "P", stop = S, limit = T)
+                    live := true
+            else if leg == 2
+                side := up ? 1 : -1
+                brkBar := bar_index
+                st := 2
+                pE := up ? f_dn(ibH - eIn * R) : f_up(ibL + eIn * R)
+                pS := up ? f_dn(ibH - sIn * R) : f_up(ibL + sIn * R)
+                pT := up ? f_up(ibH + tIn * R) : f_dn(ibL - tIn * R)
+                dist = math.abs(pE - pS)
+                pN := math.max(1, math.floor(risk / (dist * pv)))
+                mv := vr
+                if maxRisk > 0 and pN * dist * pv > maxRisk
+                    st := 9
+
+if st == 2 and bar_index > brkBar and (side > 0 ? close < ibH : close > ibL)
+    st := 9
+    if nextHm < cut
+        strategy.entry("P", side > 0 ? strategy.long : strategy.short, qty = pN, limit = pE)
+        strategy.exit("x", from_entry = "P", stop = pS, limit = pT)
+        live := true
+
+if live and nextHm >= cut
+    if strategy.opentrades == 0
+        strategy.cancel("P")
+        strategy.cancel("x")
+    live := false
+
+if hm == 1555
+    strategy.cancel_all()
+    if strategy.position_size != 0
+        strategy.close_all(immediately = true)
+    live := false
+
+f_rep(i) => str.tostring(array.get(bn, i)) + " trades, net " + str.tostring(array.get(bnet, i), "#") + ", PF " + str.tostring(array.get(bgl, i) > 0 ? array.get(bgp, i) / array.get(bgl, i) : 0, "#.##")
+if year(time, TZ) == repY and month(time, TZ) == repM and dayofmonth(time, TZ) == repD and hm == 1600
+    runtime.error("REPORT leg " + str.tostring(leg) + " | ALL " + f_rep(0) + " | measure>=" + str.tostring(vthr) + ": " + f_rep(1) + " | measure<: " + f_rep(2) + " | strategy.netprofit " + str.tostring(strategy.netprofit, "#"))

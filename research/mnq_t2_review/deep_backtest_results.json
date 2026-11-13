@@ -111,5 +111,86 @@
     }
   },
   "overnight_script": "pine/mnq_overnight.pine compiled in TradingView (it ran to its own extended-hours guard). The connector only offers the regular session, so it could not be backtested there.",
-  "v31_additions_check": "The new v3.1 code compiled in TradingView. Regime reading from Pine vs Python: 2026-09-15 1.3019/1.3019, 2026-10-01 1.3669/1.3669, 2026-10-15 1.325/1.3250, 2026-10-30 1.6195/1.6195, 2026-11-10 1.5828/1.5828."
+  "v31_additions_check": "The new v3.1 code compiled in TradingView. Regime reading from Pine vs Python: 2026-09-15 1.3019/1.3019, 2026-10-01 1.3669/1.3669, 2026-10-15 1.325/1.3250, 2026-10-30 1.6195/1.6195, 2026-11-10 1.5828/1.5828.",
+  "probe_runs": {
+    "script": "pine/ib_probe.pine (one leg, one setting, no gates; splits closed trades by a volume measure)",
+    "T3 as shipped, MNQ, 2025-11-17..2026-11-11": {
+      "all": [
+        55,
+        2671,
+        1.71
+      ],
+      "ib_volume>=20d_avg": [
+        32,
+        2827,
+        2.5
+      ],
+      "below": [
+        18,
+        -159,
+        0.9
+      ],
+      "note": "replica on the chart export: 55 trades, 2670"
+    },
+    "T3 as shipped, MNQ, 2023-11-01..2025-11-14": {
+      "all": [
+        87,
+        -250,
+        0.97
+      ],
+      "ib_volume>=20d_avg": [
+        61,
+        649,
+        1.13
+      ],
+      "below": [
+        26,
+        -899,
+        0.64
+      ]
+    },
+    "T3 Tue-Fri, MNQ, 2023-11-01..2025-11-14": {
+      "all": [
+        76,
+        521,
+        1.09
+      ],
+      "ib_volume>=20d_avg": [
+        55,
+        1023,
+        1.24
+      ],
+      "below": [
+        21,
+        -503,
+        0.73
+      ]
+    },
+    "T2R one setting no gates, MNQ, 2023-11-01..2025-11-14": {
+      "all": [
+        241,
+        2895,
+        1.07
+      ],
+      "break_bar_volume>=prior20_avg": [
+        157,
+        2144,
+        1.08
+      ],
+      "below": [
+        84,
+        752,
+        1.06
+      ]
+    },
+    "T2X one setting no gates, all IB sizes, MCL, 2023-11-01..2026-11-11": {
+      "all": [
+        560,
+        -6710,
+        0.88
+      ]
+    },
+    "format": "[trades, net $, profit factor]",
+    "back_adjustment": "The chart exports are back-adjusted (about 17,470 on 2023-11-01 against a real price near 14,700). Deep Backtesting uses real prices, so percent-of-price rules select slightly different days there: 87 T3 trades in 2023-2025 against 66 on the back-adjusted 15-minute export."
+  }
 }

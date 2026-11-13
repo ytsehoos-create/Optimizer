@@ -30,6 +30,10 @@ MNQ_DATA=/path/to/exports ./run_all.sh
 
 It needs `pandas` and `numpy` only and takes a few minutes. Working files (`*.pkl`, `repdata.json`) are not committed.
 
+## Indicator and MCL follow-up
+
+`ind1.py`, `ind2.py`, `ind3.py` (RSI, MACD and volume on MNQ), `mcl1.py` (MCL against MNQ) and `probe.py` (a single-leg tester that mirrors `pine/ib_probe.pine`) are not part of `run_all.sh`. They need the 5-minute MNQ export with the Volume, RSI and MACD columns and the 5-minute MCL exports in the same data folder; files with MCL in their name load under `mcl_` keys. Results: RSI and MACD rebuild exactly from the closes and add nothing; one volume lead for T3 held outside the tuning window; MCL does not suit these setups.
+
 ## Monthly check
 
 Re-export the charts and the trade list, run `run_all.sh`, and look at three things:

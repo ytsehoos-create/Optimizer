@@ -137,18 +137,18 @@ footer { color: var(--muted); font-size: 13px; border-top: 1px solid var(--rule)
 
 <section>
   <h2>Before November 2025, with exact fills</h2>
-  <p class="sub">Your TradingView connector came online during this review, so I ran your saved script through Deep Backtesting on 5-minute bars for the two years before the tuning window. On the last 12 months it lands close to the chart (154 trades and $27,654 against 151 and $28,825), so I trust it for the earlier years.</p>
+  <p class="sub">Your TradingView connector came online during this review, so I ran your saved script through Deep Backtesting on 5-minute bars for the two years before the tuning window. On the last 12 months it lands close to the chart (154 trades and $27,654 against 151 and $28,825; the gap comes from back-adjusted chart prices, explained in the addendum), so I trust it for the earlier years.</p>
   <div class="tw"><table>
     <thead><tr><th>Exact 5-minute fills</th><th class="n">Nov 2023 – Nov 2025 (two years)</th><th class="n">Last 12 months</th></tr></thead>
     <tbody>
       <tr><td>T2R + T2X, tuned as shipped</td><td class="n">257 trades · $4,412 · PF 1.11 · DD $5,266</td><td class="n">95 trades · $26,048 · PF 3.72 · DD $1,108</td></tr>
       <tr><td>T2R + T2X, one setting for all weekdays</td><td class="n">382 trades · $5,200 · PF 1.11 · DD $5,743</td><td class="n">134 trades · $10,774 · PF 1.90 · DD $1,371</td></tr>
       <tr><td>T2X alone, tuned</td><td class="n">110 trades · $4,307 · PF 1.32 · DD $3,243</td><td class="n">41 trades · $8,815 · PF 4.44 · DD $586</td></tr>
-      <tr><td>T3 as shipped</td><td class="n">66 trades · <span class="neg">−$324</span></td><td class="n">56 trades · $2,777</td></tr>
-      <tr><td>T3 with the v3.1 rules</td><td class="n">30 trades · $1,563</td><td class="n">41 trades · $3,818</td></tr>
+      <tr><td>T3 as shipped</td><td class="n">87 trades · <span class="neg">−$250</span> · PF 0.97</td><td class="n">56 trades · $2,777 · PF 1.74</td></tr>
+      <tr><td>T3 Tuesday to Friday</td><td class="n">76 trades · $521 · PF 1.09</td><td class="n">44 trades · $3,515 · PF 2.43</td></tr>
     </tbody>
   </table></div>
-  <p class="cap">Net profit, profit factor and maximum drawdown at the script's own risk settings. Two-year T2 rows are TradingView Deep Backtesting of your saved script; T3 rows and the last 12 months are the replica.</p>
+  <p class="cap">Net profit, profit factor and maximum drawdown at the script's own risk settings. Two-year rows are TradingView Deep Backtesting on real prices; the last 12 months are the replica on your chart export. With the regime skip added as well, T3 on your chart's prices made $1,563 on 30 trades in the two earlier years and $3,818 on 41 in the last 12 months.</p>
   <ul>
     <li><strong>The tuning added nothing outside its window.</strong> Before November 2025 the tuned script and the one-setting version made the same profit factor, 1.11. Every dollar of lift from weekday-specific settings sits inside the 12 months they were chosen on.</li>
     <li><strong>The idea itself did get better.</strong> The one-setting version went from 1.11 to 1.90. That part is the market, and the next section measures it.</li>
@@ -197,7 +197,7 @@ footer { color: var(--muted); font-size: 13px; border-top: 1px solid var(--rule)
       <tr><td>Option: T2X rows at $300 risk</td><td class="n">136</td><td class="n">$34,952</td><td class="n">3.76</td><td class="n">$1,005</td><td class="n">$11,096</td><td class="n">3.02</td></tr>
       <tr><td>Option: T2R half risk above 1.7</td><td class="n">136</td><td class="n">$28,805</td><td class="n">3.65</td><td class="n">$774</td><td class="n">$9,524</td><td class="n">2.87</td></tr>
     </tbody></table></div>
-  <p class="cap">The highlighted row is the new default. On the two earlier years, with exact fills, the as-traded set made $4,088 and the new default $5,975. The two options are inputs you set yourself: T2X risk is the last field on each T2X row; the T2R dial is in the new Regime group and ships at ×1.</p>
+  <p class="cap">The highlighted row is the new default. On the two earlier years, with exact fills, the as-traded set made $4,162, and $4,933 with T3 Monday off. The two options are inputs you set yourself: T2X risk is the last field on each T2X row; the T2R dial is in the new Regime group and ships at ×1.</p>
   <ul>
     <li><strong>T3 Monday is off.</strong> It lost in each of the three years: 20 trades, −$1,377.</li>
     <li><strong>T3 is skipped while the reading is above 1.7.</strong> This costs nothing in the last six months, when the reading was rarely that high, and removes most of T3's losses in the two earlier years.</li>
@@ -249,6 +249,64 @@ footer { color: var(--muted); font-size: 13px; border-top: 1px solid var(--rule)
     <div class="rule"><h3>Re-tuning</h3><div class="now">monthly</div>
       <p>When you re-tune, also run the one-setting version. If it turns negative over the last six months while the tuned version still looks good, the tuning is doing all the work.</p></div>
   </div>
+</section>
+
+<section>
+  <h2>Addendum: RSI, MACD, volume and MCL</h2>
+  <p class="sub">After the review you added a 5-minute MNQ export with volume, RSI and MACD, and two MCL files.</p>
+
+  <h3>RSI and MACD add nothing</h3>
+  <p class="sub">Both are arithmetic on closing prices I already had: rebuilt from the closes, they match your exported columns to four decimals. As filters on the existing trades they separate nothing, and the standard ways of trading them lose.</p>
+  <div class="tw"><table>
+    <thead><tr><th>Entry rule on MNQ 5-minute bars, 12 months</th><th class="n">Trades</th><th class="n">PF</th><th class="n">First 6 / last 6</th></tr></thead>
+    <tbody>
+      <tr><td>RSI fade, buy under 30 and sell over 70</td><td class="n">336</td><td class="n">0.87</td><td class="n">0.71 / 1.07</td></tr>
+      <tr><td>RSI fade, 25 and 75</td><td class="n">166</td><td class="n">0.97</td><td class="n">0.90 / 1.05</td></tr>
+      <tr><td>RSI momentum, buy over 60 and sell under 40</td><td class="n">780</td><td class="n">0.89</td><td class="n">0.94 / 0.84</td></tr>
+      <tr><td>MACD histogram crosses zero, go with it</td><td class="n">818</td><td class="n">0.84</td><td class="n">0.82 / 0.85</td></tr>
+      <tr><td>MACD histogram crosses zero, fade it</td><td class="n">783</td><td class="n">1.05</td><td class="n">1.05 / 1.06</td></tr>
+      <tr><td>Volume spike on a wide bar, fade it</td><td class="n">295</td><td class="n">1.01</td><td class="n">1.13 / 0.90</td></tr>
+      <tr><td>Volume spike on a wide bar, go with it</td><td class="n">293</td><td class="n">0.72</td><td class="n">0.68 / 0.76</td></tr>
+    </tbody>
+  </table></div>
+  <p class="cap">Entry at the next bar's open, stop 1 ATR, target 1.5 ATR, flat at 15:55, costs included.</p>
+
+  <h3>Volume gave two leads, and one survived</h3>
+  <p class="sub">Volume is the only new information. Of 42 filter tests on the existing trades, four cleared the 5% bar where two would by chance, all on volume. I turned the two patterns into rules and ran each on 2023–2025 through Deep Backtesting.</p>
+  <div class="tw"><table>
+    <thead><tr><th>Rule</th><th class="n">Last 12 months, kept</th><th class="n">skipped</th><th class="n">2023–2025, kept</th><th class="n">skipped</th></tr></thead>
+    <tbody>
+      <tr><td>T3 only when first-hour volume is at or above its 20-day average</td><td class="n">32 · PF 2.50</td><td class="n">18 · PF 0.90</td><td class="n">61 · PF 1.13</td><td class="n">26 · PF 0.64</td></tr>
+      <tr><td>The same, Tuesday to Friday</td><td class="n">28 · PF 2.96</td><td class="n">12 · PF 1.60</td><td class="n">55 · PF 1.24</td><td class="n">21 · PF 0.73</td></tr>
+      <tr><td>T2R (one setting) only when the breaking bar's volume beats the prior 20 bars</td><td class="n">44 · PF 2.01</td><td class="n">48 · PF 1.04</td><td class="n">157 · PF 1.08</td><td class="n">84 · PF 1.06</td></tr>
+    </tbody>
+  </table></div>
+  <p class="cap">Trades and profit factor. The Tuesday-to-Friday figures for the last 12 months are from the replica; the rest are TradingView.</p>
+  <ul>
+    <li><strong>The T2R lead was noise.</strong> It disappears outside the tuning window.</li>
+    <li><strong>The T3 lead points the same way in both periods:</strong> wide-IB days on thin volume are where T3 loses. On top of the Monday rule it would have saved about $500 over the two earlier years and cost about $430 in the last 12 months, so I have not added it to v3.1. It is one input if you want it.</li>
+  </ul>
+
+  <h3>MCL is a worse fit for these setups</h3>
+  <div class="tw"><table>
+    <thead><tr><th>Regular hours, 12 months</th><th class="n">MNQ</th><th class="n">MCL</th></tr></thead>
+    <tbody>
+      <tr><td>Median IB range, per contract</td><td class="n">$436</td><td class="n">$103</td></tr>
+      <tr><td>Median IB range, % of price</td><td class="n">0.78%</td><td class="n">1.38%</td></tr>
+      <tr><td>Day range ÷ IB range, median</td><td class="n">1.50</td><td class="n">2.11</td></tr>
+      <tr><td>Round-trip cost as a share of T2R's 0.1R stop</td><td class="n">4%</td><td class="n">22%</td></tr>
+      <tr><td>Median 5-minute bar volume, contracts</td><td class="n">15,078</td><td class="n">654</td></tr>
+    </tbody>
+  </table></div>
+  <ul>
+    <li>MCL days travel about twice their 09:30–10:30 range. On MNQ that is the expanding condition in which the fades fail.</li>
+    <li>T2R's tight stop is ten ticks on MCL, so a fifth of every loss is commission and slippage before the market does anything.</li>
+    <li>Across 159 settings in five setup families on MCL's 12 months, none was profitable in both half-years. The one leg that looked positive on small-IB days, T2X, lost over three years with exact fills: 560 trades, −$6,710, PF 0.88.</li>
+    <li>Crude keeps its own clock: a 09:00 open, the inventory report at 10:30 on Wednesdays, settlement at 14:30. A fair search on MCL would start from those, and 3.5 months of extended-hours data is too little to run one.</li>
+  </ul>
+
+  <h3>Your charts are back-adjusted</h3>
+  <p class="sub">Your chart shows about 17,470 for November 1 2023, when the contract traded near 14,700. Back-adjustment lifts older prices by a little over 1% per quarterly roll, so rules written as a percent of price (the 0.9% large-IB skip, the 0.40–0.60% sizing band) see older days as smaller than they were. Live bars are unaffected. It is why Deep Backtesting, which uses real prices, found 154 trades where your chart found 151, and it means a chart backtest can shift by a few trades after each roll.</p>
 </section>
 
 <section>
