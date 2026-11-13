@@ -1,0 +1,342 @@
+<title>MNQ T2 Review</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: a desk memo. One reading column, answers first, each claim beside the table or chart that supports it. */
+:root {
+  --bg: #f5f6f8; --surface: #ffffff; --ink: #131722; --ink-2: #454d5e; --muted: #6b7384; --rule: #dde1e8;
+  --accent: #1f5fbf; --good: #0f7b4f; --warn: #9a5b06; --bad: #b3261e;
+  --good-tint: rgba(15,123,79,.11); --bad-tint: rgba(179,38,30,.09);
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a;
+  --font-text: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-num: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #12151b; --surface: #1a1e26; --ink: #e8ebf1; --ink-2: #bcc3d0; --muted: #8e96a6; --rule: #2c323d;
+    --accent: #7fb0f5; --good: #4cc38a; --warn: #e0a23c; --bad: #f0766d;
+    --good-tint: rgba(76,195,138,.13); --bad-tint: rgba(240,118,109,.12);
+    --s1: #3987e5; --s2: #d95926; --s3: #199e70; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #12151b; --surface: #1a1e26; --ink: #e8ebf1; --ink-2: #bcc3d0; --muted: #8e96a6; --rule: #2c323d;
+  --accent: #7fb0f5; --good: #4cc38a; --warn: #e0a23c; --bad: #f0766d;
+  --good-tint: rgba(76,195,138,.13); --bad-tint: rgba(240,118,109,.12);
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; color-scheme: dark;
+}
+body { background: var(--bg); color: var(--ink); font-family: var(--font-text); font-size: 16px; line-height: 1.55; }
+.page { max-width: 880px; margin: 0 auto; padding-block: 40px 72px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: flex; flex-direction: column; gap: 44px; }
+header .kicker { font-family: var(--font-num); font-size: 12.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+h1 { font-size: clamp(28px, 5vw, 38px); line-height: 1.12; font-weight: 600; margin: 8px 0 12px; text-wrap: balance; letter-spacing: -.01em; }
+h2 { font-size: 22px; line-height: 1.25; font-weight: 600; margin: 0 0 6px; text-wrap: balance; }
+h3 { font-size: 16px; font-weight: 600; margin: 0 0 4px; }
+p { margin: 0; max-width: 68ch; }
+.lede { font-size: 17.5px; color: var(--ink-2); max-width: 66ch; }
+section { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.sub { color: var(--ink-2); }
+.num, td.n, th.n { font-family: var(--font-num); font-variant-numeric: tabular-nums; }
+.pos { color: var(--good); } .neg { color: var(--bad); }
+/* the four answers */
+.answers { display: grid; gap: 0; border-top: 1px solid var(--rule); }
+.answers > div { display: grid; grid-template-columns: 210px 1fr; gap: 6px 24px; padding: 16px 0; border-bottom: 1px solid var(--rule); }
+.answers .q { font-weight: 600; }
+.answers .q span { display: block; font-family: var(--font-num); font-size: 12px; color: var(--muted); font-weight: 400; letter-spacing: .04em; }
+.answers .a { min-width: 0; color: var(--ink-2); }
+.answers .a strong { color: var(--ink); font-weight: 600; }
+@media (max-width: 640px) { .answers > div { grid-template-columns: 1fr; } }
+/* tables */
+.tw { overflow-x: auto; border: 1px solid var(--rule); border-radius: 6px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th, td { padding: 8px 10px; text-align: left; border-bottom: 1px solid var(--rule); white-space: nowrap; }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 500; color: var(--muted); font-size: 12.5px; }
+td.n, th.n { text-align: right; }
+td.w { white-space: normal; min-width: 220px; }
+tr.hi td { background: var(--good-tint); }
+.cap { color: var(--muted); font-size: 13.5px; margin-top: -8px; max-width: 78ch; }
+/* figures */
+figure { margin: 0; background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; padding: 16px 16px 12px; min-width: 0; }
+figure h3 { margin-bottom: 2px; }
+figure .fs { color: var(--muted); font-size: 13.5px; margin-bottom: 10px; max-width: none; }
+.chart { position: relative; overflow-x: auto; }
+.chart svg { display: block; width: 100%; min-width: 600px; height: auto; }
+.chart text { font-family: var(--font-num); font-size: 11px; fill: var(--muted); }
+.chart text.lbl { fill: var(--ink-2); font-size: 11.5px; }
+.chart .grid { stroke: var(--rule); stroke-width: 1; }
+.chart .axis { stroke: var(--muted); stroke-width: 1; }
+.tip { position: absolute; pointer-events: none; background: var(--ink); color: var(--bg); font-family: var(--font-num); font-size: 12px; padding: 6px 8px; border-radius: 4px; white-space: nowrap; z-index: 2; line-height: 1.45; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 13px; color: var(--ink-2); margin-top: 8px; }
+.legend i { display: inline-block; width: 14px; height: 3px; border-radius: 2px; margin-right: 6px; vertical-align: middle; }
+.legend .band { width: 14px; height: 10px; border-radius: 2px; }
+/* ladder bars */
+.ladder { display: grid; gap: 8px; }
+.ladder .row { display: grid; grid-template-columns: minmax(150px, 250px) 1fr; gap: 12px; align-items: center; font-size: 14px; }
+.ladder .bar { height: 14px; background: var(--s1); border-radius: 0 4px 4px 0; min-width: 2px; }
+.ladder .track { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.ladder .v { font-family: var(--font-num); font-size: 13px; color: var(--ink-2); white-space: nowrap; }
+@media (max-width: 560px) { .ladder .row { grid-template-columns: 1fr; gap: 2px; } }
+/* rule cards */
+.rules { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 12px; }
+.rule { border-top: 2px solid var(--ink); padding-top: 10px; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.rule .now { font-family: var(--font-num); font-size: 12.5px; color: var(--muted); }
+.rule p { color: var(--ink-2); font-size: 14.5px; }
+.pill { display: inline-block; font-family: var(--font-num); font-size: 12px; padding: 1px 8px; border-radius: 999px; border: 1px solid currentColor; }
+.pill.ok { color: var(--good); } .pill.watch { color: var(--warn); } .pill.stop { color: var(--bad); }
+ul { margin: 0; padding-left: 20px; max-width: 68ch; color: var(--ink-2); display: flex; flex-direction: column; gap: 6px; }
+code { font-family: var(--font-num); font-size: .92em; }
+.spec { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+.spec > div { background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.spec p { font-size: 14.5px; color: var(--ink-2); }
+footer { color: var(--muted); font-size: 13px; border-top: 1px solid var(--rule); padding-top: 14px; }
+</style>
+
+<div class="page">
+<header>
+  <div class="kicker">MNQ1! · 5-min RTH · Nov 17 2025 – Nov 12 2026 · reviewed Nov 13 2026</div>
+  <h1>The T2 script has a real edge, a smaller one than its backtest, and a regime it depends on</h1>
+  <p class="lede">I rebuilt the strategy in Python and it reproduces your TradingView list exactly: 151 of 151 trades, same times, prices, sizes and P&amp;L. Everything below is measured on that replica, on your 3-year 15-minute file, and on your overnight files.</p>
+</header>
+
+<section>
+  <div class="answers">
+    <div><div class="q"><span>QUESTION 1</span>Improve current results</div>
+      <div class="a"><strong>Small gain from the existing rules, a larger one from where risk sits.</strong> Two T3 changes lift the 12 months from $28,825 to $29,866 and the last six from $9,099 to $9,696, with a lower drawdown. Over 40 other changes to the existing settings added nothing reliable. Moving risk toward T2X, the one leg that paid in all three years, is the bigger lever.</div></div>
+    <div><div class="q"><span>QUESTION 2</span>Another session</div>
+      <div class="a"><strong>Two candidates out of about 1,400 tested.</strong> A London-open pullback (02:00–03:00 ET range) and a Globex first-hour momentum trade (18:00–19:00 ET). Both were profitable in both halves of 2026 and are uncorrelated with the day script. Both come from a search on ten months of data, so treat them as simulator candidates.</div></div>
+    <div><div class="q"><span>QUESTION 3</span>The last six months</div>
+      <div class="a"><strong>Still profitable, at about half the pace.</strong> As traded: $19,726 in the first six months, $9,099 in the last six (profit factor 3.6, then 2.6). Every table below shows the last six months separately.</div></div>
+    <div><div class="q"><span>QUESTION 4</span>Regime warnings</div>
+      <div class="a"><strong>Most of the before-and-after gap is tuning; part of it is a regime you can measure.</strong> The last 12 months had days that stayed unusually close to their first-hour range. The script now shows that reading every day, skips T3 when it turns, and I give drawdown limits for the rest, because last month's P&amp;L predicts nothing about the next.</div></div>
+  </div>
+</section>
+
+<section>
+  <h2>What the 12 months are made of</h2>
+  <p class="sub">Profit factor (PF) is gross profit divided by gross loss. R is the initial-balance range, as in the script.</p>
+  <div class="tw"><table>
+    <thead><tr><th>Leg</th><th class="n">Trades</th><th class="n">Net</th><th class="n">PF</th><th class="n">Win</th><th class="n">First 6 mo</th><th class="n">Last 6 mo</th></tr></thead>
+    <tbody>
+      <tr><td>T2R · fade the first-break extension</td><td class="n">54</td><td class="n">$16,569</td><td class="n">3.27</td><td class="n">48%</td><td class="n">$12,075</td><td class="n">$4,494</td></tr>
+      <tr><td>T2X · retrace, then continuation</td><td class="n">41</td><td class="n">$9,479</td><td class="n">5.14</td><td class="n">66%</td><td class="n">$6,911</td><td class="n">$2,567</td></tr>
+      <tr><td>T3 · wide-IB fade</td><td class="n">56</td><td class="n">$2,777</td><td class="n">1.74</td><td class="n">61%</td><td class="n">$740</td><td class="n">$2,037</td></tr>
+      <tr><td><strong>All, as traded</strong></td><td class="n">151</td><td class="n">$28,825</td><td class="n">3.16</td><td class="n">58%</td><td class="n">$19,726</td><td class="n">$9,099</td></tr>
+    </tbody></table></div>
+  <p class="cap">Fifteen trades make $21,203 of the $28,825. Maximum drawdown $978.</p>
+
+  <h3>The fills are not the weak point</h3>
+  <p class="sub">T2R uses stops of about a tenth of the IB range, so I tested harsher fills. Requiring every limit to be traded through by a tick leaves $25,375. Adding two-tick worse entries and four-tick stop slippage on top leaves $24,412.</p>
+
+  <figure>
+    <h3>The tuning is the weak point</h3>
+    <p class="fs">T2R + T2X net profit over the 12 months as weekday-specific settings are removed one layer at a time (T3 excluded).</p>
+    <div class="ladder" id="ladder"></div>
+  </figure>
+  <p class="sub">With one setting for every weekday and a flat $200 the two T2 legs still make $10,774 at PF 1.9. That is the part I would call the edge. The other $15,000 comes from per-weekday entries, stops, targets, switches and sizing that were chosen on these same 12 months, which is all the history a 5-minute chart holds. Expect live results nearer the lower bars than the top one.</p>
+</section>
+
+<section>
+  <h2>Before November 2025</h2>
+  <p class="sub">Your 5-minute history stops at the tuning window, so for earlier years I ran the same rules on the 15-minute file. That yardstick is harsh on T2R (in the overlap year it captures 40% of the exact profit) but it is the same yardstick in every year. T3 enters at the 10:30 open with fixed levels, so its numbers are exact in all three years.</p>
+  <div class="tw"><table>
+    <thead><tr><th>Same rules, 15-min bars</th><th class="n">Nov 23 – Nov 24</th><th class="n">Nov 24 – Nov 25</th><th class="n">Nov 25 – Nov 26</th></tr></thead>
+    <tbody>
+      <tr><td>Tuned settings, all legs · PF</td><td class="n">1.38</td><td class="n">1.04</td><td class="n">1.84</td></tr>
+      <tr><td>One setting for all weekdays · PF</td><td class="n">1.24</td><td class="n">0.96</td><td class="n">1.39</td></tr>
+      <tr><td>T2X only, tuned · net</td><td class="n">$5,466</td><td class="n">$2,840</td><td class="n">$4,184</td></tr>
+      <tr><td>T2R only, tuned · net</td><td class="n">$2,697</td><td class="n neg">−$2,013</td><td class="n">$4,536</td></tr>
+      <tr><td>T3 as shipped (exact) · net</td><td class="n neg">−$179</td><td class="n neg">−$145</td><td class="n">$2,777</td></tr>
+    </tbody></table></div>
+  <p class="cap">The last year is the best on every row, and the gap between years shrinks once tuning is removed. T2X is the only leg that paid in all three.</p>
+</section>
+
+<section>
+  <h2>The regime: how far days travel beyond their first hour</h2>
+  <p class="sub">I tested about 50 daily measures of volatility, trend and recent opening-range behaviour against trade outcomes. One held up in every year: the median, over the last 20 full sessions, of the day's range divided by its IB range. I call it the regime reading. Near 1.3–1.5, days stay close to the first hour and fades at the IB edges work. Above about 1.7, days expand and fades fail.</p>
+  <figure>
+    <h3>Regime reading, Nov 2023 – Nov 2026</h3>
+    <p class="fs">Median of (RTH range ÷ IB range) over the prior 20 full sessions. Hover for a date.</p>
+    <div class="chart" id="regChart"></div>
+    <div class="legend"><span><i style="background:var(--s1)"></i>Regime reading</span><span><i class="band" style="background:var(--good-tint)"></i>Calm, at or below 1.4</span><span><i class="band" style="background:var(--bad-tint)"></i>Expanding, above 1.7</span></div>
+  </figure>
+  <div class="tw"><table>
+    <thead><tr><th>Share of sessions</th><th class="n">Calm ≤ 1.4</th><th class="n">Normal</th><th class="n">Expanding &gt; 1.7</th><th class="n">Median</th></tr></thead>
+    <tbody>
+      <tr><td>Nov 2023 – Nov 2025</td><td class="n">1%</td><td class="n">56%</td><td class="n">43%</td><td class="n">1.66</td></tr>
+      <tr><td>Last 12 months</td><td class="n">36%</td><td class="n">48%</td><td class="n">16%</td><td class="n">1.48</td></tr>
+      <tr><td>Last 6 months</td><td class="n">39%</td><td class="n">58%</td><td class="n">3%</td><td class="n">1.45</td></tr>
+    </tbody></table></div>
+  <p class="cap">The 12 months the script was tuned on were calm on a third of days. The two years before were calm on four days in total.</p>
+  <div class="tw"><table>
+    <thead><tr><th>T3, exact fills</th><th class="n">As shipped</th><th class="n">Tue–Fri, reading ≤ 1.7</th><th class="n">Tue–Fri, reading &gt; 1.7</th><th class="n">Mondays</th></tr></thead>
+    <tbody id="t3rows"></tbody></table></div>
+  <p class="cap">Net profit (trades). Across all weekdays T3 made PF 1.8 at or below 1.7 and PF 0.5 above it. A shuffle test puts the chance of a gap that size at under 1%, before allowing for the 50 measures I tried.</p>
+  <ul>
+    <li><strong>T3</strong> depends on it most. That is why it was flat for two years and good in the third.</li>
+    <li><strong>T2R</strong> leans the same way but less cleanly. In the exact year it made PF 4.3 with the reading at or below 1.6 and PF 2.2 above; at 1.7 the two sides were equal. On the 15-minute yardstick its average trade was 0.25R below the 3-year median reading and about zero above.</li>
+    <li><strong>T2X</strong> goes the other way, as a continuation trade should: PF 9.6 above 1.6 against 3.4 below. It is the leg that carries an expanding market.</li>
+    <li><strong>IB size</strong> matters separately. T2 sits out when the IB exceeds 0.9% of price, which was 34% of days in the last 12 months against 20% before, so in volatile stretches the script is mostly T3.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>Changes to the day script (v3.1)</h2>
+  <div class="tw"><table>
+    <thead><tr><th>5-min exact</th><th class="n">Trades</th><th class="n">12 mo net</th><th class="n">PF</th><th class="n">Max DD</th><th class="n">Last 6 mo</th><th class="n">PF</th><th class="n">Prior 2 yr*</th></tr></thead>
+    <tbody>
+      <tr><td>As traded</td><td class="n">151</td><td class="n">$28,825</td><td class="n">3.16</td><td class="n">$978</td><td class="n">$9,099</td><td class="n">2.57</td><td class="n">$8,665</td></tr>
+      <tr><td>T3 Monday off</td><td class="n">139</td><td class="n">$29,563</td><td class="n">3.46</td><td class="n">$978</td><td class="n">$9,696</td><td class="n">2.90</td><td class="n">$9,304</td></tr>
+      <tr class="hi"><td><strong>+ T3 skipped above 1.7 (new default)</strong></td><td class="n">136</td><td class="n">$29,866</td><td class="n">3.57</td><td class="n">$774</td><td class="n">$9,696</td><td class="n">2.90</td><td class="n">$10,554</td></tr>
+      <tr><td>Option: T2X rows at $300 risk</td><td class="n">136</td><td class="n">$34,952</td><td class="n">3.76</td><td class="n">$1,005</td><td class="n">$11,096</td><td class="n">3.02</td><td class="n">$16,363</td></tr>
+      <tr><td>Option: T2R half risk above 1.7</td><td class="n">136</td><td class="n">$28,805</td><td class="n">3.65</td><td class="n">$774</td><td class="n">$9,524</td><td class="n">2.87</td><td class="n">$8,448</td></tr>
+    </tbody></table></div>
+  <p class="cap">The highlighted row is the new default. *Nov 2023 – Nov 2025 on the 15-minute yardstick. The two options are inputs you set yourself: T2X risk is the last field on each T2X row; the T2R dial is in the new Regime group and ships at ×1.</p>
+  <ul>
+    <li><strong>T3 Monday is off.</strong> It lost in each of the three years: 20 trades, −$1,377.</li>
+    <li><strong>T3 is skipped while the reading is above 1.7.</strong> This costs nothing in the last six months, when the reading was rarely that high, and removes most of T3's losses in the two earlier years.</li>
+    <li><strong>The status table shows the reading</strong> (calm, normal or expanding) and how many of the last 20 sessions had a large IB.</li>
+    <li><strong>Tested and left alone:</strong> both entry cutoffs, each T1 gate, target alignment, the large-IB threshold, the risk ceiling, and every weekday switch on and off. The largest gain was a later T2X cutoff (15:00 in place of 13:00): +$2,093 over the 12 months, of which $83 fell in the last six, so I left it as an input for you to try. Everything else moved the total by about $1,000 or less, or helped one half-year and hurt the other. The settings already sit at their best fit for this window; more tuning would add fit, not edge.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>Two overnight candidates</h2>
+  <p class="sub">I tested five setup types (edge fade, retrace continuation, zone fade, zone momentum, breakout) over seven session windows from the Globex open to the pre-market, about 1,400 combinations, with conservative fills. In 27 of the 35 families the typical setting lost money. Fading the first hour's extremes lost in every overnight session. Two ideas survived checks on neighbouring settings, on both halves of the year and on the 5-minute file.</p>
+  <div class="spec">
+    <div>
+      <h3>LX · London pullback</h3>
+      <p>Range 02:00–03:00 ET, the hour before London opens. After the first break, wait for a close back inside, then rest a limit 0.30R inside the broken edge in the break's direction. Stop 0.80R inside, target 1.00R beyond. No entry after 06:00, flat at 07:00.</p>
+      <p class="num">160 trades · +$8,767 · PF 1.78 · win 38% · max DD $1,184<br>Jan–May PF 1.78 · last 6 mo +$4,937, PF 1.78<br>5-min bars, Aug–Nov: 60 trades, PF 1.91</p>
+      <p>Stops from 0.75R to 0.90R with entries from 0.2R to 0.4R all made PF 1.35–1.7 overall and at least 1.25 in each half. Ranges ending at 03:00 were profitable at 30, 60 and 90 minutes; ranges ending at 04:00 or later were not. The 02:00–03:00 window is the best of its neighbours, which made PF 1.0–1.5, so expect less than 1.78.</p>
+    </div>
+    <div>
+      <h3>GM · Globex first-hour momentum</h3>
+      <p>Range 18:00–19:00 ET. If the hour closes in its top or bottom 20%, go with it at 19:00. Stop 0.85R back inside from that edge, target 0.30R beyond it. Flat at 23:00.</p>
+      <p class="num">90 trades · +$3,086 · PF 1.85 · win 76% · max DD $567<br>Jan–May PF 1.97 · last 6 mo +$1,716, PF 1.77<br>5-min bars, Aug–Nov: 32 trades, PF 1.82</p>
+      <p>All 36 zone, stop and target combinations I tried were profitable. The same trade from 19:00, 20:00 or 21:00 made nothing, so the effect belongs to the reopen hour. Average win $99, average loss $165: it needs its high win rate.</p>
+    </div>
+  </div>
+  <figure>
+    <h3>Cumulative P&amp;L since Jan 2 2026, $200 risk per trade</h3>
+    <p class="fs">Day script with the v3.1 defaults, and each overnight candidate on 15-minute bars. Hover for values.</p>
+    <div class="chart" id="eqChart"></div>
+    <div class="legend"><span><i style="background:var(--s1)"></i>Day script v3.1</span><span><i style="background:var(--s2)"></i>LX London pullback</span><span><i style="background:var(--s3)"></i>GM Globex momentum</span></div>
+  </figure>
+  <div class="tw"><table>
+    <thead><tr><th>Month</th><th class="n">Day script v3.1</th><th class="n">LX</th><th class="n">GM</th><th class="n">Together</th></tr></thead>
+    <tbody id="monRows"></tbody></table></div>
+  <p class="cap">Daily P&amp;L correlation with the day script: LX 0.03, GM −0.01. Since January the day script alone had 15 losing weeks of 46; with both added, 8. Last six months together: $16,349 against $9,696.</p>
+  <p class="sub">I dropped a London 03:00–04:00 range fade that looked good on 15-minute bars (PF 1.5) and failed on 5-minute bars (PF 0.8–1.2).</p>
+</section>
+
+<section>
+  <h2>What to watch from here</h2>
+  <p class="sub">On the 3-year yardstick, a month's P&amp;L has no correlation with the next month's (−0.01 over 37 months), and the last 20 trades say nothing about the next one. So a good or bad month is not a signal. These are.</p>
+  <div class="rules">
+    <div class="rule"><h3>Regime reading</h3><div class="now">now 1.58 · <span class="pill ok">normal</span></div>
+      <p>Above 1.7, T3 stops by itself. If it stays above 1.6 for three weeks, set the T2R dial to 0.5 and leave T2X alone. It averaged 1.32–1.42 from August to October and 1.68 so far in November.</p></div>
+    <div class="rule"><h3>Large-IB days</h3><div class="now">now 7 of the last 20 · <span class="pill watch">watch</span></div>
+      <p>When more than half the last 20 sessions have an IB above 0.9%, T2 is sidelined and you are running T3 alone, the weakest leg. October and November made $469 and $340.</p></div>
+    <div class="rule"><h3>Drawdown from the peak</h3><div class="now">backtest worst $774</div>
+      <p>Reshuffling the year's own trades 5,000 times gives a 12-month drawdown of $1,286 at the median, $2,150 at the 95th percentile and $2,750 at the 99th. At $2,200 halve the size; at $2,750 stop and re-test.</p></div>
+    <div class="rule"><h3>Re-tuning</h3><div class="now">monthly</div>
+      <p>When you re-tune, also run the one-setting version. If it turns negative over the last six months while the tuned version still looks good, the tuning is doing all the work.</p></div>
+  </div>
+</section>
+
+<section>
+  <h2>What this work cannot tell you</h2>
+  <ul>
+    <li>Exact T2R and T2X results exist only for the 12 months they were tuned on. The earlier years rest on 15-minute bars, which understate T2R. If you export the Deep Backtesting trade list for November 2023 to November 2025, I can tie the regime work to exact trades.</li>
+    <li>The overnight candidates have ten and a half months of history and were chosen by searching it. There is no earlier intraday data to test them on.</li>
+    <li>I could not compile Pine here. The day script's v3.1 additions and the overnight script each match a Python port of the same logic, and the overnight port reproduces the search engine's results trade for trade, but neither file has been through TradingView's compiler. Check the 12-month net against $29,866 (T3 on) when you load v3.1, and run both on Sim101 first. Alerts ship off in the overnight script.</li>
+    <li>The regime threshold was found by looking at many measures. It held in each of three years and across 10-, 20- and 40-session windows, which is why I trust it for T3, but it is evidence and not proof.</li>
+  </ul>
+</section>
+
+<footer>Costs as in the script: $0.62 per contract per side, one tick of slippage on stops and market orders. Data: TradingView exports of MNQ1! (5-min RTH, 5-min and 15-min extended hours, 15-min RTH from Nov 2023, daily from 2019).</footer>
+</div>
+
+<script>
+const D = {"eq_rec":[["2025-11-19",263],["2025-11-21",143],["2025-11-26",-326],["2025-11-28",1769],["2025-12-02",1621],["2025-12-03",3572],["2025-12-10",4778],["2025-12-11",4883],["2025-12-12",4780],["2025-12-18",5345],["2025-12-24",5002],["2025-12-30",4836],["2025-12-31",6165],["2026-01-02",6376],["2026-01-07",8331],["2026-01-09",8694],["2026-01-13",8565],["2026-01-15",9816],["2026-01-16",9625],["2026-01-20",10550],["2026-01-21",10359],["2026-01-23",10190],["2026-01-26",10407],["2026-01-29",10232],["2026-01-30",11560],["2026-02-03",11260],["2026-02-05",11531],["2026-02-11",11817],["2026-02-13",11682],["2026-02-17",11834],["2026-02-18",11700],["2026-02-24",11595],["2026-02-26",11863],["2026-03-03",12092],["2026-03-04",11985],["2026-03-06",12762],["2026-03-11",14269],["2026-03-12",15050],["2026-03-17",14866],["2026-03-20",15005],["2026-03-24",15622],["2026-03-25",15415],["2026-03-26",15232],["2026-03-27",15340],["2026-03-31",15053],["2026-04-01",16579],["2026-04-08",17657],["2026-04-10",17457],["2026-04-13",17685],["2026-04-14",17802],["2026-04-15",17653],["2026-04-16",17507],["2026-04-17",17195],["2026-04-21",17542],["2026-04-22",17909],["2026-04-23",19013],["2026-04-24",18720],["2026-04-28",18532],["2026-04-29",20262],["2026-05-01",20421],["2026-05-05",20635],["2026-05-06",20170],["2026-05-13",19861],["2026-05-14",20127],["2026-05-19",20352],["2026-05-20",20722],["2026-05-26",20514],["2026-05-27",20700],["2026-05-29",21192],["2026-06-04",21018],["2026-06-05",21156],["2026-06-10",21402],["2026-06-18",21199],["2026-06-23",21414],["2026-06-26",21655],["2026-06-30",21501],["2026-07-02",21334],["2026-07-07",21587],["2026-07-08",21381],["2026-07-10",21298],["2026-07-14",21941],["2026-07-16",22061],["2026-07-17",22331],["2026-07-21",22363],["2026-07-22",23583],["2026-07-23",23394],["2026-07-29",23187],["2026-07-30",23499],["2026-08-04",23379],["2026-08-06",23559],["2026-08-07",24397],["2026-08-11",24224],["2026-08-12",25078],["2026-08-13",25152],["2026-08-18",25959],["2026-08-20",27293],["2026-08-25",27294],["2026-08-28",27125],["2026-09-01",27012],["2026-09-02",27135],["2026-09-09",26837],["2026-09-16",26528],["2026-09-18",27745],["2026-09-22",28026],["2026-09-23",28245],["2026-09-24",27941],["2026-09-29",29227],["2026-09-30",29057],["2026-10-01",29175],["2026-10-02",29988],["2026-10-05",30256],["2026-10-07",29803],["2026-10-20",30181],["2026-10-21",29729],["2026-10-30",29526],["2026-11-03",30043],["2026-11-11",29759],["2026-11-12",29866]],"eq_lx":[["2026-01-07",501],["2026-01-09",1015],["2026-01-12",1004],["2026-01-13",912],["2026-01-14",722],["2026-01-16",652],["2026-01-19",514],["2026-01-26",321],["2026-01-27",110],["2026-01-28",38],["2026-01-29",31],["2026-01-30",-42],["2026-02-03",222],["2026-02-05",20],["2026-02-09",-169],["2026-02-10",268],["2026-02-11",750],["2026-02-12",917],["2026-02-13",779],["2026-02-17",616],["2026-02-19",609],["2026-02-20",476],["2026-02-24",272],["2026-02-26",354],["2026-02-27",231],["2026-03-02",88],["2026-03-04",456],["2026-03-05",279],["2026-03-09",275],["2026-03-11",788],["2026-03-13",669],["2026-03-16",659],["2026-03-17",1128],["2026-03-18",1263],["2026-03-19",1770],["2026-03-20",1634],["2026-03-23",1482],["2026-03-24",1586],["2026-03-25",2129],["2026-03-26",2069],["2026-03-30",2139],["2026-03-31",1973],["2026-04-01",1833],["2026-04-03",1946],["2026-04-06",1793],["2026-04-07",2427],["2026-04-08",2256],["2026-04-10",2057],["2026-04-13",2444],["2026-04-15",2931],["2026-04-16",2921],["2026-04-17",3429],["2026-04-20",3291],["2026-04-21",3110],["2026-04-22",2933],["2026-04-23",2859],["2026-04-24",3326],["2026-04-27",3757],["2026-04-28",4191],["2026-05-04",4050],["2026-05-07",3884],["2026-05-11",3715],["2026-05-12",3831],["2026-05-13",3685],["2026-05-14",4238],["2026-05-15",4070],["2026-05-18",4388],["2026-05-19",4269],["2026-05-21",4152],["2026-05-22",4110],["2026-05-25",4026],["2026-05-26",3829],["2026-05-29",3671],["2026-06-01",3662],["2026-06-03",4139],["2026-06-04",3998],["2026-06-05",3894],["2026-06-09",3891],["2026-06-10",4294],["2026-06-12",4157],["2026-06-15",4600],["2026-06-16",4561],["2026-06-17",4371],["2026-06-18",4449],["2026-06-22",4465],["2026-06-23",4956],["2026-06-24",4816],["2026-06-25",5232],["2026-06-26",4980],["2026-06-29",4888],["2026-06-30",5290],["2026-07-02",5116],["2026-07-06",5241],["2026-07-07",5096],["2026-07-08",5092],["2026-07-09",4947],["2026-07-10",4780],["2026-07-13",5199],["2026-07-14",5094],["2026-07-17",5360],["2026-07-21",5355],["2026-07-22",5289],["2026-07-23",5222],["2026-07-27",5087],["2026-07-28",5128],["2026-07-29",5264],["2026-07-30",5260],["2026-07-31",5262],["2026-08-03",5708],["2026-08-06",5815],["2026-08-07",6314],["2026-08-10",6306],["2026-08-11",6142],["2026-08-13",6073],["2026-08-17",6064],["2026-08-18",5981],["2026-08-24",5935],["2026-08-25",5899],["2026-08-26",5851],["2026-08-28",5783],["2026-08-31",5637],["2026-09-01",6149],["2026-09-02",5980],["2026-09-03",6455],["2026-09-04",6684],["2026-09-07",6622],["2026-09-08",6611],["2026-09-09",7150],["2026-09-10",7592],["2026-09-11",7493],["2026-09-15",7933],["2026-09-16",7750],["2026-09-18",7590],["2026-09-22",8002],["2026-09-24",7977],["2026-09-25",7972],["2026-09-28",8069],["2026-09-30",8012],["2026-10-02",8502],["2026-10-05",8341],["2026-10-06",8158],["2026-10-07",8147],["2026-10-08",8409],["2026-10-13",8221],["2026-10-14",8146],["2026-10-15",8222],["2026-10-19",8663],["2026-10-20",8757],["2026-10-23",8637],["2026-10-26",8512],["2026-10-27",8321],["2026-10-28",8158],["2026-10-29",8040],["2026-10-30",8327],["2026-11-02",8237],["2026-11-03",8357],["2026-11-05",8636],["2026-11-10",8516],["2026-11-12",8944],["2026-11-13",8767]],"eq_gm":[["2026-01-01",87],["2026-01-04",176],["2026-01-05",15],["2026-01-07",122],["2026-01-08",196],["2026-01-12",276],["2026-01-13",77],["2026-01-14",179],["2026-01-20",-18],["2026-01-25",158],["2026-01-26",251],["2026-01-28",350],["2026-02-01",543],["2026-02-03",618],["2026-02-08",744],["2026-02-15",800],["2026-02-17",673],["2026-02-19",793],["2026-02-24",887],["2026-03-05",1009],["2026-03-16",804],["2026-03-23",625],["2026-03-25",710],["2026-03-30",801],["2026-03-31",886],["2026-04-05",998],["2026-04-06",1054],["2026-04-09",893],["2026-04-13",1020],["2026-04-15",1091],["2026-04-19",1145],["2026-04-20",1247],["2026-04-23",1361],["2026-05-03",1452],["2026-05-11",1272],["2026-05-12",1371],["2026-05-18",1262],["2026-05-21",1341],["2026-05-24",1465],["2026-05-25",1547],["2026-05-31",1649],["2026-06-02",1745],["2026-06-10",1857],["2026-06-11",1997],["2026-06-16",1886],["2026-06-17",2033],["2026-06-18",2131],["2026-06-22",2241],["2026-06-24",2330],["2026-07-01",2136],["2026-07-02",1940],["2026-07-06",2000],["2026-07-13",2062],["2026-07-16",2162],["2026-07-20",2021],["2026-07-23",1837],["2026-07-27",1913],["2026-07-30",2025],["2026-08-06",2108],["2026-08-10",2236],["2026-08-16",2354],["2026-08-18",2405],["2026-08-19",2471],["2026-08-23",2572],["2026-08-25",2671],["2026-08-26",2492],["2026-08-30",2592],["2026-08-31",2432],["2026-09-03",2539],["2026-09-08",2398],["2026-09-09",2251],["2026-09-10",2349],["2026-09-15",2172],["2026-09-16",2281],["2026-09-20",2376],["2026-09-21",2456],["2026-09-27",2239],["2026-09-28",2133],["2026-10-01",2189],["2026-10-04",2273],["2026-10-05",2104],["2026-10-11",2175],["2026-10-12",2274],["2026-10-14",2447],["2026-10-15",2554],["2026-10-19",2659],["2026-10-20",2721],["2026-10-21",2852],["2026-10-29",2969],["2026-11-04",3087]],"exp":[["2023-12-01",1.655],["2023-12-04",1.655],["2023-12-05",1.61],["2023-12-06",1.61],["2023-12-07",1.577],["2023-12-08",1.605],["2023-12-11",1.536],["2023-12-12",1.536],["2023-12-13",1.536],["2023-12-14",1.536],["2023-12-15",1.605],["2023-12-18",1.536],["2023-12-19",1.605],["2023-12-20",1.571],["2023-12-21",1.571],["2023-12-22",1.571],["2023-12-26",1.605],["2023-12-27",1.65],["2023-12-28",1.605],["2023-12-29",1.593],["2024-01-02",1.65],["2024-01-03",1.616],["2024-01-04",1.616],["2024-01-05",1.637],["2024-01-08",1.637],["2024-01-09",1.66],["2024-01-10",1.791],["2024-01-11",1.928],["2024-01-12",1.778],["2024-01-16",1.626],["2024-01-17",1.582],["2024-01-18",1.582],["2024-01-19",1.582],["2024-01-22",1.626],["2024-01-23",1.549],["2024-01-24",1.623],["2024-01-25",1.623],["2024-01-26",1.623],["2024-01-29",1.645],["2024-01-30",1.659],["2024-01-31",1.659],["2024-02-01",1.829],["2024-02-02",1.949],["2024-02-05",1.973],["2024-02-06",1.973],["2024-02-07",1.933],["2024-02-08",1.79],["2024-02-09",1.656],["2024-02-12",1.79],["2024-02-13",1.933],["2024-02-14",1.933],["2024-02-15",1.933],["2024-02-16",1.899],["2024-02-20",1.78],["2024-02-21",1.78],["2024-02-22",1.899],["2024-02-23",1.899],["2024-02-26",1.899],["2024-02-27",1.899],["2024-02-28",1.732],["2024-02-29",1.548],["2024-03-01",1.548],["2024-03-04",1.548],["2024-03-05",1.548],["2024-03-06",1.614],["2024-03-07",1.614],["2024-03-08",1.688],["2024-03-11",1.806],["2024-03-12",1.688],["2024-03-13",1.648],["2024-03-14",1.648],["2024-03-15",1.542],["2024-03-18",1.524],["2024-03-19",1.605],["2024-03-20",1.648],["2024-03-21",1.648],["2024-03-22",1.648],["2024-03-25",1.648],["2024-03-26",1.648],["2024-03-27",1.688],["2024-03-28",1.688],["2024-04-01",1.648],["2024-04-02",1.605],["2024-04-03",1.576],["2024-04-04",1.554],["2024-04-05",1.576],["2024-04-08",1.576],["2024-04-09",1.554],["2024-04-10",1.576],["2024-04-11",1.554],["2024-04-12",1.576],["2024-04-15",1.703],["2024-04-16",1.854],["2024-04-17",1.854],["2024-04-18",1.854],["2024-04-19",1.787],["2024-04-22",1.787],["2024-04-23",1.787],["2024-04-24",1.787],["2024-04-25",1.787],["2024-04-26",1.916],["2024-04-29",1.916],["2024-04-30",1.916],["2024-05-01",2.018],["2024-05-02",2.077],["2024-05-03",2.018],["2024-05-06",1.916],["2024-05-07",2.055],["2024-05-08",2.055],["2024-05-09",2.055],["2024-05-10",1.933],["2024-05-13",1.804],["2024-05-14",1.657],["2024-05-15",1.67],["2024-05-16",1.67],["2024-05-17",1.72],["2024-05-20",1.72],["2024-05-21",1.566],["2024-05-22",1.72],["2024-05-23",1.72],["2024-05-24",1.72],["2024-05-28",1.841],["2024-05-29",1.841],["2024-05-30",1.707],["2024-05-31",1.707],["2024-06-03",1.822],["2024-06-04",1.841],["2024-06-05",1.841],["2024-06-06",1.875],["2024-06-07",1.875],["2024-06-10",2.093],["2024-06-11",2.279],["2024-06-12",2.363],["2024-06-13",2.363],["2024-06-14",2.279],["2024-06-17",2.093],["2024-06-18",2.093],["2024-06-20",2.093],["2024-06-21",2.011],["2024-06-24",1.888],["2024-06-25",1.888],["2024-06-26",1.888],["2024-06-27",1.888],["2024-06-28",1.888],["2024-07-01",1.835],["2024-07-02",1.822],["2024-07-03",1.822],["2024-07-05",1.822],["2024-07-08",1.803],["2024-07-09",1.766],["2024-07-10",1.803],["2024-07-11",1.803],["2024-07-12",1.803],["2024-07-15",1.803],["2024-07-16",1.836],["2024-07-17",1.836],["2024-07-18",1.836],["2024-07-19",1.836],["2024-07-22",1.813],["2024-07-23",1.799],["2024-07-24",1.799],["2024-07-25",1.799],["2024-07-26",1.776],["2024-07-29",1.776],["2024-07-30",1.776],["2024-07-31",1.813],["2024-08-01",1.813],["2024-08-02",1.813],["2024-08-05",1.776],["2024-08-06",1.771],["2024-08-07",1.771],["2024-08-08",1.771],["2024-08-09",1.72],["2024-08-12",1.691],["2024-08-13",1.653],["2024-08-14",1.691],["2024-08-15",1.691],["2024-08-16",1.691],["2024-08-19",1.653],["2024-08-20",1.691],["2024-08-21",1.691],["2024-08-22",1.691],["2024-08-23",1.72],["2024-08-26",1.691],["2024-08-27",1.653],["2024-08-28",1.606],["2024-08-29",1.628],["2024-08-30",1.628],["2024-09-03",1.694],["2024-09-04",1.726],["2024-09-05",1.699],["2024-09-06",1.68],["2024-09-09",1.68],["2024-09-10",1.699],["2024-09-11",1.726],["2024-09-12",1.726],["2024-09-13",1.774],["2024-09-16",1.761],["2024-09-17",1.761],["2024-09-18",1.761],["2024-09-19",1.912],["2024-09-20",1.761],["2024-09-23",1.761],["2024-09-24",1.761],["2024-09-25",1.761],["2024-09-26",1.761],["2024-09-27",1.761],["2024-09-30",1.822],["2024-10-01",1.747],["2024-10-02",1.683],["2024-10-03",1.663],["2024-10-04",1.663],["2024-10-07",1.551],["2024-10-08",1.551],["2024-10-09",1.551],["2024-10-10",1.551],["2024-10-11",1.551],["2024-10-14",1.551],["2024-10-15",1.551],["2024-10-16",1.551],["2024-10-17",1.404],["2024-10-18",1.402],["2024-10-21",1.302],["2024-10-22",1.402],["2024-10-23",1.485],["2024-10-24",1.571],["2024-10-25",1.571],["2024-10-28",1.485],["2024-10-29",1.423],["2024-10-30",1.486],["2024-10-31",1.486],["2024-11-01",1.496],["2024-11-04",1.496],["2024-11-05",1.435],["2024-11-06",1.349],["2024-11-07",1.349],["2024-11-08",1.349],["2024-11-11",1.435],["2024-11-12",1.435],["2024-11-13",1.435],["2024-11-14",1.467],["2024-11-15",1.503],["2024-11-18",1.532],["2024-11-19",1.503],["2024-11-20",1.503],["2024-11-21",1.477],["2024-11-22",1.455],["2024-11-25",1.455],["2024-11-26",1.455],["2024-11-27",1.433],["2024-11-29",1.455],["2024-12-02",1.455],["2024-12-03",1.443],["2024-12-04",1.477],["2024-12-05",1.503],["2024-12-06",1.518],["2024-12-09",1.503],["2024-12-10",1.503],["2024-12-11",1.518],["2024-12-12",1.518],["2024-12-13",1.514],["2024-12-16",1.514],["2024-12-17",1.515],["2024-12-18",1.488],["2024-12-19",1.515],["2024-12-20",1.515],["2024-12-23",1.537],["2024-12-24",1.537],["2024-12-26",1.537],["2024-12-27",1.537],["2024-12-30",1.537],["2024-12-31",1.611],["2025-01-02",1.798],["2025-01-03",1.798],["2025-01-06",1.798],["2025-01-07",1.664],["2025-01-08",1.664],["2025-01-10",1.664],["2025-01-13",1.659],["2025-01-14",1.659],["2025-01-15",1.664],["2025-01-16",1.664],["2025-01-17",1.659],["2025-01-21",1.612],["2025-01-22",1.612],["2025-01-23",1.552],["2025-01-24",1.552],["2025-01-27",1.552],["2025-01-28",1.552],["2025-01-29",1.552],["2025-01-30",1.612],["2025-01-31",1.552],["2025-02-03",1.552],["2025-02-04",1.552],["2025-02-05",1.528],["2025-02-06",1.543],["2025-02-07",1.523],["2025-02-10",1.497],["2025-02-11",1.497],["2025-02-12",1.461],["2025-02-13",1.461],["2025-02-14",1.479],["2025-02-18",1.479],["2025-02-19",1.479],["2025-02-20",1.509],["2025-02-21",1.509],["2025-02-24",1.509],["2025-02-25",1.479],["2025-02-26",1.479],["2025-02-27",1.509],["2025-02-28",1.509],["2025-03-03",1.572],["2025-03-04",1.572],["2025-03-05",1.572],["2025-03-06",1.619],["2025-03-07",1.619],["2025-03-10",1.688],["2025-03-11",1.772],["2025-03-12",1.772],["2025-03-13",1.822],["2025-03-14",1.822],["2025-03-17",1.806],["2025-03-18",1.806],["2025-03-19",1.806],["2025-03-20",1.868],["2025-03-21",1.868],["2025-03-24",1.868],["2025-03-25",1.868],["2025-03-26",1.868],["2025-03-27",1.799],["2025-03-28",1.799],["2025-03-31",1.799],["2025-04-01",1.799],["2025-04-02",1.821],["2025-04-03",1.815],["2025-04-04",1.81],["2025-04-07",1.81],["2025-04-08",1.708],["2025-04-09",1.81],["2025-04-10",1.81],["2025-04-11",1.883],["2025-04-14",1.883],["2025-04-15",1.883],["2025-04-16",1.883],["2025-04-17",1.883],["2025-04-21",1.883],["2025-04-22",1.81],["2025-04-23",1.883],["2025-04-24",1.894],["2025-04-25",1.894],["2025-04-28",1.894],["2025-04-29",1.906],["2025-04-30",1.894],["2025-05-01",1.9],["2025-05-02",1.899],["2025-05-05",1.899],["2025-05-06",1.855],["2025-05-07",1.855],["2025-05-08",1.855],["2025-05-09",1.855],["2025-05-12",1.782],["2025-05-13",1.782],["2025-05-14",1.71],["2025-05-15",1.71],["2025-05-16",1.71],["2025-05-19",1.782],["2025-05-20",1.753],["2025-05-21",1.753],["2025-05-22",1.753],["2025-05-23",1.753],["2025-05-27",1.66],["2025-05-28",1.619],["2025-05-29",1.66],["2025-05-30",1.619],["2025-06-02",1.619],["2025-06-03",1.594],["2025-06-04",1.616],["2025-06-05",1.537],["2025-06-06",1.537],["2025-06-09",1.537],["2025-06-10",1.537],["2025-06-11",1.605],["2025-06-12",1.683],["2025-06-13",1.683],["2025-06-16",1.605],["2025-06-17",1.537],["2025-06-18",1.605],["2025-06-20",1.537],["2025-06-23",1.526],["2025-06-24",1.526],["2025-06-25",1.541],["2025-06-26",1.595],["2025-06-27",1.595],["2025-06-30",1.619],["2025-07-01",1.619],["2025-07-02",1.766],["2025-07-03",1.619],["2025-07-07",1.619],["2025-07-08",1.766],["2025-07-09",1.619],["2025-07-10",1.554],["2025-07-11",1.554],["2025-07-14",1.493],["2025-07-15",1.493],["2025-07-16",1.539],["2025-07-17",1.563],["2025-07-18",1.622],["2025-07-21",1.563],["2025-07-22",1.563],["2025-07-23",1.563],["2025-07-24",1.563],["2025-07-25",1.524],["2025-07-28",1.524],["2025-07-29",1.477],["2025-07-30",1.477],["2025-07-31",1.477],["2025-08-01",1.477],["2025-08-04",1.477],["2025-08-05",1.423],["2025-08-06",1.477],["2025-08-07",1.524],["2025-08-08",1.607],["2025-08-11",1.607],["2025-08-12",1.688],["2025-08-13",1.733],["2025-08-14",1.607],["2025-08-15",1.501],["2025-08-18",1.501],["2025-08-19",1.501],["2025-08-20",1.607],["2025-08-21",1.607],["2025-08-22",1.607],["2025-08-25",1.447],["2025-08-26",1.492],["2025-08-27",1.455],["2025-08-28",1.429],["2025-08-29",1.405],["2025-09-02",1.405],["2025-09-03",1.405],["2025-09-04",1.405],["2025-09-05",1.405],["2025-09-08",1.405],["2025-09-09",1.405],["2025-09-10",1.405],["2025-09-11",1.405],["2025-09-12",1.405],["2025-09-15",1.429],["2025-09-16",1.442],["2025-09-17",1.442],["2025-09-18",1.442],["2025-09-19",1.442],["2025-09-22",1.468],["2025-09-23",1.484],["2025-09-24",1.512],["2025-09-25",1.747],["2025-09-26",1.747],["2025-09-29",1.747],["2025-09-30",1.747],["2025-10-01",1.862],["2025-10-02",1.815],["2025-10-03",1.652],["2025-10-06",1.815],["2025-10-07",1.815],["2025-10-08",1.815],["2025-10-09",1.741],["2025-10-10",1.815],["2025-10-13",1.815],["2025-10-14",1.815],["2025-10-15",1.815],["2025-10-16",1.815],["2025-10-17",1.903],["2025-10-20",1.815],["2025-10-21",1.752],["2025-10-22",1.726],["2025-10-23",1.726],["2025-10-24",1.726],["2025-10-27",1.726],["2025-10-28",1.752],["2025-10-29",1.799],["2025-10-30",1.84],["2025-10-31",1.84],["2025-11-03",1.84],["2025-11-04",1.84],["2025-11-05",1.726],["2025-11-06",1.717],["2025-11-07",1.717],["2025-11-10",1.717],["2025-11-11",1.737],["2025-11-12",1.83],["2025-11-13",1.718],["2025-11-14",1.718],["2025-11-17",1.718],["2025-11-18",1.742],["2025-11-19",1.742],["2025-11-20",1.718],["2025-11-21",1.742],["2025-11-24",1.834],["2025-11-25",1.81],["2025-11-26",1.81],["2025-11-28",1.742],["2025-12-01",1.742],["2025-12-02",1.742],["2025-12-03",1.718],["2025-12-04",1.742],["2025-12-05",1.742],["2025-12-08",1.742],["2025-12-09",1.702],["2025-12-10",1.65],["2025-12-11",1.65],["2025-12-12",1.632],["2025-12-15",1.643],["2025-12-16",1.632],["2025-12-17",1.605],["2025-12-18",1.605],["2025-12-19",1.605],["2025-12-22",1.605],["2025-12-23",1.521],["2025-12-24",1.506],["2025-12-26",1.506],["2025-12-29",1.451],["2025-12-30",1.423],["2025-12-31",1.367],["2026-01-02",1.367],["2026-01-05",1.39],["2026-01-06",1.308],["2026-01-07",1.341],["2026-01-08",1.396],["2026-01-09",1.341],["2026-01-12",1.341],["2026-01-13",1.341],["2026-01-14",1.341],["2026-01-15",1.341],["2026-01-16",1.39],["2026-01-20",1.39],["2026-01-21",1.39],["2026-01-22",1.39],["2026-01-23",1.39],["2026-01-26",1.416],["2026-01-27",1.373],["2026-01-28",1.373],["2026-01-29",1.416],["2026-01-30",1.416],["2026-02-02",1.416],["2026-02-03",1.398],["2026-02-04",1.416],["2026-02-05",1.447],["2026-02-06",1.416],["2026-02-09",1.447],["2026-02-10",1.447],["2026-02-11",1.416],["2026-02-12",1.416],["2026-02-13",1.461],["2026-02-17",1.413],["2026-02-18",1.413],["2026-02-19",1.398],["2026-02-20",1.336],["2026-02-23",1.336],["2026-02-24",1.336],["2026-02-25",1.336],["2026-02-26",1.336],["2026-02-27",1.259],["2026-03-02",1.225],["2026-03-03",1.225],["2026-03-04",1.259],["2026-03-05",1.236],["2026-03-06",1.236],["2026-03-09",1.259],["2026-03-10",1.259],["2026-03-11",1.259],["2026-03-12",1.335],["2026-03-13",1.383],["2026-03-16",1.383],["2026-03-17",1.391],["2026-03-18",1.391],["2026-03-19",1.45],["2026-03-20",1.478],["2026-03-23",1.51],["2026-03-24",1.497],["2026-03-25",1.497],["2026-03-26",1.497],["2026-03-27",1.51],["2026-03-30",1.566],["2026-03-31",1.633],["2026-04-01",1.691],["2026-04-02",1.76],["2026-04-06",1.76],["2026-04-07",1.76],["2026-04-08",1.691],["2026-04-09",1.605],["2026-04-10",1.725],["2026-04-13",1.728],["2026-04-14",1.728],["2026-04-15",1.796],["2026-04-16",1.815],["2026-04-17",1.796],["2026-04-20",1.796],["2026-04-21",1.796],["2026-04-22",1.815],["2026-04-23",1.815],["2026-04-24",1.965],["2026-04-27",1.965],["2026-04-28",1.965],["2026-04-29",1.815],["2026-04-30",1.766],["2026-05-01",1.697],["2026-05-04",1.638],["2026-05-05",1.697],["2026-05-06",1.697],["2026-05-07",1.916],["2026-05-08",1.9],["2026-05-11",1.9],["2026-05-12",1.674],["2026-05-13",1.674],["2026-05-14",1.674],["2026-05-15",1.655],["2026-05-18",1.563],["2026-05-19",1.563],["2026-05-20",1.514],["2026-05-21",1.527],["2026-05-22",1.527],["2026-05-26",1.453],["2026-05-27",1.453],["2026-05-28",1.453],["2026-05-29",1.527],["2026-06-01",1.527],["2026-06-02",1.584],["2026-06-03",1.527],["2026-06-04",1.527],["2026-06-05",1.527],["2026-06-08",1.527],["2026-06-09",1.535],["2026-06-10",1.609],["2026-06-11",1.609],["2026-06-12",1.609],["2026-06-15",1.609],["2026-06-16",1.612],["2026-06-17",1.612],["2026-06-18",1.636],["2026-06-22",1.612],["2026-06-23",1.612],["2026-06-24",1.612],["2026-06-25",1.636],["2026-06-26",1.636],["2026-06-29",1.636],["2026-06-30",1.636],["2026-07-01",1.612],["2026-07-02",1.612],["2026-07-06",1.636],["2026-07-07",1.612],["2026-07-08",1.578],["2026-07-09",1.578],["2026-07-10",1.499],["2026-07-13",1.499],["2026-07-14",1.451],["2026-07-15",1.451],["2026-07-16",1.451],["2026-07-17",1.451],["2026-07-20",1.423],["2026-07-21",1.423],["2026-07-22",1.423],["2026-07-23",1.423],["2026-07-24",1.423],["2026-07-27",1.423],["2026-07-28",1.423],["2026-07-29",1.386],["2026-07-30",1.398],["2026-07-31",1.398],["2026-08-03",1.33],["2026-08-04",1.398],["2026-08-05",1.477],["2026-08-06",1.477],["2026-08-07",1.477],["2026-08-10",1.398],["2026-08-11",1.33],["2026-08-12",1.412],["2026-08-13",1.316],["2026-08-14",1.297],["2026-08-17",1.297],["2026-08-18",1.297],["2026-08-19",1.282],["2026-08-20",1.261],["2026-08-21",1.261],["2026-08-24",1.238],["2026-08-25",1.208],["2026-08-26",1.231],["2026-08-27",1.197],["2026-08-28",1.235],["2026-08-31",1.289],["2026-09-01",1.235],["2026-09-02",1.235],["2026-09-03",1.197],["2026-09-04",1.235],["2026-09-08",1.289],["2026-09-09",1.289],["2026-09-10",1.289],["2026-09-11",1.289],["2026-09-14",1.302],["2026-09-15",1.302],["2026-09-16",1.302],["2026-09-17",1.32],["2026-09-18",1.358],["2026-09-21",1.358],["2026-09-22",1.398],["2026-09-23",1.398],["2026-09-24",1.398],["2026-09-25",1.515],["2026-09-28",1.501],["2026-09-29",1.489],["2026-09-30",1.489],["2026-10-01",1.367],["2026-10-02",1.367],["2026-10-05",1.341],["2026-10-06",1.341],["2026-10-07",1.341],["2026-10-08",1.367],["2026-10-09",1.489],["2026-10-12",1.489],["2026-10-13",1.367],["2026-10-14",1.325],["2026-10-15",1.325],["2026-10-16",1.325],["2026-10-19",1.325],["2026-10-20",1.325],["2026-10-21",1.29],["2026-10-22",1.415],["2026-10-23",1.415],["2026-10-26",1.562],["2026-10-27",1.566],["2026-10-28",1.62],["2026-10-29",1.62],["2026-10-30",1.62],["2026-11-02",1.76],["2026-11-03",1.897],["2026-11-04",1.897],["2026-11-05",1.76],["2026-11-06",1.583],["2026-11-09",1.583],["2026-11-10",1.583],["2026-11-11",1.583],["2026-11-12",1.583],["2026-11-13",1.583]],"monthly":[["2025-11",1627,1769,0,0],["2025-12",4627,4396,0,0],["2026-01",5394,5394,-42,350],["2026-02",84,304,273,537],["2026-03",3179,3190,1743,-1],["2026-04",5110,5209,2218,475],["2026-05",727,930,-520,288],["2026-06",309,309,1620,680],["2026-07",1812,1998,-28,-305],["2026-08",3604,3626,374,407],["2026-09",1741,1932,2375,-299],["2026-10",469,469,315,836],["2026-11",141,340,440,118]],"t3":[["y1",20,-179,0.9,10,325,1.4,9,-380,1,-124],["y2",46,-145,0.96,20,1238,2.06,19,-870,7,-514],["y3",56,2777,1.74,39,3676,2.94,5,-160,12,-738],["all",122,2453,1.26,69,5239,2.36,33,-1410,20,-1377]]};
+const fmt$ = v => (v < 0 ? "−$" : "$") + Math.abs(Math.round(v)).toLocaleString("en-US");
+// tuning ladder
+(() => {
+  const rows = [["As tuned (T2R + T2X)", 26048, "PF 3.72"], ["Without IB-size ×1.5", 21877, "PF 3.62"], ["Flat $200 on every row", 20142, "PF 3.77"],
+    ["Every weekday switched on", 19391, "PF 2.86"], ["One setting for all weekdays", 10774, "PF 1.90"], ["…and no T1 gates", 7781, "PF 1.42"]];
+  const max = 26048, el = document.getElementById("ladder");
+  el.innerHTML = rows.map(r => `<div class="row"><div>${r[0]}</div><div class="track"><div class="bar" style="width:${(r[1] / max * 78).toFixed(1)}%"></div><span class="v">${fmt$(r[1])} · ${r[2]}</span></div></div>`).join("");
+})();
+// T3 table
+(() => {
+  const name = {y1: "Nov 23 – Nov 24", y2: "Nov 24 – Nov 25", y3: "Nov 25 – Nov 26", all: "Three years"};
+  const cell = (v, n) => `<td class="n${v < 0 ? " neg" : ""}">${fmt$(v)} (${n})</td>`;
+  document.getElementById("t3rows").innerHTML = D.t3.map(r => `<tr><td>${r[0] === "all" ? "<strong>" + name[r[0]] + "</strong>" : name[r[0]]}</td>${cell(r[2], r[1])}${cell(r[5], r[4])}${cell(r[8], r[7])}${cell(r[10], r[9])}</tr>`).join("");
+})();
+// monthly table
+(() => {
+  const rows = D.monthly.filter(r => r[0] >= "2026-01");
+  const mn = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const c = v => `<td class="n${v < 0 ? " neg" : ""}">${fmt$(v)}</td>`;
+  let tot = [0, 0, 0];
+  let html = rows.map(r => { tot[0] += r[2]; tot[1] += r[3]; tot[2] += r[4]; return `<tr><td>${mn[+r[0].slice(5) - 1]} 2026${r[0] === "2026-11" ? " (to the 12th)" : ""}</td>${c(r[2])}${c(r[3])}${c(r[4])}${c(r[2] + r[3] + r[4])}</tr>`; }).join("");
+  html += `<tr><td><strong>Jan 2 – Nov 12</strong></td>${c(tot[0])}${c(tot[1])}${c(tot[2])}${c(tot[0] + tot[1] + tot[2])}</tr>`;
+  document.getElementById("monRows").innerHTML = html;
+})();
+// generic line chart with crosshair + tooltip
+function lineChart(el, series, opt) {
+  const W = 840, H = opt.h || 300, m = {l: 46, r: opt.r || 16, t: 12, b: 26};
+  const t0 = opt.t0, t1 = opt.t1, y0 = opt.y0, y1 = opt.y1;
+  const X = t => m.l + (t - t0) / (t1 - t0) * (W - m.l - m.r), Y = v => m.t + (y1 - v) / (y1 - y0) * (H - m.t - m.b);
+  let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${opt.label}">`;
+  (opt.bands || []).forEach(b => { s += `<rect x="${m.l}" y="${Y(b[1])}" width="${W - m.l - m.r}" height="${Y(b[0]) - Y(b[1])}" fill="${b[2]}"/>`; });
+  opt.yt.forEach(v => { s += `<line class="grid" x1="${m.l}" x2="${W - m.r}" y1="${Y(v)}" y2="${Y(v)}"/><text x="${m.l - 6}" y="${Y(v) + 4}" text-anchor="end">${opt.yf(v)}</text>`; });
+  opt.xt.forEach(d => { const x = X(Date.parse(d[0])); s += `<line class="grid" x1="${x}" x2="${x}" y1="${H - m.b}" y2="${H - m.b + 4}"/><text x="${x}" y="${H - 8}" text-anchor="middle">${d[1]}</text>`; });
+  (opt.marks || []).forEach(k => { const x = X(Date.parse(k[0])); s += `<line class="axis" stroke-dasharray="3 3" x1="${x}" x2="${x}" y1="${m.t}" y2="${H - m.b}"/><text class="lbl" x="${x + 5}" y="${m.t + 10}">${k[1]}</text>`; });
+  series.forEach(se => {
+    const pts = se.data.map(p => [X(p.t), Y(p.v)]);
+    s += `<path d="M${pts.map(p => p[0].toFixed(1) + " " + p[1].toFixed(1)).join("L")}" fill="none" stroke="${se.color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
+    const last = pts[pts.length - 1];
+    s += `<circle cx="${last[0]}" cy="${last[1]}" r="4" fill="${se.color}" stroke="var(--surface)" stroke-width="2"/>`;
+    if (se.end) s += `<text class="lbl" x="${last[0] + 8}" y="${last[1] + 4 + (se.dy || 0)}">${se.end}</text>`;
+  });
+  s += `<line id="x" class="axis" y1="${m.t}" y2="${H - m.b}" x1="0" x2="0" visibility="hidden"/></svg><div class="tip" hidden></div>`;
+  el.innerHTML = s;
+  const svg = el.querySelector("svg"), cross = el.querySelector("#x"), tip = el.querySelector(".tip");
+  const near = (arr, t) => { let lo = 0, hi = arr.length - 1; while (lo < hi) { const mid = (lo + hi + 1) >> 1; if (arr[mid].t <= t) lo = mid; else hi = mid - 1; } return arr[lo]; };
+  svg.addEventListener("pointermove", ev => {
+    const r = svg.getBoundingClientRect(), px = (ev.clientX - r.left) / r.width * W;
+    if (px < m.l || px > W - m.r) { cross.setAttribute("visibility", "hidden"); tip.hidden = true; return; }
+    const t = t0 + (px - m.l) / (W - m.l - m.r) * (t1 - t0);
+    cross.setAttribute("x1", px); cross.setAttribute("x2", px); cross.setAttribute("visibility", "visible");
+    const d = new Date(t).toLocaleDateString("en-US", {month: "short", day: "numeric", year: "numeric", timeZone: "UTC"});
+    tip.innerHTML = d + "<br>" + series.map(se => se.name + " " + opt.vf(near(se.data, t).v)).join("<br>");
+    tip.hidden = false;
+    const left = (ev.clientX - r.left), flip = left > r.width * 0.62;
+    tip.style.left = flip ? "" : (left + 12) + "px"; tip.style.right = flip ? (r.width - left + 12) + "px" : ""; tip.style.top = "8px";
+  });
+  svg.addEventListener("pointerleave", () => { cross.setAttribute("visibility", "hidden"); tip.hidden = true; });
+}
+// regime chart
+(() => {
+  const data = D.exp.map(p => ({t: Date.parse(p[0]), v: p[1]}));
+  lineChart(document.getElementById("regChart"), [{name: "reading", data, color: "var(--s1)"}], {
+    label: "Regime reading over three years", t0: Date.parse("2023-11-20"), t1: Date.parse("2026-11-20"), y0: 1.2, y1: 2.4, h: 290,
+    yt: [1.2, 1.4, 1.7, 2.0, 2.4], yf: v => v.toFixed(1), vf: v => v.toFixed(2),
+    xt: [["2024-01-01", "Jan 24"], ["2024-07-01", "Jul 24"], ["2025-01-01", "Jan 25"], ["2025-07-01", "Jul 25"], ["2026-01-01", "Jan 26"], ["2026-07-01", "Jul 26"]],
+    bands: [[1.2, 1.4, "var(--good-tint)"], [1.7, 2.4, "var(--bad-tint)"]], marks: [["2025-11-17", "5-min history starts"]]});
+})();
+// equity chart
+(() => {
+  const from = "2026-01-02";
+  const mk = arr => { const before = arr.filter(p => p[0] < from); const base = before.length ? before[before.length - 1][1] : 0;
+    return [{t: Date.parse(from), v: 0}].concat(arr.filter(p => p[0] >= from).map(p => ({t: Date.parse(p[0]), v: p[1] - base}))); };
+  const a = mk(D.eq_rec), b = mk(D.eq_lx), c = mk(D.eq_gm);
+  const k = v => "$" + (v / 1000).toFixed(1) + "K";
+  lineChart(document.getElementById("eqChart"), [
+    {name: "Day script", data: a, color: "var(--s1)", end: k(a[a.length - 1].v)}, {name: "LX", data: b, color: "var(--s2)", end: k(b[b.length - 1].v)}, {name: "GM", data: c, color: "var(--s3)", end: k(c[c.length - 1].v)}], {
+    label: "Cumulative profit since January 2026", t0: Date.parse("2026-01-01"), t1: Date.parse("2026-11-16"), y0: -2000, y1: 26000, h: 300, r: 62,
+    yt: [0, 5000, 10000, 15000, 20000, 25000], yf: v => "$" + v / 1000 + "K", vf: v => fmt$(v),
+    xt: [["2026-01-01", "Jan"], ["2026-03-01", "Mar"], ["2026-05-01", "May"], ["2026-07-01", "Jul"], ["2026-09-01", "Sep"], ["2026-11-01", "Nov"]]});
+})();
+</script>

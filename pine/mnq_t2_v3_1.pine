@@ -1,0 +1,1095 @@
+//@version=6
+// ============================================================================
+// MNQ v3.1 · T2R + T2X on ONE account                     Chart: MNQ1! 5-minute
+// ----------------------------------------------------------------------------
+// Runs both T2 setups with one position at a time. T1 is not traded; it is
+// re-created internally for the R1/R2/R3/R7 gates (same rules as the T1 scripts).
+//
+// T2R (first-break extension fade) — at the close of the first bar that breaks
+//   the IB (from 10:30), rest a limit beyond the broken edge:
+//     up   → SHORT IBH + e·R · stop IBH + s·R · target IBH − t·R
+//     down → LONG  IBL − e·R · stop IBL − s·R · target IBL + t·R
+//   Skip: large IB (> 0.9% of price), break bar ran ≥ 0.20R (filter B), break bar
+//   already hit the entry. R1: T1 won → cancel. Cancel unfilled at 14:00.
+// T2X (post-break retrace resumption) — after the first close back inside the
+//   IB, rest a limit inside it in the break's direction:
+//     up   → LONG  IBH − e·R · stop IBH − s·R · target IBH + t·R
+//     down → SHORT IBL + e·R · stop IBL + s·R · target IBL − t·R
+//   Skip: large IB. R3: T1 lost → cancel. R2: T1 won at the opposite edge →
+//   cancel. R7: Monday, held back until T1 is in (cancelled at once when there
+//   is no T1 trade that day). Cancel unfilled at 13:00.
+//
+// One account, one position at a time:
+//   • While the account is flat and both orders rest, each order's target is the
+//     other's entry if that is closer. A fill can then only hand off at the same
+//     price: the first trade takes profit exactly where the second enters.
+//   • While a trade is on, nothing at the broker is changed or cancelled:
+//     – T2X arming during a T2R trade waits and is placed once flat.
+//     – An order that should be cancelled (cutoff, R1, R2, R3) stays until flat;
+//       if it fills through the handoff, it is exited at that bar's close.
+//   • Once flat, stale orders are cancelled and valid ones re-placed.
+//   This keeps every cancel away from a live trade's stop and target, for
+//   bridges whose cancel acts on the whole ticker.
+//
+// T3 (wide-IB fade, off by default) — only on the days T2 skips for a large IB:
+//   at the 10:25 close, if price is in the outer zone of the IB, fade it toward the
+//   middle: market at the 10:30 open, stop beyond that IB edge, target back inside it.
+//     top zone    → SHORT · stop IBH + s·R · target IBH − b·R
+//     bottom zone → LONG  · stop IBL − s·R · target IBL + b·R
+//   Same risk per trade and ceiling as T2. It never overlaps a T2 day.
+//
+// v3.1 (Nov 2026 review) — two changes, both for T3, plus a regime read-out:
+//   • T3 has weekday switches; Monday is off (it lost in each of the three years
+//     Nov 2023 – Nov 2026: 20 trades, −$1.4K).
+//   • Regime reading = median over the last 20 full sessions of (RTH range ÷ IB range):
+//     how far days travel beyond their first hour. Low = days stay near the IB and
+//     fades work; high = days expand and fades fail. T3 is skipped while the reading
+//     is above 1.7 (Nov 2023 – Nov 2026, T3 at or below 1.7: PF 1.8; above: PF 0.5).
+//     T2R can be scaled down in the same condition (off by default: risk × 1).
+//     The reading and the count of large-IB days are shown in the status table.
+//
+//   Flatten everything at the 15:55 bar close. Size = max(1, floor(risk $ ÷ stop $)).
+//   Defaults: $200 per trade; Wednesday T2R breakout fades and Wednesday T2X
+//   breakout longs $300. IB-size sizing (on by default): T2R risks 1.5× its
+//   row's risk when the IB is 0.40–0.60% of price ($300, or $450 on Wednesday
+//   breakouts). Switch it off in Risk to trade every row at its own risk.
+//   Orders are processed from the bar after they are placed, as in the backtest.
+//
+// Automation: ONE alert, "alert() function calls only", Webhook URL = your
+//   bridge, Message = blank. Bridge = NinjaView (default), CrossTrade or TradersPost.
+//   NinjaView messages are exactly what the NinjaView Bridge extension's Payload
+//   generator (v5.2) builds: lowercase alert names, stop_loss_price, prices x.xx.
+//   NinjaView, "Market at the level" (default): nothing rests at NinjaTrader. The
+//     strategy keeps its orders internally; the moment price reaches one (any tick),
+//     the alert sends a market entry with its stop and target:
+//       ENTRY   → "oco market buy/sell" (qty, take_profit_price, stop_loss_price, oco_id);
+//                 "close then oco market buy/sell" when a trade may still be open (handoff)
+//       EXIT    → "cancel oco and flatten" for that trade's oco_id, then "market close" (15:55)
+//     Skipped if price is already past the stop when the level is reached.
+//     Needs Properties → Recalculate → "On every tick" (on by default here).
+//   NinjaView "Resting limit" (only once a Send to NT8 test shows the bracket arms on
+//     fill), CrossTrade, TradersPost: the order rests at the broker:
+//     PLACE  → NinjaView "oco limit buy/sell" / CrossTrade "place" limit: limit
+//              entry with TP/SL bracket that arms on fill, each order with its
+//              own id (oco_id / order_id)
+//     CANCEL → NinjaView "cancel oco" / CrossTrade "cancel" for that id only
+//              (TradersPost: cancel the ticker's resting orders)
+//     EXIT   → NinjaView "cancel oco and flatten" for the open trade's oco_id, then
+//              "market close"; CrossTrade "flatten" for the instrument
+//              (15:55, or a cancelled order that filled)
+//     CrossTrade also sends "cancelorders" (account + instrument) at 9:30 and 15:55:
+//              its bracket legs are GTC, so nothing is left working overnight.
+// ============================================================================
+strategy("MNQ v3.1 · T2R + T2X (one account)", shorttitle = "T2", overlay = true, pyramiding = 0,
+     process_orders_on_close = false, initial_capital = 50000, margin_long = 0, margin_short = 0,
+     commission_type = strategy.commission.cash_per_contract, commission_value = 0.62,
+     slippage = 1, max_lines_count = 500, max_labels_count = 500, calc_on_every_tick = true)
+
+// ── Inputs ──────────────────────────────────────────────────────────────────
+G1 = "Risk"
+riskCap   = input.float(200, "Risk per trade ($)", minval = 1, group = G1)
+maxRisk   = input.float(300, "Skip if the trade risks more than ($, 0 = off)", minval = 0, group = G1,
+     tooltip = "1 contract can risk more than the risk setting on wide-IB days. Above this ceiling the trade is skipped.")
+ibSizeOn  = input.bool(true, "T2R IB-size sizing", group = G1,
+     tooltip = "On days whose IB range (at 10:30) is in this band, T2R risks this multiple of its row's risk, and the skip ceiling scales with it. Entries, stops, targets and T2X are unchanged. Check it each month with t2_retune.py.")
+ibSizeLo  = input.float(0.40, "   IB from (% of price)", step = 0.05, inline = "ibs", group = G1)
+ibSizeHi  = input.float(0.60, "to under", step = 0.05, inline = "ibs", group = G1)
+ibSizeX   = input.float(1.5,  "   T2R risk ×", minval = 0.25, step = 0.25, group = G1)
+
+G2 = "Rules (v3 defaults)"
+largeIB   = input.float(0.9,  "Skip if IB range > (% of price)",            step = 0.05, group = G2)
+filterB   = input.float(0.20, "T2R: skip if the break bar ran ≥ x·R",       step = 0.05, group = G2)
+useR1     = input.bool(true,  "R1: cancel T2R when T1 wins",                             group = G2)
+useR3     = input.bool(true,  "R3: cancel T2X when T1 loses",                            group = G2)
+useR7     = input.bool(true,  "R7: Monday T2X only once T1 is in",                       group = G2)
+useR2     = input.bool(true,  "R2: cancel T2X when T1 wins at the opposite edge",        group = G2)
+cutR      = input.int(1400,   "T2R: cancel unfilled at (HHMM ET)",                       group = G2)
+cutX      = input.int(1300,   "T2X: cancel unfilled at (HHMM ET)",                       group = G2)
+alignOn   = input.bool(true,  "Align targets: take profit at the other order's entry when closer", group = G2)
+flatHM    = input.int(1555,   "Flatten at close of bar (HHMM ET)",                       group = G2)
+
+GRU = "T2R · break UP → SHORT fade: on · entry · stop · target (× R) · risk $ (0 = Risk per trade)"
+ruMonOn = input.bool(false, "Mon", inline = "ruMon", group = GRU)
+ruMonE  = input.float(0.20, "", step = 0.05, inline = "ruMon", group = GRU)
+ruMonS  = input.float(0.30, "", step = 0.05, inline = "ruMon", group = GRU)
+ruMonT  = input.float(0.25, "", step = 0.05, inline = "ruMon", group = GRU)
+ruMonRk = input.float(0,    "", minval = 0, step = 25, inline = "ruMon", group = GRU)
+ruTueOn = input.bool(true,  "Tue", inline = "ruTue", group = GRU)
+ruTueE  = input.float(0.30, "", step = 0.05, inline = "ruTue", group = GRU)
+ruTueS  = input.float(0.50, "", step = 0.05, inline = "ruTue", group = GRU)
+ruTueT  = input.float(0.25, "", step = 0.05, inline = "ruTue", group = GRU)
+ruTueRk = input.float(0,    "", minval = 0, step = 25, inline = "ruTue", group = GRU)
+ruWedOn = input.bool(true,  "Wed", inline = "ruWed", group = GRU)
+ruWedE  = input.float(0.20, "", step = 0.05, inline = "ruWed", group = GRU)
+ruWedS  = input.float(0.30, "", step = 0.05, inline = "ruWed", group = GRU)
+ruWedT  = input.float(0.25, "", step = 0.05, inline = "ruWed", group = GRU)
+ruWedRk = input.float(300,  "", minval = 0, step = 25, inline = "ruWed", group = GRU)
+ruThuOn = input.bool(true,  "Thu", inline = "ruThu", group = GRU)
+ruThuE  = input.float(0.30, "", step = 0.05, inline = "ruThu", group = GRU)
+ruThuS  = input.float(0.50, "", step = 0.05, inline = "ruThu", group = GRU)
+ruThuT  = input.float(0.50, "", step = 0.05, inline = "ruThu", group = GRU)
+ruThuRk = input.float(0,    "", minval = 0, step = 25, inline = "ruThu", group = GRU)
+ruFriOn = input.bool(true,  "Fri", inline = "ruFri", group = GRU)
+ruFriE  = input.float(0.20, "", step = 0.05, inline = "ruFri", group = GRU)
+ruFriS  = input.float(0.30, "", step = 0.05, inline = "ruFri", group = GRU)
+ruFriT  = input.float(0.25, "", step = 0.05, inline = "ruFri", group = GRU)
+ruFriRk = input.float(0,    "", minval = 0, step = 25, inline = "ruFri", group = GRU)
+
+GRD = "T2R · break DOWN → LONG fade: on · entry · stop · target (× R) · risk $ (0 = Risk per trade)"
+rdMonOn = input.bool(false, "Mon", inline = "rdMon", group = GRD)
+rdMonE  = input.float(0.20, "", step = 0.05, inline = "rdMon", group = GRD)
+rdMonS  = input.float(0.30, "", step = 0.05, inline = "rdMon", group = GRD)
+rdMonT  = input.float(0.25, "", step = 0.05, inline = "rdMon", group = GRD)
+rdMonRk = input.float(0,    "", minval = 0, step = 25, inline = "rdMon", group = GRD)
+rdTueOn = input.bool(true,  "Tue", inline = "rdTue", group = GRD)
+rdTueE  = input.float(0.20, "", step = 0.05, inline = "rdTue", group = GRD)
+rdTueS  = input.float(0.30, "", step = 0.05, inline = "rdTue", group = GRD)
+rdTueT  = input.float(0.25, "", step = 0.05, inline = "rdTue", group = GRD)
+rdTueRk = input.float(0,    "", minval = 0, step = 25, inline = "rdTue", group = GRD)
+rdWedOn = input.bool(true,  "Wed", inline = "rdWed", group = GRD)
+rdWedE  = input.float(0.20, "", step = 0.05, inline = "rdWed", group = GRD)
+rdWedS  = input.float(0.30, "", step = 0.05, inline = "rdWed", group = GRD)
+rdWedT  = input.float(0.25, "", step = 0.05, inline = "rdWed", group = GRD)
+rdWedRk = input.float(0,    "", minval = 0, step = 25, inline = "rdWed", group = GRD)
+rdThuOn = input.bool(true,  "Thu", inline = "rdThu", group = GRD)
+rdThuE  = input.float(0.20, "", step = 0.05, inline = "rdThu", group = GRD)
+rdThuS  = input.float(0.30, "", step = 0.05, inline = "rdThu", group = GRD)
+rdThuT  = input.float(0.25, "", step = 0.05, inline = "rdThu", group = GRD)
+rdThuRk = input.float(0,    "", minval = 0, step = 25, inline = "rdThu", group = GRD)
+rdFriOn = input.bool(true,  "Fri", inline = "rdFri", group = GRD)
+rdFriE  = input.float(0.20, "", step = 0.05, inline = "rdFri", group = GRD)
+rdFriS  = input.float(0.30, "", step = 0.05, inline = "rdFri", group = GRD)
+rdFriT  = input.float(0.25, "", step = 0.05, inline = "rdFri", group = GRD)
+rdFriRk = input.float(0,    "", minval = 0, step = 25, inline = "rdFri", group = GRD)
+
+GXU = "T2X · break UP → LONG on retrace: on · entry · stop (× R below IBH) · target (× R above) · risk $"
+xuMonOn = input.bool(true,  "Mon", inline = "xuMon", group = GXU)
+xuMonE  = input.float(0.10, "", step = 0.05, inline = "xuMon", group = GXU)
+xuMonS  = input.float(0.30, "", step = 0.05, inline = "xuMon", group = GXU)
+xuMonT  = input.float(0.20, "", step = 0.05, inline = "xuMon", group = GXU)
+xuMonRk = input.float(0,    "", minval = 0, step = 25, inline = "xuMon", group = GXU)
+xuTueOn = input.bool(true,  "Tue", inline = "xuTue", group = GXU)
+xuTueE  = input.float(0.20, "", step = 0.05, inline = "xuTue", group = GXU)
+xuTueS  = input.float(0.60, "", step = 0.05, inline = "xuTue", group = GXU)
+xuTueT  = input.float(0.40, "", step = 0.05, inline = "xuTue", group = GXU)
+xuTueRk = input.float(0,    "", minval = 0, step = 25, inline = "xuTue", group = GXU)
+xuWedOn = input.bool(true,  "Wed", inline = "xuWed", group = GXU)
+xuWedE  = input.float(0.20, "", step = 0.05, inline = "xuWed", group = GXU)
+xuWedS  = input.float(0.60, "", step = 0.05, inline = "xuWed", group = GXU)
+xuWedT  = input.float(0.30, "", step = 0.05, inline = "xuWed", group = GXU)
+xuWedRk = input.float(300,  "", minval = 0, step = 25, inline = "xuWed", group = GXU)
+xuThuOn = input.bool(false, "Thu", inline = "xuThu", group = GXU)
+xuThuE  = input.float(0.20, "", step = 0.05, inline = "xuThu", group = GXU)
+xuThuS  = input.float(0.60, "", step = 0.05, inline = "xuThu", group = GXU)
+xuThuT  = input.float(0.30, "", step = 0.05, inline = "xuThu", group = GXU)
+xuThuRk = input.float(0,    "", minval = 0, step = 25, inline = "xuThu", group = GXU)
+xuFriOn = input.bool(true,  "Fri", inline = "xuFri", group = GXU)
+xuFriE  = input.float(0.50, "", step = 0.05, inline = "xuFri", group = GXU)
+xuFriS  = input.float(0.60, "", step = 0.05, inline = "xuFri", group = GXU)
+xuFriT  = input.float(0.20, "", step = 0.05, inline = "xuFri", group = GXU)
+xuFriRk = input.float(0,    "", minval = 0, step = 25, inline = "xuFri", group = GXU)
+
+GXD = "T2X · break DOWN → SHORT on retrace: on · entry · stop (× R above IBL) · target (× R below) · risk $"
+xdMonOn = input.bool(false, "Mon", inline = "xdMon", group = GXD)
+xdMonE  = input.float(0.30, "", step = 0.05, inline = "xdMon", group = GXD)
+xdMonS  = input.float(0.60, "", step = 0.05, inline = "xdMon", group = GXD)
+xdMonT  = input.float(0.25, "", step = 0.05, inline = "xdMon", group = GXD)
+xdMonRk = input.float(0,    "", minval = 0, step = 25, inline = "xdMon", group = GXD)
+xdTueOn = input.bool(true,  "Tue", inline = "xdTue", group = GXD)
+xdTueE  = input.float(0.30, "", step = 0.05, inline = "xdTue", group = GXD)
+xdTueS  = input.float(0.60, "", step = 0.05, inline = "xdTue", group = GXD)
+xdTueT  = input.float(0.25, "", step = 0.05, inline = "xdTue", group = GXD)
+xdTueRk = input.float(0,    "", minval = 0, step = 25, inline = "xdTue", group = GXD)
+xdWedOn = input.bool(true,  "Wed", inline = "xdWed", group = GXD)
+xdWedE  = input.float(0.50, "", step = 0.05, inline = "xdWed", group = GXD)
+xdWedS  = input.float(0.60, "", step = 0.05, inline = "xdWed", group = GXD)
+xdWedT  = input.float(0.25, "", step = 0.05, inline = "xdWed", group = GXD)
+xdWedRk = input.float(0,    "", minval = 0, step = 25, inline = "xdWed", group = GXD)
+xdThuOn = input.bool(false, "Thu", inline = "xdThu", group = GXD)
+xdThuE  = input.float(0.30, "", step = 0.05, inline = "xdThu", group = GXD)
+xdThuS  = input.float(0.60, "", step = 0.05, inline = "xdThu", group = GXD)
+xdThuT  = input.float(0.25, "", step = 0.05, inline = "xdThu", group = GXD)
+xdThuRk = input.float(0,    "", minval = 0, step = 25, inline = "xdThu", group = GXD)
+xdFriOn = input.bool(true,  "Fri", inline = "xdFri", group = GXD)
+xdFriE  = input.float(0.40, "", step = 0.05, inline = "xdFri", group = GXD)
+xdFriS  = input.float(0.60, "", step = 0.05, inline = "xdFri", group = GXD)
+xdFriT  = input.float(0.25, "", step = 0.05, inline = "xdFri", group = GXD)
+xdFriRk = input.float(0,    "", minval = 0, step = 25, inline = "xdFri", group = GXD)
+
+G5 = "T1 re-created for the gates (not traded; keep in step with the T1 rules)"
+t1Z1On    = input.bool(true,  "Use T1 Zone 1 in the gates",                              group = G5)
+t1Z3aOn   = input.bool(true,  "Use T1 Zone 3a in the gates",                             group = G5)
+t1GapMax  = input.float(1.0,  "T1 skip if gap ≥ (%)",                       step = 0.05, group = G5)
+t1ZoneMax = input.float(25,   "Zone 1 max (% of IB from IB2)",              step = 1,    group = G5)
+t1Vwap    = input.bool(true,  "Zone 1 VWAP filter",                                      group = G5)
+t1LongE   = input.float(0.25, "Zone 1 long: entry", step = 0.05, inline = "t1l", group = G5)
+t1LongS   = input.float(0.55, "stop",               step = 0.05, inline = "t1l", group = G5)
+t1LongT   = input.float(0.00, "target (IBH − x·R)", step = 0.05, inline = "t1l", group = G5)
+t1ShortE  = input.float(0.20, "Zone 1 short: entry", step = 0.05, inline = "t1s", group = G5)
+t1ShortS  = input.float(0.45, "stop",                step = 0.05, inline = "t1s", group = G5)
+t1ShortT  = input.float(0.00, "target (IBL + x·R)",  step = 0.05, inline = "t1s", group = G5)
+t1Cutoff  = input.int(1400,   "Zone 1 cancel unfilled at (HHMM ET)",                     group = G5)
+t1Z3aLo   = input.float(50,   "Zone 3a from", step = 1,    inline = "t1z3", group = G5)
+t1Z3aHi   = input.float(75,   "to (%)",       step = 1,    inline = "t1z3", group = G5)
+t1Z3aS    = input.float(0.25, "stop (IB2 ∓ x·R)", step = 0.05, inline = "t1z3", group = G5)
+t1Mon = input.bool(true, "T1 days: Mon", inline = "t1d", group = G5)
+t1Tue = input.bool(true, "Tue", inline = "t1d", group = G5)
+t1Wed = input.bool(true, "Wed", inline = "t1d", group = G5)
+t1Thu = input.bool(true, "Thu", inline = "t1d", group = G5)
+t1Fri = input.bool(true, "Fri", inline = "t1d", group = G5)
+
+G6 = "Automation"
+sendAlerts = input.bool(true, "Send webhook alerts", group = G6)
+showLabels = input.bool(true, "Show status labels on the chart", group = G6)
+bridge     = input.string("NinjaView", "Bridge", options = ["NinjaView", "CrossTrade", "TradersPost"], group = G6)
+ntAccount  = input.string("Sim101", "NinjaView: NinjaTrader account (exact name; comma-separate for several)", group = G6)
+ntTicker   = input.string("MNQ 12-26", "NinjaView: NinjaTrader instrument (update at each quarterly roll)", group = G6)
+nvMode     = input.string("Market at the level", "NinjaView: entries", options = ["Market at the level", "Resting limit"], group = G6,
+     tooltip = "Market at the level: nothing rests at NinjaTrader; the moment price reaches an entry, a market order with its stop and target is sent (NinjaView's 'OCO Market'). Needs Properties → Recalculate → On every tick. Resting limit ('oco limit'): use only once a Send to NT8 test from the extension's Payload tab shows the entry resting at its price with no target or stop until it fills; a target or stop placed before the fill could open a trade on its own.")
+ctKey      = input.string("", "CrossTrade: secret key", group = G6, display = display.none,
+     tooltip = "From your CrossTrade dashboard. It is stored in this chart's settings and sent inside every alert, so keep the chart private.")
+ctAccount  = input.string("", "CrossTrade: account (exact name)", group = G6)
+ctInstr    = input.string("", "CrossTrade: instrument (blank = this chart's ticker)", group = G6)
+ctDest     = input.string("Tradovate", "CrossTrade: destination", options = ["Tradovate", "NinjaTrader"], group = G6)
+tickerOut  = input.string("MNQ1!", "TradersPost: ticker sent to bridge", group = G6)
+
+G7 = "T3 · wide-IB fade (only on days T2 skips for a large IB)"
+t3On    = input.bool(false, "Trade T3", group = G7,
+     tooltip = "On days whose IB is larger than the T2 large-IB skip, fade a 10:25 close in the outer zone of the IB back toward the middle. Nov 2025 – Nov 2026 with Monday off and the regime skip on: 41 trades, PF 2.9, +$3.8K at $200 risk. Nov 2023 – Nov 2025 it was about flat without those two rules and positive with them. Off until it has run on a demo account.")
+t3Zone  = input.float(0.25, "   Outer zone at 10:25 (× R from the edge)", minval = 0.05, maxval = 0.5, step = 0.05, group = G7)
+t3StopX = input.float(0.15, "   Stop beyond the IB edge (× R)", minval = 0, step = 0.05, group = G7)
+t3Back  = input.float(0.40, "   Target back inside from the edge (× R)", minval = 0.05, step = 0.05, group = G7)
+t3Risk  = input.float(0, "   Risk $ (0 = Risk per trade)", minval = 0, step = 25, group = G7)
+t3Mon = input.bool(false, "   T3 days: Mon", inline = "t3d", group = G7)
+t3Tue = input.bool(true, "Tue", inline = "t3d", group = G7)
+t3Wed = input.bool(true, "Wed", inline = "t3d", group = G7)
+t3Thu = input.bool(true, "Thu", inline = "t3d", group = G7)
+t3Fri = input.bool(true, "Fri", inline = "t3d", group = G7)
+
+G8 = "Regime · how far days travel beyond the IB"
+regLen    = input.int(20, "Sessions in the median", minval = 5, maxval = 60, group = G8,
+     tooltip = "The regime reading is the median, over this many completed full sessions, of (RTH high − RTH low) ÷ (IB high − IB low). Around 1.3–1.5: days stay near their first hour and fades at the IB work. Above about 1.7: days expand well beyond it and fades fail. It needs this many sessions of chart history before it has a value; until then nothing is skipped or scaled.")
+regHotAt  = input.float(1.7, "Expanding above", minval = 1.0, step = 0.05, group = G8)
+regCalmAt = input.float(1.4, "Calm at or below (status table only)", minval = 1.0, step = 0.05, group = G8)
+t3RegOff  = input.bool(true, "T3: no trade while expanding", group = G8,
+     tooltip = "Nov 2023 – Nov 2026, exact fills: T3 with the reading at or below 1.7 made PF 1.8 (86 trades); above 1.7 it made PF 0.5 (36 trades).")
+rRegMult  = input.float(1.0, "T2R: risk × while expanding (1 = unchanged, 0 = no T2R)", minval = 0, step = 0.25, group = G8,
+     tooltip = "The evidence for T2R is weaker than for T3. Nov 2025 – Nov 2026 it made PF 2.2 with the reading above 1.6 against PF 4.3 below, but about the same either side of 1.7. Left at 1; set 0.5 to halve its size while expanding.")
+
+// A blank CrossTrade key or account holds back every alert (the backtest still runs);
+// the status table on the chart says so.
+ctMissing = bridge == "CrossTrade" and (ctKey == "" or ctAccount == "")
+alertsOn  = sendAlerts and not ctMissing
+nvMarket  = bridge == "NinjaView" and nvMode == "Market at the level"
+// The script runs on every realtime tick (for NinjaView's market entries). Everything
+// that changes the strategy's own orders runs only at the bar's close, as in the backtest.
+conf      = barstate.isconfirmed
+
+// ── Session clock (America/New_York) ────────────────────────────────────────
+if not (timeframe.isminutes and timeframe.multiplier == 5)
+    runtime.error("This strategy is built and tested on a 5-minute chart.")
+
+TZ        = "America/New_York"
+hm        = hour(time, TZ) * 100 + minute(time, TZ)
+// Charts without extended hours have no bar after 15:55: flatten there at the latest.
+flatAt    = syminfo.session == session.regular ? math.min(flatHM, 1555) : flatHM
+nextT     = time + timeframe.in_seconds() * 1000
+nextHm    = hour(nextT, TZ) * 100 + minute(nextT, TZ)
+isRTH     = hm >= 930 and hm < 1600
+newRTH    = hm == 930
+inIB      = hm >= 930 and hm < 1030
+lastIBBar = hm == 1025
+afterIB   = hm >= 1030 and hm < 1600
+dow       = dayofweek(time, TZ)
+dIdx      = dow - dayofweek.monday          // 0 = Mon … 4 = Fri
+isWeekday = dIdx >= 0 and dIdx <= 4
+isMonday  = dIdx == 0
+dayName   = dIdx == 0 ? "Mon" : dIdx == 1 ? "Tue" : dIdx == 2 ? "Wed" : dIdx == 3 ? "Thu" : dIdx == 4 ? "Fri" : "weekend"
+t1DayOn   = (dIdx == 0 and t1Mon) or (dIdx == 1 and t1Tue) or (dIdx == 2 and t1Wed) or
+             (dIdx == 3 and t1Thu) or (dIdx == 4 and t1Fri)
+t3DayOn   = (dIdx == 0 and t3Mon) or (dIdx == 1 and t3Tue) or (dIdx == 2 and t3Wed) or
+             (dIdx == 3 and t3Thu) or (dIdx == 4 and t3Fri)
+
+vwapRTH   = ta.vwap(hlc3, newRTH)
+
+// Per-weekday levels, indexed Mon … Fri.
+ruOn = array.from(ruMonOn, ruTueOn, ruWedOn, ruThuOn, ruFriOn)
+ruE  = array.from(ruMonE,  ruTueE,  ruWedE,  ruThuE,  ruFriE)
+ruS  = array.from(ruMonS,  ruTueS,  ruWedS,  ruThuS,  ruFriS)
+ruT  = array.from(ruMonT,  ruTueT,  ruWedT,  ruThuT,  ruFriT)
+ruRk = array.from(ruMonRk, ruTueRk, ruWedRk, ruThuRk, ruFriRk)
+rdOn = array.from(rdMonOn, rdTueOn, rdWedOn, rdThuOn, rdFriOn)
+rdE  = array.from(rdMonE,  rdTueE,  rdWedE,  rdThuE,  rdFriE)
+rdS  = array.from(rdMonS,  rdTueS,  rdWedS,  rdThuS,  rdFriS)
+rdT  = array.from(rdMonT,  rdTueT,  rdWedT,  rdThuT,  rdFriT)
+rdRk = array.from(rdMonRk, rdTueRk, rdWedRk, rdThuRk, rdFriRk)
+xuOn = array.from(xuMonOn, xuTueOn, xuWedOn, xuThuOn, xuFriOn)
+xuE  = array.from(xuMonE,  xuTueE,  xuWedE,  xuThuE,  xuFriE)
+xuS  = array.from(xuMonS,  xuTueS,  xuWedS,  xuThuS,  xuFriS)
+xuT  = array.from(xuMonT,  xuTueT,  xuWedT,  xuThuT,  xuFriT)
+xuRk = array.from(xuMonRk, xuTueRk, xuWedRk, xuThuRk, xuFriRk)
+xdOn = array.from(xdMonOn, xdTueOn, xdWedOn, xdThuOn, xdFriOn)
+xdE  = array.from(xdMonE,  xdTueE,  xdWedE,  xdThuE,  xdFriE)
+xdS  = array.from(xdMonS,  xdTueS,  xdWedS,  xdThuS,  xdFriS)
+xdT  = array.from(xdMonT,  xdTueT,  xdWedT,  xdThuT,  xdFriT)
+xdRk = array.from(xdMonRk, xdTueRk, xdWedRk, xdThuRk, xdFriRk)
+
+// ── Helpers and webhook messages (edit f_msg* for a different bridge) ───────
+f_px(x) => str.tostring(x, "#.##")
+f_nvPx(x) => str.tostring(x, "0.00")      // NinjaView prices as its payload generator writes them
+// Levels are rounded to a tick away from the side price reaches them from, so a
+// touch triggers on exactly the bar it does in the backtest's exact-price levels.
+f_tickUp(x) => math.ceil(x / syminfo.mintick - 1e-6) * syminfo.mintick
+f_tickDn(x) => math.floor(x / syminfo.mintick + 1e-6) * syminfo.mintick
+// The closer of a trade's own target and another level (both on its profit side).
+f_closer(d, own, lvl) => na(lvl) ? own : d > 0 ? math.min(own, lvl) : math.max(own, lvl)
+f_lots(rk, pts) => math.max(1, math.floor(rk / (pts * syminfo.pointvalue)))
+f_nv(a) =>
+    '{"alert":"' + a + '","account":"' + ntAccount + '","ticker":"' + ntTicker + '"'
+// NinjaView market entry with its bracket ("oco market buy/sell"). For a handoff, "close then oco
+// market …" closes the open position before entering; nothing that flattens is sent after it.
+f_nvMarket(d, n, stp, tp, id, handoff) =>
+    f_nv((handoff ? "close then oco market " : "oco market ") + (d > 0 ? "buy" : "sell")) + ',"qty":"' + str.tostring(n) +
+         '","take_profit_price":"' + f_nvPx(tp) + '","stop_loss_price":"' + f_nvPx(stp) + '","oco_id":"' + id + '"}'
+// NinjaView: flatten the instrument (no id) as a backstop after "cancel oco and flatten".
+nvClose = '{"alert":"market close","account":"' + ntAccount + '","ticker":"' + ntTicker + '"}'
+// CrossTrade: key=value; lines. The destination line routes straight to Tradovate.
+ctTicker = ctInstr == "" ? syminfo.ticker : ctInstr
+f_ct(cmd) =>
+    'key=' + ctKey + ';\ncommand=' + cmd + ';\naccount=' + ctAccount + ';\n'
+ctTail = ctDest == "Tradovate" ? '\ndestination=tradovate;' : ''
+// CrossTrade: cancel every working order for this account and instrument. Bracket legs are sent GTC
+// and nothing documented cancels them when an entry is cancelled, so this clears them each day.
+ctSweep = f_ct("cancelorders") + 'instrument=' + ctTicker + ';' + ctTail
+// Resting limit entry with a take-profit / stop-loss bracket that arms on fill.
+f_msgPlace(d, n, e, stp, tp, id) =>
+    string m = na
+    if bridge == "NinjaView"
+        m := f_nv("oco limit " + (d > 0 ? "buy" : "sell")) + ',"qty":"' + str.tostring(n) + '","limit_price":"' + f_nvPx(e) +
+             '","take_profit_price":"' + f_nvPx(tp) + '","stop_loss_price":"' + f_nvPx(stp) + '","oco_id":"' + id + '"}'
+    else if bridge == "CrossTrade"
+        m := f_ct("place") + 'instrument=' + ctTicker + ';\naction=' + (d > 0 ? "buy" : "sell") + ';\nqty=' + str.tostring(n) +
+             ';\norder_type=limit;\nlimit_price=' + f_px(e) + ';\ntif=day;\ntake_profit=' + f_px(tp) + ';\nstop_loss=' + f_px(stp) +
+             ';\norder_id=' + id + ';' + ctTail
+    else
+        m := '{"ticker":"' + tickerOut + '","action":"' + (d > 0 ? "buy" : "sell") +
+             '","orderType":"limit","limitPrice":' + f_px(e) + ',"quantity":' + str.tostring(n) +
+             ',"stopLoss":{"type":"stop","stopPrice":' + f_px(stp) + '},"takeProfit":{"limitPrice":' + f_px(tp) + '}}'
+    m
+// Cancel one resting order (NinjaView by oco_id, CrossTrade by order_id) or the ticker's resting orders (TradersPost).
+f_msgCancel(id) =>
+    bridge == "NinjaView" ? f_nv("cancel oco") + ',"oco_id":"' + id + '"}' :
+         bridge == "CrossTrade" ? f_ct("cancel") + 'order_id=' + id + ';' + ctTail :
+         '{"ticker":"' + tickerOut + '","action":"cancel"}'
+// Close the position. NinjaView: "cancel oco and flatten" for the trade's id (cancels its bracket and
+// closes it), or "market close" with no id; CrossTrade: flatten closes the position and cancels its orders.
+f_msgExit(id) =>
+    bridge == "NinjaView" ? (id == "" ? nvClose : f_nv("cancel oco and flatten") + ',"oco_id":"' + id + '"}') :
+         bridge == "CrossTrade" ? f_ct("flatten") + 'instrument=' + ctTicker + ';' + ctTail :
+         '{"ticker":"' + tickerOut + '","action":"exit"}'
+f_side(d) => d > 0 ? "LONG" : "SHORT"
+// Chart label: one line each for the day, T2R, T2X and T3; events on the same line are joined by " · ".
+f_add(cur, e) => cur == "" ? e : cur + " · " + e
+f_line(txt, tag, cur) => cur == "" ? txt : (txt == "" ? "" : txt + "\n") + tag + cur
+// An order now working: its levels, unless this bar's line already shows them.
+f_placed(shown, e, t, aligned) =>
+    shown ? "working" + (aligned ? " · T " + f_px(t) + " (aligned)" : "") :
+         "working @ " + f_px(e) + " · T " + f_px(t) + (aligned ? " (aligned)" : "")
+// Market entry with a take-profit / stop-loss bracket (T3 at 10:30).
+f_msgMarket(d, n, stp, tp, id) =>
+    string m = na
+    if bridge == "NinjaView"
+        m := f_nvMarket(d, n, stp, tp, id, false)
+    else if bridge == "CrossTrade"
+        m := f_ct("place") + 'instrument=' + ctTicker + ';\naction=' + (d > 0 ? "buy" : "sell") + ';\nqty=' + str.tostring(n) +
+             ';\norder_type=market;\ntif=day;\ntake_profit=' + f_px(tp) + ';\nstop_loss=' + f_px(stp) + ';\norder_id=' + id + ';' + ctTail
+    else
+        m := '{"ticker":"' + tickerOut + '","action":"' + (d > 0 ? "buy" : "sell") + '","orderType":"market","quantity":' + str.tostring(n) +
+             ',"stopLoss":{"type":"stop","stopPrice":' + f_px(stp) + '},"takeProfit":{"limitPrice":' + f_px(tp) + '}}'
+    m
+
+// ── State ───────────────────────────────────────────────────────────────────
+var float prevRthClose = na
+var float lastRthClose = na
+var float rthOpen      = na
+var float ibH          = na
+var float ibL          = na
+var int   ibHBar       = na
+var int   ibLBar       = na
+var float c1030        = na
+var float ibPctDay     = na      // IB range as % of the 10:30 price
+var bool  dayLive      = false   // large-IB check passed at 10:30
+var int   brk          = 0       // first break: +1 up, −1 down, 2 both sides, 0 none yet
+var int   brkBar       = na
+
+// Regime: (RTH range ÷ IB range) of each completed full session; the reading is their median.
+var array<float> regHist = array.new<float>()
+var array<float> ibHist  = array.new<float>()    // IB % of price of the same number of sessions
+var float dayHi    = na      // RTH high / low of the session in progress
+var float dayLo    = na
+var int   lastRthHm = na     // time of the latest RTH bar (tells a half day from a full one)
+var float regNow   = na      // today's reading (na until regLen sessions are stored)
+
+// T2R: 0 none, 1 live (resting while flat or during a T2X trade), 2 in trade, 3 done
+var int   rSt   = 0
+var bool  rDead = false          // should be cancelled; left resting until flat
+var int   rSide = 0
+var float rE    = na
+var float rS    = na
+var float rT    = na
+var int   rQty  = 0
+var float rRisk = na
+// T2X: 0 none, 1 waiting to arm, 2 armed (live), 3 in trade, 4 done
+var int   xSt   = 0
+var bool  xDead = false
+var bool  xHeld = false          // R7 hold during the bar just closed
+var int   xSide = 0
+var float xE    = na
+var float xS    = na
+var float xT    = na
+var int   xQty  = 0
+var float xRisk = na
+// What is resting at the broker
+var bool  rAtBroker = false
+var bool  xAtBroker = false
+var float rTgtOut   = na
+var int   rQtyPine  = 0          // size of the resting order inside the strategy emulator
+var int   xQtyPine  = 0
+var int   ordSeq    = 0          // makes every oco_id unique (NinjaTrader rejects a reused one)
+var string rId      = ""
+var string xId      = ""
+var float xTgtOut   = na
+var int   seenClosed = 0
+var string rNote = "waiting for IB"
+var string xNote = "waiting for IB"
+
+// T1, re-created bar by bar (never traded here). State: 0 none, 1 order
+// working, 2 in trade, 3 won, 4 lost, 5 no trade (skipped or cancelled).
+var int   t1St   = 0
+var int   t1Side = 0
+var string t1Tag = ""
+var float t1E    = na
+var float t1S    = na
+var float t1T    = na
+var float t1Px   = na
+var int   t1Fill = na
+var string t1Note = "waiting for IB"
+
+// T3: 0 none, 1 order sent at 10:25 close, 2 in trade, 3 done
+var int    t3St   = 0
+var int    t3Side = 0
+var float  t3S    = na
+var float  t3T    = na
+var int    t3Qty  = 0
+var string t3Id   = ""
+var string t3Note = "off"
+
+evt  = ""                         // this bar's events, shown as one label: the day's line,
+evtR = ""                         // then T2R, T2X and T3 on lines of their own
+evtX = ""
+evt3 = ""
+lvR  = false                      // this bar's T2R / T2X line already shows the order's levels
+lvX  = false
+
+// ── NinjaView "market at the level": send the entry the moment price reaches it ──
+// Runs on every realtime tick, before anything below updates: it reads the orders the
+// strategy holds as of the last bar close (orders count from the bar after they are
+// placed, as in the backtest). Each order is sent at most once.
+varip string nvSentR  = ""        // id of the T2R order already sent (or skipped)
+varip string nvSentX  = ""
+varip string nvOpenId = ""        // entry sent whose trade may still be open
+varip string nvLast   = ""        // last entry sent or skipped, for the status table
+if newRTH
+    nvOpenId := ""
+if nvMarket and alertsOn and barstate.isrealtime and not newRTH
+    if rAtBroker and not rDead and rId != nvSentR and (rSide > 0 ? low <= rE : high >= rE)
+        nvSentR := rId
+        if rSide > 0 ? close > rS : close < rS
+            alert(f_nvMarket(rSide, rQty, rS, rTgtOut, rId, nvOpenId != ""), alert.freq_all)
+            nvOpenId := rId
+            nvLast := "sent T2R " + f_side(rSide) + " " + str.tostring(rQty) + " at " + f_px(close) + " (" + str.format_time(timenow, "HH:mm:ss", TZ) + ")"
+        else
+            nvLast := "skipped T2R: price already past the stop (" + str.format_time(timenow, "HH:mm:ss", TZ) + ")"
+    if xAtBroker and not xDead and xId != nvSentX and (xSide > 0 ? low <= xE : high >= xE)
+        nvSentX := xId
+        if xSide > 0 ? close > xS : close < xS
+            alert(f_nvMarket(xSide, xQty, xS, xTgtOut, xId, nvOpenId != ""), alert.freq_all)
+            nvOpenId := xId
+            nvLast := "sent T2X " + f_side(xSide) + " " + str.tostring(xQty) + " at " + f_px(close) + " (" + str.format_time(timenow, "HH:mm:ss", TZ) + ")"
+        else
+            nvLast := "skipped T2X: price already past the stop (" + str.format_time(timenow, "HH:mm:ss", TZ) + ")"
+
+// New RTH session: roll the prior close, reset the day.
+if newRTH
+    // Regime: store the session that just ended (full sessions only), then read today's median.
+    if conf and not na(dayHi) and not na(ibH) and ibH > ibL and lastRthHm >= 1500
+        array.push(regHist, (dayHi - dayLo) / (ibH - ibL))
+        if array.size(regHist) > regLen
+            array.shift(regHist)
+    regNow := array.size(regHist) >= regLen ? array.median(regHist) : na
+    dayHi := high
+    dayLo := low
+    prevRthClose := lastRthClose
+    rthOpen := open
+    ibH := high
+    ibL := low
+    ibHBar := bar_index
+    ibLBar := bar_index
+    c1030 := na
+    ibPctDay := na
+    dayLive := false
+    brk := 0
+    brkBar := na
+    rSt := 0
+    rDead := false
+    rSide := 0
+    xSt := 0
+    xDead := false
+    xHeld := false
+    xSide := 0
+    rAtBroker := false
+    xAtBroker := false
+    rNote := "building IB"
+    xNote := "building IB"
+    t3St := 0
+    t3Side := 0
+    t3Id := ""
+    t3Note := t3On ? "building IB" : "off"
+    t1St := 0
+    t1Side := 0
+    t1Tag := ""
+    t1Note := "building IB"
+    if conf
+        strategy.cancel_all()
+    if strategy.position_size != 0       // safety net: never carry a position into a new session
+        if conf
+            strategy.close_all(comment = "carried over: closed", immediately = true)
+        if alertsOn
+            alert(f_msgExit(""), alert.freq_once_per_bar_close)
+    if alertsOn and bridge == "CrossTrade"      // clean slate: no order outlives its day
+        alert(ctSweep, alert.freq_once_per_bar_close)
+    rId := ""
+    xId := ""
+else if inIB
+    if high > ibH
+        ibH := high
+        ibHBar := bar_index
+    if low < ibL
+        ibL := low
+        ibLBar := bar_index
+
+if isRTH
+    lastRthClose := close
+    lastRthHm := hm
+    if not newRTH and not na(dayHi)
+        dayHi := math.max(dayHi, high)
+        dayLo := math.min(dayLo, low)
+
+R = ibH - ibL
+// Days are expanding beyond the IB: fades are at a disadvantage (see the Regime inputs).
+regHot = not na(regNow) and regNow > regHotAt
+
+// ── 10:30 (10:25 bar close): eligibility and the T1 setup ───────────────────
+if lastIBBar and not na(ibH)
+    c1030 := close
+    ibPct = R / close * 100
+    ibPctDay := ibPct
+    if conf
+        array.push(ibHist, ibPct)
+        if array.size(ibHist) > regLen
+            array.shift(ibHist)
+    anyOn = false
+    if isWeekday
+        anyOn := array.get(ruOn, dIdx) or array.get(rdOn, dIdx) or array.get(xuOn, dIdx) or array.get(xdOn, dIdx)
+    if not anyOn
+        rNote := "no T2 on " + dayName
+        xNote := rNote
+    else if ibPct > largeIB
+        rNote := "skip: large IB " + str.tostring(ibPct, "#.##") + "% > " + str.tostring(largeIB, "#.##") + "%"
+        xNote := rNote
+        evt := rNote
+    else
+        dayLive := true
+        rNote := "waiting for the first break"
+        xNote := rNote
+
+    // T3: only on the days T2 skips for a large IB
+    if t3On
+        if not (isWeekday and ibPct > largeIB and R > 0)
+            t3Note := "no T3: IB " + str.tostring(ibPct, "#.##") + "% (needs > " + str.tostring(largeIB, "#.##") + "%)"
+        else if not t3DayOn
+            t3Note := "no T3 on " + dayName
+        else if t3RegOff and regHot
+            t3Note := "no T3: days are expanding beyond the IB (regime " + str.tostring(regNow, "#.##") + " > " + str.tostring(regHotAt, "#.##") + ")"
+            evt3 := f_add(evt3, t3Note)
+        else
+            pos0 = (close - ibL) / R
+            if pos0 >= t3Zone and pos0 <= 1 - t3Zone
+                t3Note := "no T3: 10:25 close is mid-IB (" + str.tostring(pos0 * 100, "#") + "%)"
+            else
+                sd3 = pos0 > 1 - t3Zone ? -1 : 1
+                s3 = sd3 < 0 ? f_tickUp(ibH + t3StopX * R) : f_tickDn(ibL - t3StopX * R)
+                tg3 = sd3 < 0 ? f_tickDn(ibH - t3Back * R) : f_tickUp(ibL + t3Back * R)
+                n3 = f_lots(t3Risk > 0 ? t3Risk : riskCap, math.abs(close - s3))
+                rk3 = n3 * math.abs(close - s3) * syminfo.pointvalue
+                if (tg3 - close) * sd3 <= 0
+                    t3Note := "no T3: price already past the target"
+                else if maxRisk > 0 and rk3 > maxRisk
+                    t3Note := "no T3: " + str.tostring(n3) + " lot risks $" + str.tostring(rk3, "#")
+                else
+                    t3St := 1
+                    t3Side := sd3
+                    t3S := s3
+                    t3T := tg3
+                    t3Qty := n3
+                    ordSeq += 1
+                    t3Id := "T3-" + str.format_time(time, "yyMMdd", TZ) + "-" + str.tostring(ordSeq)
+                    if conf
+                        strategy.entry("T3", sd3 > 0 ? strategy.long : strategy.short, qty = n3)
+                        strategy.exit("T3 exit", from_entry = "T3", stop = s3, limit = tg3)
+                    if alertsOn
+                        alert(f_msgMarket(sd3, n3, s3, tg3, t3Id), alert.freq_once_per_bar_close)
+                    t3Note := f_side(sd3) + " " + str.tostring(n3) + " at the 10:30 open · S " + f_px(s3) + " · T " + f_px(tg3) + " · risk $" + str.tostring(rk3, "#")
+                    evt3 := f_add(evt3, t3Note)
+
+    gapPct = na(prevRthClose) ? na : math.abs(rthOpen - prevRthClose) / prevRthClose * 100
+    ib2Hi = ibHBar > ibLBar
+    ib2Lo = ibLBar > ibHBar
+    zone = ib2Hi ? (ibH - close) / R * 100 : ib2Lo ? (close - ibL) / R * 100 : na
+    t1St := 5
+    if not t1DayOn
+        t1Note := "day off"
+    else if R <= 0 or not (ib2Hi or ib2Lo)
+        t1Note := "no IB2"
+    else if na(gapPct)
+        t1Note := "no prior close"
+    else if gapPct >= t1GapMax
+        t1Note := "skip: gap " + str.tostring(gapPct, "#.##") + "%"
+    else if zone <= t1ZoneMax and t1Z1On
+        t1Side := ib2Hi ? 1 : -1
+        t1Tag := "Z1"
+        t1E := math.round_to_mintick(ib2Hi ? ibH - t1LongE * R : ibL + t1ShortE * R)
+        t1S := math.round_to_mintick(ib2Hi ? ibH - t1LongS * R : ibL + t1ShortS * R)
+        t1T := math.round_to_mintick(ib2Hi ? ibH - t1LongT * R : ibL + t1ShortT * R)
+        t1Risk = f_lots(riskCap, math.abs(t1E - t1S)) * math.abs(t1E - t1S) * syminfo.pointvalue
+        if maxRisk > 0 and t1Risk > maxRisk
+            t1Note := "Z1 skipped: risk above ceiling"
+        else
+            t1St := 1
+            t1Note := "Z1 " + f_side(t1Side) + " working @ " + f_px(t1E)
+    else if zone >= t1Z3aLo and zone <= t1Z3aHi and t1Z3aOn
+        t1Side := ib2Hi ? -1 : 1
+        t1Tag := "Z3a"
+        t1E := close
+        t1S := math.round_to_mintick(ib2Hi ? ibH - t1Z3aS * R : ibL + t1Z3aS * R)
+        t1T := math.round_to_mintick(ib2Hi ? ibL : ibH)
+        t1Risk = f_lots(riskCap, math.abs(t1E - t1S)) * math.abs(t1E - t1S) * syminfo.pointvalue
+        if maxRisk > 0 and t1Risk > maxRisk
+            t1Note := "Z3a skipped: risk above ceiling"
+        else
+            t1St := 2
+            t1Px := close
+            t1Fill := bar_index
+            t1Note := "Z3a " + f_side(t1Side) + " in @ " + f_px(t1Px)
+    else
+        t1Note := "no T1: zone " + str.tostring(zone, "#") + "%"
+
+// ── T1, bar by bar (backtest rules: stop before target, no target on the fill bar)
+if afterIB and t1St == 1
+    if hm >= t1Cutoff
+        t1St := 5
+        t1Note := "Z1 cancelled at cutoff"
+    else
+        touched = t1Side > 0 ? low <= t1E : high >= t1E
+        if touched
+            vwapBlocked = t1Vwap and (t1Side > 0 ? not (vwapRTH[1] < t1E) : not (vwapRTH[1] > t1E))
+            px = t1Side > 0 ? math.min(open, t1E) : math.max(open, t1E)
+            if vwapBlocked
+                t1St := 5
+                t1Note := "Z1 skipped: VWAP"
+            else if (t1Side > 0 and px <= t1S) or (t1Side < 0 and px >= t1S)
+                t1St := 5
+                t1Note := "Z1 skipped: gapped through stop"
+            else
+                t1St := 2
+                t1Px := px
+                t1Fill := bar_index
+                t1Note := "Z1 " + f_side(t1Side) + " in @ " + f_px(t1Px)
+
+if afterIB and t1St == 2 and bar_index >= t1Fill
+    hitStop = t1Side > 0 ? low <= t1S : high >= t1S
+    hitTgt  = bar_index > t1Fill and (t1Side > 0 ? high >= t1T : low <= t1T)
+    if hitStop
+        t1St := 4
+    else if hitTgt
+        t1St := 3
+    else if hm == flatAt
+        t1St := (close - t1Px) * t1Side > 0 ? 3 : 4
+    if t1St >= 3
+        t1Note := t1Tag + " " + (t1St == 3 ? "WON" : "LOST") + " " + str.format_time(time, "HH:mm", TZ)
+
+t1In   = t1St == 2 or t1St == 3 or t1St == 4
+t1Lost = t1St == 4
+t1Won  = t1St == 3
+
+// ── Fills seen at this bar close ────────────────────────────────────────────
+if strategy.closedtrades > seenClosed
+    for k = seenClosed to strategy.closedtrades - 1
+        eid = strategy.closedtrades.entry_id(k)
+        if eid == "T2R" and rSt != 3
+            rSt := 3
+            rAtBroker := false
+            rNote := "closed " + (strategy.closedtrades.profit(k) > 0 ? "+" : "") + str.tostring(strategy.closedtrades.profit(k), "#") + " $"
+        else if eid == "T2X" and xSt != 4
+            xSt := 4
+            xAtBroker := false
+            xNote := "closed " + (strategy.closedtrades.profit(k) > 0 ? "+" : "") + str.tostring(strategy.closedtrades.profit(k), "#") + " $"
+        else if eid == "T3" and t3St != 3
+            t3St := 3
+            t3Note := "closed " + (strategy.closedtrades.profit(k) > 0 ? "+" : "") + str.tostring(strategy.closedtrades.profit(k), "#") + " $"
+    seenClosed := strategy.closedtrades
+
+openId = strategy.opentrades > 0 ? strategy.opentrades.entry_id(0) : ""
+if openId == "T2R" and rSt != 2
+    rSt := 2
+    rAtBroker := false
+    rNote := "in trade: " + f_side(rSide) + " " + str.tostring(rQty)
+    evtR := f_add(evtR, "filled")
+if openId == "T2X" and xSt != 3
+    xSt := 3
+    xAtBroker := false
+    xNote := "in trade: " + f_side(xSide) + " " + str.tostring(xQty)
+    evtX := f_add(evtX, "filled")
+if openId == "T3" and t3St == 1
+    t3St := 2
+    t3Note := "in trade: " + f_side(t3Side) + " " + str.tostring(t3Qty) + " · S " + f_px(t3S) + " · T " + f_px(t3T)
+    evt3 := f_add(evt3, "filled")
+
+// An order that should have been cancelled filled (handoff while it waited):
+// exit it at this bar's close.
+exitedDead = false
+if openId == "T2R" and rDead
+    if conf
+        strategy.close("T2R", comment = "cancelled order filled", immediately = true)
+    if alertsOn and not nvMarket          // market mode never sent a cancelled order
+        alert(f_msgExit(rId), alert.freq_once_per_bar_close)
+        if bridge == "NinjaView"
+            alert(nvClose, alert.freq_once_per_bar_close)
+        if bridge == "CrossTrade"           // its flatten also cancels the other resting order:
+            xAtBroker := false              // re-place it at the next flat bar close
+    rSt := 3
+    rDead := false
+    exitedDead := true
+    rNote := "exited: filled after it was cancelled"
+    evtR := f_add(evtR, rNote)
+if openId == "T2X" and xDead
+    if conf
+        strategy.close("T2X", comment = "cancelled order filled", immediately = true)
+    if alertsOn and not nvMarket
+        alert(f_msgExit(xId), alert.freq_once_per_bar_close)
+        if bridge == "NinjaView"
+            alert(nvClose, alert.freq_once_per_bar_close)
+        if bridge == "CrossTrade"
+            rAtBroker := false
+    xSt := 4
+    xDead := false
+    exitedDead := true
+    xNote := "exited: filled after it was cancelled"
+    evtX := f_add(evtX, xNote)
+
+inTrade = strategy.opentrades > 0 and not exitedDead
+
+// ── Gates and cutoffs (deferred while a trade is on) ────────────────────────
+// R7: a touch of the T2X entry while it was held back ends T2X for the day.
+if xSt == 2 and xHeld and (xSide > 0 ? low <= xE : high >= xE)
+    xSt := 4
+    xNote := "skipped: entry touched before T1 was in (R7)"
+    evtX := f_add(evtX, xNote)
+
+if rSt == 1 and not rDead
+    why = useR1 and t1Won ? "T1 won (R1)" : (nextHm >= cutR or nextHm < 930) ? "not filled by cutoff" : ""
+    if why != ""
+        if inTrade and rAtBroker
+            rDead := true
+            rNote := "to cancel when flat: " + why
+        else
+            rSt := 3
+            rNote := "cancelled: " + why
+        evtR := f_add(evtR, rNote)
+
+if (xSt == 1 or xSt == 2) and not xDead
+    why = useR3 and t1Lost ? "T1 lost (R3)" : useR2 and t1Won and t1Side != xSide ? "T1 won at the opposite edge (R2)" :
+         (nextHm >= cutX or nextHm < 930) ? (xSt == 2 ? "not filled by cutoff" : "no close back inside the IB before cutoff") :
+         useR7 and isMonday and t1St == 5 ? "Monday without a T1 trade (R7)" : ""
+    if why != ""
+        if inTrade and xAtBroker
+            xDead := true
+            xNote := "to cancel when flat: " + why
+        else
+            xSt := 4
+            xNote := "cancelled: " + why
+        evtX := f_add(evtX, xNote)
+
+// ── First break of the IB (from 10:30): set up both ─────────────────────────
+if afterIB and brk == 0 and not na(c1030)
+    up = high > ibH
+    dn = low < ibL
+    if up or dn
+        brk := up and dn ? 2 : up ? 1 : -1
+        brkBar := bar_index
+        if dayLive
+            isUp = brk == 1
+            if brk == 2
+                rNote := "no trade: first bar broke both sides"
+                xNote := rNote
+            else
+                // T2R
+                ext = isUp ? high - ibH : ibL - low
+                if not array.get(isUp ? ruOn : rdOn, dIdx)
+                    rNote := "no T2R: break " + (isUp ? "up" : "down") + " is off on " + dayName
+                else if ext >= filterB * R
+                    rNote := "no T2R: break bar ran " + str.tostring(ext / R, "#.##") + "R"
+                else if nextHm >= cutR or nextHm < 930
+                    rNote := "no T2R: break after cutoff"
+                else if useR1 and t1Won
+                    rNote := "no T2R: T1 already won (R1)"
+                else if regHot and rRegMult <= 0
+                    rNote := "no T2R: days are expanding beyond the IB (regime " + str.tostring(regNow, "#.##") + ")"
+                else
+                    e = array.get(isUp ? ruE : rdE, dIdx)
+                    s = array.get(isUp ? ruS : rdS, dIdx)
+                    t = array.get(isUp ? ruT : rdT, dIdx)
+                    rk = array.get(isUp ? ruRk : rdRk, dIdx)
+                    // IB-size sizing: more risk when the IB is in the chosen band.
+                    // Regime: optionally less risk while days are expanding beyond the IB.
+                    rMult = (ibSizeOn and ibPctDay >= ibSizeLo and ibPctDay < ibSizeHi ? ibSizeX : 1.0) * (regHot ? rRegMult : 1.0)
+                    eN = isUp ? f_tickUp(ibH + e * R) : f_tickDn(ibL - e * R)
+                    sN = isUp ? f_tickUp(ibH + s * R) : f_tickDn(ibL - s * R)
+                    tN = isUp ? f_tickDn(ibH - t * R) : f_tickUp(ibL + t * R)
+                    n = f_lots((rk > 0 ? rk : riskCap) * rMult, math.abs(eN - sN))
+                    rkN = n * math.abs(eN - sN) * syminfo.pointvalue
+                    if isUp ? high >= eN : low <= eN
+                        rNote := "no T2R: the breaking bar already hit the entry"
+                    else if maxRisk > 0 and rkN > maxRisk * math.max(rMult, 1.0)
+                        rNote := "no T2R: " + str.tostring(n) + " lot risks $" + str.tostring(rkN, "#")
+                    else
+                        rSt := 1
+                        rSide := isUp ? -1 : 1
+                        rE := eN
+                        rS := sN
+                        rT := tN
+                        rQty := n
+                        rRisk := rkN
+                        rNote := f_side(rSide) + " " + str.tostring(n) + " @ " + f_px(eN) + " · S " + f_px(sN) + " · T " + f_px(tN) + " · risk $" + str.tostring(rkN, "#") +
+                             (rMult != 1.0 ? " (IB " + str.tostring(ibPctDay, "#.##") + "%" + (regHot and rRegMult != 1.0 ? ", expanding" : "") + ": ×" + str.tostring(rMult) + ")" : "")
+                // T2X
+                if not array.get(isUp ? xuOn : xdOn, dIdx)
+                    xNote := "no T2X: break " + (isUp ? "up" : "down") + " is off on " + dayName
+                else if nextHm >= cutX or nextHm < 930
+                    xNote := "no T2X: break after cutoff"
+                else if useR3 and t1Lost
+                    xNote := "no T2X: T1 already lost (R3)"
+                else if useR2 and t1Won and t1Side != (isUp ? 1 : -1)
+                    xNote := "no T2X: T1 already won at the opposite edge (R2)"
+                else if useR7 and isMonday and t1St == 5
+                    xNote := "no T2X: Monday without a T1 trade (R7)"
+                else
+                    e = array.get(isUp ? xuE : xdE, dIdx)
+                    s = array.get(isUp ? xuS : xdS, dIdx)
+                    t = array.get(isUp ? xuT : xdT, dIdx)
+                    rk = array.get(isUp ? xuRk : xdRk, dIdx)
+                    eN = isUp ? f_tickDn(ibH - e * R) : f_tickUp(ibL + e * R)
+                    sN = isUp ? f_tickDn(ibH - s * R) : f_tickUp(ibL + s * R)
+                    tN = isUp ? f_tickUp(ibH + t * R) : f_tickDn(ibL - t * R)
+                    n = f_lots(rk > 0 ? rk : riskCap, math.abs(eN - sN))
+                    rkN = n * math.abs(eN - sN) * syminfo.pointvalue
+                    if maxRisk > 0 and rkN > maxRisk
+                        xNote := "no T2X: " + str.tostring(n) + " lot risks $" + str.tostring(rkN, "#")
+                    else
+                        xSt := 1
+                        xSide := isUp ? 1 : -1
+                        xE := eN
+                        xS := sN
+                        xT := tN
+                        xQty := n
+                        xRisk := rkN
+                        xNote := f_side(xSide) + " " + str.tostring(n) + " @ " + f_px(eN) + " · S " + f_px(sN) + " · T " + f_px(tN) + " · waiting for a close back inside the IB"
+            if brk == 2
+                evt := f_add(evt, "IB broken both ways on one bar: no T2 today")
+            else
+                evt := f_add(evt, "IB break " + (brk == 1 ? "up" : "down"))
+                evtR := f_add(evtR, rNote)
+                evtX := f_add(evtX, xNote)
+                lvR := rSt == 1
+                lvX := xSt == 1
+
+// ── T2X arming: first close back inside the IB after the break bar ──────────
+if xSt == 1 and afterIB and bar_index > brkBar and (xSide > 0 ? close < ibH : close > ibL)
+    xSt := 2
+    evtX := f_add(evtX, "armed")
+
+// ── Broker sync: only while flat ────────────────────────────────────────────
+xHeld := false
+if not inTrade and not exitedDead and afterIB and nextHm >= 930 and nextHm < 1600
+    wantR = rSt == 1 and not rDead
+    r7Hold = xSt == 2 and not xDead and useR7 and isMonday and not t1In
+    wantX = xSt == 2 and not xDead and not r7Hold
+    xHeld := r7Hold
+    tgtR = wantR ? (alignOn and wantX ? f_closer(rSide, rT, xE) : rT) : na
+    tgtX = wantX ? (alignOn and wantR ? f_closer(xSide, xT, rE) : xT) : na
+    stale = rDead or xDead
+    changed = wantR != rAtBroker or wantX != xAtBroker or (wantR and tgtR != rTgtOut) or (wantX and tgtX != xTgtOut)
+    if changed or stale
+        // Bridge: cancel everything resting, then re-place what is still valid.
+        // Strategy: cancel what is no longer wanted; re-calling entry/exit with
+        // the same id updates the rest in place.
+        // NinjaView market mode: nothing rests at NinjaTrader, so nothing to cancel or place.
+        if alertsOn and not nvMarket and bridge != "TradersPost"
+            if rAtBroker
+                alert(f_msgCancel(rId), alert.freq_once_per_bar_close)
+            if xAtBroker
+                alert(f_msgCancel(xId), alert.freq_once_per_bar_close)
+        else if alertsOn and bridge == "TradersPost" and (rAtBroker or xAtBroker)
+            alert(f_msgCancel(""), alert.freq_once_per_bar_close)
+        if not wantR and conf
+            strategy.cancel("T2R")
+            strategy.cancel("T2R exit")
+        if not wantX and conf
+            strategy.cancel("T2X")
+            strategy.cancel("T2X exit")
+        if rDead
+            rSt := 3
+            rDead := false
+            rNote := "cancelled (was waiting for flat)"
+        if xDead
+            xSt := 4
+            xDead := false
+            xNote := "cancelled (was waiting for flat)"
+        rAtBroker := false
+        xAtBroker := false
+        if wantR
+            if conf
+                strategy.order("T2R", rSide > 0 ? strategy.long : strategy.short, qty = rQty, limit = rE)
+                strategy.exit("T2R exit", from_entry = "T2R", stop = rS, limit = tgtR)
+            rQtyPine := rQty
+            ordSeq += 1
+            rId := "T2R-" + str.format_time(time, "yyMMdd", TZ) + "-" + str.tostring(ordSeq)
+            if alertsOn and not nvMarket
+                alert(f_msgPlace(rSide, rQty, rE, rS, tgtR, rId), alert.freq_once_per_bar_close)
+            rAtBroker := true
+            rTgtOut := tgtR
+            rNote := "working: " + f_side(rSide) + " " + str.tostring(rQty) + " @ " + f_px(rE) + " · S " + f_px(rS) + " · T " + f_px(tgtR) + (tgtR != rT ? " (aligned)" : "")
+        if wantX
+            if conf
+                strategy.order("T2X", xSide > 0 ? strategy.long : strategy.short, qty = xQty, limit = xE)
+                strategy.exit("T2X exit", from_entry = "T2X", stop = xS, limit = tgtX)
+            xQtyPine := xQty
+            ordSeq += 1
+            xId := "T2X-" + str.format_time(time, "yyMMdd", TZ) + "-" + str.tostring(ordSeq)
+            if alertsOn and not nvMarket
+                alert(f_msgPlace(xSide, xQty, xE, xS, tgtX, xId), alert.freq_once_per_bar_close)
+            xAtBroker := true
+            xTgtOut := tgtX
+            xNote := "working: " + f_side(xSide) + " " + str.tostring(xQty) + " @ " + f_px(xE) + " · S " + f_px(xS) + " · T " + f_px(tgtX) + (tgtX != xT ? " (aligned)" : "")
+        if wantR
+            evtR := f_add(evtR, f_placed(lvR, rE, tgtR, tgtR != rT))
+        if wantX
+            evtX := f_add(evtX, f_placed(lvX, xE, tgtX, tgtX != xT))
+    if r7Hold and xNote != "held until T1 is in (R7)"
+        xNote := "held until T1 is in (R7)"
+        evtX := f_add(evtX, xNote)
+else if inTrade and xSt == 2 and not xAtBroker and not xDead and xNote != "waiting: T2R is in a trade"
+    xNote := "waiting: T2R is in a trade"
+    evtX := f_add(evtX, xNote)
+
+// ── Handoff emulation (strategy only; nothing is sent to the bridge) ───────
+// At the broker, when a trade's target and the other resting entry sit at the
+// same price, both fill: the trade closes and the new one opens at full size.
+// TradingView's emulator would instead let the resting order spend part of its
+// size closing the trade. So while a trade is on and the other order rests at
+// its target, that order also carries the trade's size and does the closing.
+if conf and inTrade
+    posQty = int(math.abs(strategy.position_size))
+    if openId == "T2X" and rAtBroker and xTgtOut == rE
+        strategy.order("T2R", rSide > 0 ? strategy.long : strategy.short, qty = rQty + posQty, limit = rE)
+        strategy.exit("T2X exit", from_entry = "T2X", stop = xS, limit = na)
+        rQtyPine := rQty + posQty
+    else if openId == "T2R" and xAtBroker and rTgtOut == xE
+        strategy.order("T2X", xSide > 0 ? strategy.long : strategy.short, qty = xQty + posQty, limit = xE)
+        strategy.exit("T2R exit", from_entry = "T2R", stop = rS, limit = na)
+        xQtyPine := xQty + posQty
+else if conf and not exitedDead
+    // Flat again without a handoff: the resting order goes back to its own size.
+    if rAtBroker and rQtyPine != rQty
+        strategy.order("T2R", rSide > 0 ? strategy.long : strategy.short, qty = rQty, limit = rE)
+        rQtyPine := rQty
+    if xAtBroker and xQtyPine != xQty
+        strategy.order("T2X", xSide > 0 ? strategy.long : strategy.short, qty = xQty, limit = xE)
+        xQtyPine := xQty
+
+// ── Flatten at 15:55 bar close ──────────────────────────────────────────────
+if hm == flatAt
+    // Cancel resting orders first, then flatten: a cancel issued after the close
+    // order in the same bar would cancel the close itself (and the trade's bracket).
+    if conf
+        strategy.cancel_all()
+    exitId = openId == "T3" ? t3Id : nvMarket ? nvOpenId : openId == "T2R" ? rId : openId == "T2X" ? xId : ""
+    if strategy.position_size != 0 or (nvMarket and nvOpenId != "")
+        if conf and strategy.position_size != 0
+            strategy.close_all(comment = "EOD", immediately = true)
+        if alertsOn
+            alert(f_msgExit(exitId), alert.freq_once_per_bar_close)
+            if bridge == "NinjaView" and exitId != ""
+                alert(nvClose, alert.freq_once_per_bar_close)
+    if alertsOn and not nvMarket and bridge != "TradersPost"
+        if rAtBroker
+            alert(f_msgCancel(rId), alert.freq_once_per_bar_close)
+        if xAtBroker
+            alert(f_msgCancel(xId), alert.freq_once_per_bar_close)
+    else if alertsOn and bridge == "TradersPost" and (rAtBroker or xAtBroker)
+        alert(f_msgCancel(""), alert.freq_once_per_bar_close)
+    if alertsOn and bridge == "CrossTrade"      // clear any bracket leg left working (they are GTC)
+        alert(ctSweep, alert.freq_once_per_bar_close)
+    rAtBroker := false
+    xAtBroker := false
+    if conf
+        nvOpenId := ""
+
+// Flat at a bar close: no NinjaView trade can still be open (its bracket closed it).
+if conf and strategy.position_size == 0
+    nvOpenId := ""
+
+lblTxt = f_line(f_line(f_line(evt == "" ? "" : "T2 · " + evt, "T2R · ", evtR), "T2X · ", evtX), "T3 · ", evt3)
+if showLabels and lblTxt != ""
+    label.new(bar_index, high, lblTxt, yloc = yloc.abovebar, style = label.style_label_down,
+         color = color.new(color.teal, 25), textcolor = color.white, size = size.small, textalign = text.align_left)
+
+// ── Visuals ─────────────────────────────────────────────────────────────────
+showDay = isRTH and hm >= 1030
+plot(showDay ? ibH : na, "IBH", color.new(color.gray, 0), 1, plot.style_linebr)
+plot(showDay ? ibL : na, "IBL", color.new(color.gray, 0), 1, plot.style_linebr)
+plot(showDay and rSide != 0 ? rE : na, "T2R entry", color.new(color.teal, 0), 2, plot.style_linebr)
+plot(showDay and rSide != 0 ? rS : na, "T2R stop",  color.new(color.red, 30), 1, plot.style_linebr)
+plot(showDay and xSide != 0 ? xE : na, "T2X entry", color.new(color.orange, 0), 2, plot.style_linebr)
+plot(showDay and xSide != 0 ? xS : na, "T2X stop",  color.new(color.red, 30), 1, plot.style_linebr)
+
+var table tb = table.new(position.top_right, 1, 6, bgcolor = color.new(color.black, 20))
+if barstate.islast
+    alertNote = not sendAlerts ? "Alerts off" : ctMissing ? "⚠ CrossTrade key or account is blank: NO alerts are sent" :
+         "Alerts on · " + bridge + (bridge == "NinjaView" ? " · " + (nvMarket ? "market at the level" : "resting limit") : "") +
+         (nvMarket and nvLast != "" ? " · " + nvLast : "")
+    table.cell(tb, 0, 3, alertNote, text_color = ctMissing and sendAlerts ? color.orange : color.silver, text_size = size.small, text_halign = text.align_left)
+    table.cell(tb, 0, 0, "T2R · " + rNote, text_color = color.white, text_size = size.small, text_halign = text.align_left)
+    table.cell(tb, 0, 1, "T2X · " + xNote, text_color = color.white, text_size = size.small, text_halign = text.align_left)
+    table.cell(tb, 0, 2, "T1 (gates only) · " + t1Note, text_color = color.silver, text_size = size.small, text_halign = text.align_left)
+    table.cell(tb, 0, 4, "T3 · " + t3Note, text_color = t3On ? color.white : color.gray, text_size = size.small, text_halign = text.align_left)
+    // Regime read-out: the reading, and on how many of the stored sessions T2 was sidelined by a large IB.
+    bigIbN = 0
+    if array.size(ibHist) > 0
+        for i = 0 to array.size(ibHist) - 1
+            if array.get(ibHist, i) > largeIB
+                bigIbN += 1
+    regTxt = na(regNow) ? "Regime · warming up (" + str.tostring(array.size(regHist)) + " of " + str.tostring(regLen) + " sessions)" :
+         "Regime · " + str.tostring(regNow, "#.##") + (regNow > regHotAt ? " EXPANDING: fades at a disadvantage" : regNow <= regCalmAt ? " calm: fades favoured" : " normal")
+    regTxt := regTxt + " · large-IB days " + str.tostring(bigIbN) + " of " + str.tostring(array.size(ibHist))
+    table.cell(tb, 0, 5, regTxt, text_color = regHot ? color.orange : color.silver, text_size = size.small, text_halign = text.align_left)

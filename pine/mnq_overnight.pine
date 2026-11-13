@@ -1,0 +1,444 @@
+//@version=6
+// ============================================================================
+// MNQ · Overnight: London pullback (LX) + Globex first-hour momentum (GM)
+//                              Chart: MNQ1! 15-minute, extended hours ON
+// ----------------------------------------------------------------------------
+// Two setups for the hours the T2 script is idle. Each trades at most once per
+// session, they never overlap each other, and both are flat long before 9:30.
+//
+// LX · London pullback — the range is 02:00–03:00 ET, the hour before London opens.
+//   After 03:00, the first bar that breaks the range sets the direction. After the
+//   first later close back inside the range, rest a limit inside it in the break's
+//   direction (same shape as T2X):
+//     up   → LONG  RH − e·R · stop RH − s·R · target RH + t·R
+//     down → SHORT RL + e·R · stop RL + s·R · target RL − t·R
+//   Defaults e 0.30 · s 0.80 · t 1.00. No new entry from 06:00; flat at 07:00.
+//   Skip: the first bar breaks both sides; 1 contract risks more than the ceiling.
+//
+// GM · Globex first-hour momentum — the range is 18:00–19:00 ET, the first hour
+//   after the daily reopen. At the 19:00 close of that hour, if price is in its
+//   outer zone, go WITH it at the next open:
+//     top zone    → LONG  · stop RH − s·R · target RH + t·R
+//     bottom zone → SHORT · stop RL + s·R · target RL − t·R
+//   Defaults zone 0.20 · s 0.85 · t 0.30. Flat at 23:00. A small, frequent winner
+//   with a wide stop: about three wins in four, and a loss costs about 1.7 wins.
+//
+// Tested on TradingView exports with conservative fills (a limit must be traded
+//   through by a tick; when a bar holds both the stop and the target, the stop
+//   counts), $200 risk, $0.62 per contract per side, 1 tick slippage on stops:
+//     LX  15-min bars, Jan 2 – Nov 13 2026: 160 trades, PF 1.8, +$8.8K, max drawdown $1.2K;
+//         Jan–May PF 1.8, last six months PF 1.8. 5-min bars Aug–Nov: 60 trades, PF 1.9.
+//     GM  15-min bars, same dates: 90 trades, PF 1.9, +$3.1K, max drawdown $0.6K;
+//         Jan–May PF 1.9, last six months PF 1.8.
+//   These settings were chosen from a search over many windows and levels on those
+//   same months, so the true edge is smaller than the figures above; nearby settings
+//   for LX made PF 1.2–1.5. There is no earlier intraday data to confirm either one.
+//   Run both on a simulator account before trading them.
+//
+// Clock: all times are New York. London opens at 03:00 ET except for about three
+//   weeks a year (mid-March, and late October to early November) when it opens at
+//   04:00 ET; the test used the New York clock throughout, and so does this script.
+//
+// Automation: same bridges and message formats as the T2 script. ONE alert,
+//   "alert() function calls only", Webhook URL = your bridge, Message = blank.
+//   Alerts are OFF by default here. GM is a market entry with its stop and target.
+//   LX rests a limit with a bracket (CrossTrade, TradersPost, NinjaView "Resting
+//   limit"), or with NinjaView "Market at the level" is held here and sent as a
+//   market order with its stop and target the moment price reaches it.
+//   Its closes and cancels are sent at 23:00 and 07:00 (and a CrossTrade sweep at
+//   18:00 and 02:00), when the T2 script has nothing working on the account.
+// ============================================================================
+strategy("MNQ · Overnight (London pullback + Globex momentum)", shorttitle = "ON", overlay = true, pyramiding = 0,
+     process_orders_on_close = false, initial_capital = 50000, margin_long = 0, margin_short = 0,
+     commission_type = strategy.commission.cash_per_contract, commission_value = 0.62,
+     slippage = 1, max_labels_count = 500, calc_on_every_tick = true)
+
+// ── Inputs ──────────────────────────────────────────────────────────────────
+G1 = "Risk"
+riskCap   = input.float(200, "Risk per trade ($)", minval = 1, group = G1)
+maxRisk   = input.float(300, "Skip if the trade risks more than ($, 0 = off)", minval = 0, group = G1,
+     tooltip = "Size = max(1, floor(risk $ ÷ stop $)). When 1 contract risks more than this ceiling the trade is skipped.")
+
+G2 = "LX · London pullback"
+lxOn      = input.bool(true,  "Trade LX", group = G2)
+lxStart   = input.int(200,    "Range from (HHMM ET)", inline = "lxr", group = G2)
+lxEnd     = input.int(300,    "to", inline = "lxr", group = G2)
+lxE       = input.float(0.30, "Entry inside the broken edge (× R)", minval = 0, step = 0.05, group = G2)
+lxS       = input.float(0.80, "Stop inside the broken edge (× R)", minval = 0.05, step = 0.05, group = G2,
+     tooltip = "Tested 0.75 to 0.90 with entries 0.2 to 0.4: every combination was profitable in both halves of 2026. Tighter than 0.75 lost in Jan–May.")
+lxT       = input.float(1.00, "Target beyond the broken edge (× R)", minval = 0.05, step = 0.05, group = G2)
+lxCutMin  = input.int(180,    "No new entry this many minutes after the range (180 = 06:00)", minval = 15, group = G2)
+lxHoldMin = input.int(240,    "Flat this many minutes after the range (240 = 07:00)", minval = 30, group = G2)
+
+G3 = "GM · Globex first-hour momentum"
+gmOn      = input.bool(true,  "Trade GM", group = G3)
+gmStart   = input.int(1800,   "Range from (HHMM ET)", inline = "gmr", group = G3)
+gmEnd     = input.int(1900,   "to", inline = "gmr", group = G3)
+gmZone    = input.float(0.20, "Outer zone at the range close (× R from the edge)", minval = 0.05, maxval = 0.5, step = 0.05, group = G3)
+gmS       = input.float(0.85, "Stop inside that edge (× R)", minval = 0.1, step = 0.05, group = G3)
+gmT       = input.float(0.30, "Target beyond that edge (× R)", minval = 0.05, step = 0.05, group = G3)
+gmHoldMin = input.int(240,    "Flat this many minutes after the range (240 = 23:00)", minval = 30, group = G3)
+
+G6 = "Automation"
+sendAlerts = input.bool(false, "Send webhook alerts", group = G6)
+showLabels = input.bool(true, "Show status labels on the chart", group = G6)
+bridge     = input.string("NinjaView", "Bridge", options = ["NinjaView", "CrossTrade", "TradersPost"], group = G6)
+ntAccount  = input.string("Sim101", "NinjaView: NinjaTrader account (exact name; comma-separate for several)", group = G6)
+ntTicker   = input.string("MNQ 12-26", "NinjaView: NinjaTrader instrument (update at each quarterly roll)", group = G6)
+nvMode     = input.string("Market at the level", "NinjaView: LX entries", options = ["Market at the level", "Resting limit"], group = G6,
+     tooltip = "Market at the level: nothing rests at NinjaTrader; the moment price reaches the LX entry, a market order with its stop and target is sent. Needs Properties → Recalculate → On every tick. Resting limit ('oco limit'): use only once a Send to NT8 test shows the entry resting at its price with no target or stop until it fills.")
+ctKey      = input.string("", "CrossTrade: secret key", group = G6, display = display.none,
+     tooltip = "From your CrossTrade dashboard. It is stored in this chart's settings and sent inside every alert, so keep the chart private.")
+ctAccount  = input.string("", "CrossTrade: account (exact name)", group = G6)
+ctInstr    = input.string("", "CrossTrade: instrument (blank = this chart's ticker)", group = G6)
+ctDest     = input.string("Tradovate", "CrossTrade: destination", options = ["Tradovate", "NinjaTrader"], group = G6)
+tickerOut  = input.string("MNQ1!", "TradersPost: ticker sent to bridge", group = G6)
+
+ctMissing = bridge == "CrossTrade" and (ctKey == "" or ctAccount == "")
+alertsOn  = sendAlerts and not ctMissing
+nvMarket  = bridge == "NinjaView" and nvMode == "Market at the level"
+// The script runs on every realtime tick (for NinjaView's market entries). Everything
+// that changes the strategy's own orders runs only at the bar's close, as in the backtest.
+conf      = barstate.isconfirmed
+
+// ── Session clock (America/New_York) ────────────────────────────────────────
+if not (timeframe.isminutes and (timeframe.multiplier == 15 or timeframe.multiplier == 5))
+    runtime.error("This strategy is built and tested on a 15-minute chart (5-minute also works).")
+if syminfo.session == session.regular
+    runtime.error("Switch the chart to extended trading hours: these setups trade overnight.")
+
+TZ     = "America/New_York"
+hm     = hour(time, TZ) * 100 + minute(time, TZ)
+nextT  = time + timeframe.in_seconds() * 1000
+nextHm = hour(nextT, TZ) * 100 + minute(nextT, TZ)
+inL    = hm >= lxStart and hm < lxEnd
+inG    = hm >= gmStart and hm < gmEnd
+newL   = inL and not inL[1]
+newG   = inG and not inG[1]
+
+// ── Helpers and webhook messages (the same formats as the T2 script) ────────
+f_px(x) => str.tostring(x, "#.##")
+f_nvPx(x) => str.tostring(x, "0.00")
+// Levels are rounded to a tick away from the side price reaches them from.
+f_tickUp(x) => math.ceil(x / syminfo.mintick - 1e-6) * syminfo.mintick
+f_tickDn(x) => math.floor(x / syminfo.mintick + 1e-6) * syminfo.mintick
+f_lots(rk, pts) => math.max(1, math.floor(rk / (pts * syminfo.pointvalue)))
+f_side(d) => d > 0 ? "LONG" : "SHORT"
+f_nv(a) =>
+    '{"alert":"' + a + '","account":"' + ntAccount + '","ticker":"' + ntTicker + '"'
+f_nvMarket(d, n, stp, tp, id) =>
+    f_nv("oco market " + (d > 0 ? "buy" : "sell")) + ',"qty":"' + str.tostring(n) +
+         '","take_profit_price":"' + f_nvPx(tp) + '","stop_loss_price":"' + f_nvPx(stp) + '","oco_id":"' + id + '"}'
+nvClose = '{"alert":"market close","account":"' + ntAccount + '","ticker":"' + ntTicker + '"}'
+ctTicker = ctInstr == "" ? syminfo.ticker : ctInstr
+f_ct(cmd) =>
+    'key=' + ctKey + ';\ncommand=' + cmd + ';\naccount=' + ctAccount + ';\n'
+ctTail = ctDest == "Tradovate" ? '\ndestination=tradovate;' : ''
+ctSweep = f_ct("cancelorders") + 'instrument=' + ctTicker + ';' + ctTail
+// Resting limit entry with a take-profit / stop-loss bracket that arms on fill.
+f_msgPlace(d, n, e, stp, tp, id) =>
+    string m = na
+    if bridge == "NinjaView"
+        m := f_nv("oco limit " + (d > 0 ? "buy" : "sell")) + ',"qty":"' + str.tostring(n) + '","limit_price":"' + f_nvPx(e) +
+             '","take_profit_price":"' + f_nvPx(tp) + '","stop_loss_price":"' + f_nvPx(stp) + '","oco_id":"' + id + '"}'
+    else if bridge == "CrossTrade"
+        m := f_ct("place") + 'instrument=' + ctTicker + ';\naction=' + (d > 0 ? "buy" : "sell") + ';\nqty=' + str.tostring(n) +
+             ';\norder_type=limit;\nlimit_price=' + f_px(e) + ';\ntif=day;\ntake_profit=' + f_px(tp) + ';\nstop_loss=' + f_px(stp) +
+             ';\norder_id=' + id + ';' + ctTail
+    else
+        m := '{"ticker":"' + tickerOut + '","action":"' + (d > 0 ? "buy" : "sell") +
+             '","orderType":"limit","limitPrice":' + f_px(e) + ',"quantity":' + str.tostring(n) +
+             ',"stopLoss":{"type":"stop","stopPrice":' + f_px(stp) + '},"takeProfit":{"limitPrice":' + f_px(tp) + '}}'
+    m
+// Market entry with a take-profit / stop-loss bracket.
+f_msgMarket(d, n, stp, tp, id) =>
+    string m = na
+    if bridge == "NinjaView"
+        m := f_nvMarket(d, n, stp, tp, id)
+    else if bridge == "CrossTrade"
+        m := f_ct("place") + 'instrument=' + ctTicker + ';\naction=' + (d > 0 ? "buy" : "sell") + ';\nqty=' + str.tostring(n) +
+             ';\norder_type=market;\ntif=day;\ntake_profit=' + f_px(tp) + ';\nstop_loss=' + f_px(stp) + ';\norder_id=' + id + ';' + ctTail
+    else
+        m := '{"ticker":"' + tickerOut + '","action":"' + (d > 0 ? "buy" : "sell") + '","orderType":"market","quantity":' + str.tostring(n) +
+             ',"stopLoss":{"type":"stop","stopPrice":' + f_px(stp) + '},"takeProfit":{"limitPrice":' + f_px(tp) + '}}'
+    m
+f_msgCancel(id) =>
+    bridge == "NinjaView" ? f_nv("cancel oco") + ',"oco_id":"' + id + '"}' :
+         bridge == "CrossTrade" ? f_ct("cancel") + 'order_id=' + id + ';' + ctTail :
+         '{"ticker":"' + tickerOut + '","action":"cancel"}'
+f_msgExit(id) =>
+    bridge == "NinjaView" ? (id == "" ? nvClose : f_nv("cancel oco and flatten") + ',"oco_id":"' + id + '"}') :
+         bridge == "CrossTrade" ? f_ct("flatten") + 'instrument=' + ctTicker + ';' + ctTail :
+         '{"ticker":"' + tickerOut + '","action":"exit"}'
+
+// ── State ───────────────────────────────────────────────────────────────────
+// LX: 0 none, 1 building the range, 2 waiting for the first break, 3 waiting for a close
+// back inside, 4 order working, 5 in trade, 6 done for the session
+var int    lSt     = 0
+var float  lH      = na
+var float  lL      = na
+var float  lR      = na
+var int    lTEnd   = na          // time the range ended (ms)
+var int    lSide   = 0
+var float  lE      = na
+var float  lS      = na
+var float  lT      = na
+var int    lQty    = 0
+var int    lBrkBar = na
+var string lId     = ""
+var string lNote   = "waiting for 02:00"
+// GM: 0 none, 1 building the range, 2 order sent at the range close, 3 in trade, 4 done
+var int    gSt     = 0
+var float  gH      = na
+var float  gL      = na
+var int    gTEnd   = na
+var int    gSide   = 0
+var float  gS      = na
+var float  gT      = na
+var int    gQty    = 0
+var string gId     = ""
+var string gNote   = "waiting for 18:00"
+var int    ordSeq  = 0           // makes every order id unique
+var int    seenClosed = 0
+evt = ""                          // this bar's events, shown as one label
+
+// ── NinjaView "market at the level": send the LX entry the moment price reaches it ──
+// Runs on every realtime tick, before anything below updates: it reads the order the
+// strategy holds as of the last bar close. Each order is sent at most once.
+varip string nvSentL  = ""        // id of the LX order already sent (or skipped)
+varip string nvOpenId = ""        // entry sent whose trade may still be open
+varip string nvLast   = ""
+if nvMarket and alertsOn and barstate.isrealtime
+    if lSt == 4 and lId != nvSentL and (lSide > 0 ? low <= lE : high >= lE)
+        nvSentL := lId
+        if lSide > 0 ? close > lS : close < lS
+            alert(f_nvMarket(lSide, lQty, lS, lT, lId), alert.freq_all)
+            nvOpenId := lId
+            nvLast := "sent LX " + f_side(lSide) + " " + str.tostring(lQty) + " at " + f_px(close) + " (" + str.format_time(timenow, "HH:mm:ss", TZ) + ")"
+        else
+            nvLast := "skipped LX: price already past the stop (" + str.format_time(timenow, "HH:mm:ss", TZ) + ")"
+
+// ── Range building ──────────────────────────────────────────────────────────
+// A new range starts a new session for its setup. Safety net: nothing is carried into it.
+if newL or newG
+    if conf
+        strategy.cancel_all()
+    if strategy.position_size != 0
+        if conf
+            strategy.close_all(comment = "carried over: closed", immediately = true)
+        if alertsOn
+            alert(f_msgExit(""), alert.freq_once_per_bar_close)
+    if alertsOn and bridge == "CrossTrade"      // clean slate: no bracket leg outlives its session
+        alert(ctSweep, alert.freq_once_per_bar_close)
+
+if newL
+    lH := high
+    lL := low
+    lSt := 1
+    lSide := 0
+    lId := ""
+    lNote := "building the range"
+else if inL and lSt == 1
+    lH := math.max(lH, high)
+    lL := math.min(lL, low)
+
+if newG
+    gH := high
+    gL := low
+    gSt := 1
+    gSide := 0
+    gId := ""
+    gNote := "building the range"
+else if inG and gSt == 1
+    gH := math.max(gH, high)
+    gL := math.min(gL, low)
+
+// ── Fills seen at this bar close ────────────────────────────────────────────
+if strategy.closedtrades > seenClosed
+    for k = seenClosed to strategy.closedtrades - 1
+        eid = strategy.closedtrades.entry_id(k)
+        pft = strategy.closedtrades.profit(k)
+        if eid == "LX" and lSt != 6
+            lSt := 6
+            lNote := "closed " + (pft > 0 ? "+" : "") + str.tostring(pft, "#") + " $"
+        else if eid == "GM" and gSt != 4
+            gSt := 4
+            gNote := "closed " + (pft > 0 ? "+" : "") + str.tostring(pft, "#") + " $"
+    seenClosed := strategy.closedtrades
+
+openId = strategy.opentrades > 0 ? strategy.opentrades.entry_id(0) : ""
+if openId == "LX" and lSt == 4
+    lSt := 5
+    lNote := "in trade: " + f_side(lSide) + " " + str.tostring(lQty) + " · S " + f_px(lS) + " · T " + f_px(lT)
+    evt := "LX filled"
+if openId == "GM" and gSt == 2
+    gSt := 3
+    gNote := "in trade: " + f_side(gSide) + " " + str.tostring(gQty) + " · S " + f_px(gS) + " · T " + f_px(gT)
+
+// ── LX · London pullback ────────────────────────────────────────────────────
+// The range closes: wait for the first break.
+if inL and lSt == 1 and nextHm == lxEnd
+    lR := lH - lL
+    lTEnd := nextT
+    if not lxOn
+        lSt := 6
+        lNote := "off"
+    else if lR <= 0
+        lSt := 6
+        lNote := "no trade: empty range"
+    else
+        lSt := 2
+        lNote := "waiting for the first break of " + f_px(lL) + " – " + f_px(lH)
+
+// Minutes from the end of the range to the end of this bar (= the start of the next one).
+lMinsNext = na(lTEnd) ? 0.0 : (nextT - lTEnd) / 60000.0
+
+// Time is up while still waiting or working: cancel.
+if (lSt == 2 or lSt == 3 or lSt == 4) and not inL and lMinsNext >= lxCutMin
+    if lSt == 4
+        if conf
+            strategy.cancel("LX")
+            strategy.cancel("LX exit")
+        if alertsOn and not nvMarket
+            alert(f_msgCancel(bridge == "TradersPost" ? "" : lId), alert.freq_once_per_bar_close)
+    lNote := lSt == 4 ? "cancelled: not filled by the entry cutoff" : lSt == 3 ? "no trade: no close back inside before the cutoff" : "no trade: no break before the cutoff"
+    lSt := 6
+
+// First break of the range sets the direction and the levels.
+if lSt == 2 and not inL
+    up = high > lH
+    dn = low < lL
+    if up and dn
+        lSt := 6
+        lNote := "no trade: first bar broke both sides"
+    else if up or dn
+        eN = up ? f_tickDn(lH - lxE * lR) : f_tickUp(lL + lxE * lR)
+        sN = up ? f_tickDn(lH - lxS * lR) : f_tickUp(lL + lxS * lR)
+        tN = up ? f_tickUp(lH + lxT * lR) : f_tickDn(lL - lxT * lR)
+        n = f_lots(riskCap, math.abs(eN - sN))
+        rkN = n * math.abs(eN - sN) * syminfo.pointvalue
+        if math.abs(eN - sN) <= 0
+            lSt := 6
+            lNote := "no trade: the stop is not beyond the entry"
+        else if maxRisk > 0 and rkN > maxRisk
+            lSt := 6
+            lNote := "no trade: " + str.tostring(n) + " lot risks $" + str.tostring(rkN, "#")
+        else
+            lSt := 3
+            lSide := up ? 1 : -1
+            lE := eN
+            lS := sN
+            lT := tN
+            lQty := n
+            lBrkBar := bar_index
+            lNote := "break " + (up ? "up" : "down") + ": " + f_side(lSide) + " " + str.tostring(n) + " @ " + f_px(eN) + " · S " + f_px(sN) + " · T " + f_px(tN) + " · waiting for a close back inside"
+
+// First close back inside the range after the break bar: place the order.
+if lSt == 3 and bar_index > lBrkBar and (lSide > 0 ? close < lH : close > lL)
+    ordSeq += 1
+    lId := "LX-" + str.format_time(time, "yyMMdd", TZ) + "-" + str.tostring(ordSeq)
+    if conf
+        strategy.entry("LX", lSide > 0 ? strategy.long : strategy.short, qty = lQty, limit = lE)
+        strategy.exit("LX exit", from_entry = "LX", stop = lS, limit = lT)
+    if alertsOn and not nvMarket
+        alert(f_msgPlace(lSide, lQty, lE, lS, lT, lId), alert.freq_once_per_bar_close)
+    lSt := 4
+    lNote := "working: " + f_side(lSide) + " " + str.tostring(lQty) + " @ " + f_px(lE) + " · S " + f_px(lS) + " · T " + f_px(lT)
+    evt := "LX " + lNote
+
+// Flat time.
+if lSt == 5 and lMinsNext >= lxHoldMin
+    exitL = nvMarket ? nvOpenId : lId
+    if conf
+        strategy.cancel("LX exit")
+        strategy.close("LX", comment = "LX time", immediately = true)
+    if alertsOn
+        alert(f_msgExit(exitL), alert.freq_once_per_bar_close)
+        if bridge == "NinjaView" and exitL != ""
+            alert(nvClose, alert.freq_once_per_bar_close)
+        if bridge == "CrossTrade"
+            alert(ctSweep, alert.freq_once_per_bar_close)
+    lSt := 6
+    lNote := "closed at the time limit"
+
+// ── GM · Globex first-hour momentum ─────────────────────────────────────────
+if inG and gSt == 1 and nextHm == gmEnd
+    gR = gH - gL
+    gTEnd := nextT
+    gSt := 4
+    if not gmOn
+        gNote := "off"
+    else if gR <= 0
+        gNote := "no trade: empty range"
+    else
+        pos0 = (close - gL) / gR
+        if pos0 >= gmZone and pos0 <= 1 - gmZone
+            gNote := "no trade: the hour closed mid-range (" + str.tostring(pos0 * 100, "#") + "%)"
+        else
+            sd = pos0 > 1 - gmZone ? 1 : -1
+            sN = sd > 0 ? f_tickDn(gH - gmS * gR) : f_tickUp(gL + gmS * gR)
+            tN = sd > 0 ? f_tickUp(gH + gmT * gR) : f_tickDn(gL - gmT * gR)
+            dist = math.abs(close - sN)
+            n = f_lots(riskCap, dist)
+            rkN = n * dist * syminfo.pointvalue
+            if (close - sN) * sd <= 0 or (tN - close) * sd <= 0 or dist < 0.1 * gR
+                gNote := "no trade: the stop is too close to the price"
+            else if maxRisk > 0 and rkN > maxRisk
+                gNote := "no trade: " + str.tostring(n) + " lot risks $" + str.tostring(rkN, "#")
+            else
+                gSt := 2
+                gSide := sd
+                gS := sN
+                gT := tN
+                gQty := n
+                ordSeq += 1
+                gId := "GM-" + str.format_time(time, "yyMMdd", TZ) + "-" + str.tostring(ordSeq)
+                if conf
+                    strategy.entry("GM", sd > 0 ? strategy.long : strategy.short, qty = n)
+                    strategy.exit("GM exit", from_entry = "GM", stop = sN, limit = tN)
+                if alertsOn
+                    alert(f_msgMarket(sd, n, sN, tN, gId), alert.freq_once_per_bar_close)
+                gNote := f_side(sd) + " " + str.tostring(n) + " at the next open · S " + f_px(sN) + " · T " + f_px(tN) + " · risk $" + str.tostring(rkN, "#")
+                evt := "GM " + gNote
+
+gMinsNext = na(gTEnd) ? 0.0 : (nextT - gTEnd) / 60000.0
+if gSt == 3 and gMinsNext >= gmHoldMin
+    if conf
+        strategy.cancel("GM exit")
+        strategy.close("GM", comment = "GM time", immediately = true)
+    if alertsOn
+        alert(f_msgExit(gId), alert.freq_once_per_bar_close)
+        if bridge == "NinjaView" and gId != ""
+            alert(nvClose, alert.freq_once_per_bar_close)
+        if bridge == "CrossTrade"
+            alert(ctSweep, alert.freq_once_per_bar_close)
+    gSt := 4
+    gNote := "closed at the time limit"
+
+// Flat at a bar close: no NinjaView trade can still be open (its bracket closed it).
+if conf and strategy.position_size == 0
+    nvOpenId := ""
+
+if showLabels and evt != ""
+    label.new(bar_index, high, evt, yloc = yloc.abovebar, style = label.style_label_down,
+         color = color.new(color.teal, 25), textcolor = color.white, size = size.small, textalign = text.align_left)
+
+// ── Visuals ─────────────────────────────────────────────────────────────────
+showL = lSt >= 2 and not inL and lMinsNext <= lxHoldMin
+showG = gSt >= 2 and not inG and gMinsNext <= gmHoldMin
+plot(showL ? lH : na, "LX range high", color.new(color.gray, 0), 1, plot.style_linebr)
+plot(showL ? lL : na, "LX range low",  color.new(color.gray, 0), 1, plot.style_linebr)
+plot(showL and lSide != 0 ? lE : na, "LX entry", color.new(color.orange, 0), 2, plot.style_linebr)
+plot(showL and lSide != 0 ? lS : na, "LX stop",  color.new(color.red, 30), 1, plot.style_linebr)
+plot(showG ? gH : na, "GM range high", color.new(color.gray, 30), 1, plot.style_linebr)
+plot(showG ? gL : na, "GM range low",  color.new(color.gray, 30), 1, plot.style_linebr)
+plot(showG and gSide != 0 ? gS : na, "GM stop", color.new(color.red, 30), 1, plot.style_linebr)
+
+var table tb = table.new(position.top_right, 1, 3, bgcolor = color.new(color.black, 20))
+if barstate.islast
+    alertNote = not sendAlerts ? "Alerts off" : ctMissing ? "⚠ CrossTrade key or account is blank: NO alerts are sent" :
+         "Alerts on · " + bridge + (bridge == "NinjaView" ? " · LX " + (nvMarket ? "market at the level" : "resting limit") : "") +
+         (nvMarket and nvLast != "" ? " · " + nvLast : "")
+    table.cell(tb, 0, 0, "LX · " + lNote, text_color = lxOn ? color.white : color.gray, text_size = size.small, text_halign = text.align_left)
+    table.cell(tb, 0, 1, "GM · " + gNote, text_color = gmOn ? color.white : color.gray, text_size = size.small, text_halign = text.align_left)
+    table.cell(tb, 0, 2, alertNote, text_color = ctMissing and sendAlerts ? color.orange : color.silver, text_size = size.small, text_halign = text.align_left)

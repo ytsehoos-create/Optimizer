@@ -5,3 +5,8 @@ __pycache__/
 reports/
 *.log
 .DS_Store
+
+# MNQ review working files
+research/mnq_t2_review/data/
+research/mnq_t2_review/*.pkl
+research/mnq_t2_review/repdata.json

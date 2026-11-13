@@ -1,0 +1,15 @@
+from common import *
+pd.set_option("display.width", 250); pd.set_option("display.max_rows", 300)
+T = pd.read_pickle("sess_scan15.pkl")
+def show(sess, kind, cols):
+    x = T[(T.sess == sess) & (T.kind == kind)].copy()
+    for c in ("net", "netA", "netB", "dd", "ddB"): x[c] = x[c].round(0)
+    for c in ("pf", "pfA", "pfB", "win"): x[c] = x[c].round(2)
+    print("==", sess, kind); print(x[cols + ["n", "win", "net", "pf", "dd", "nA", "netA", "pfA", "nB", "netB", "pfB", "ddB"]].to_string(index=False))
+show("Globex18", "ZC", ["zone", "s", "t"])
+show("Euro02", "ZC", ["zone", "s", "t"])
+show("London03", "ZC", ["zone", "s", "t"])
+x = T[(T.sess == "London03") & (T.kind == "R")].sort_values("net", ascending=False).head(14)
+print("== London03 R top by net"); print(x[["e", "s", "t", "n", "win", "net", "pf", "dd", "nA", "netA", "pfA", "nB", "netB", "pfB"]].round(2).to_string(index=False))
+x = T[(T.sess == "Euro02") & (T.kind == "X")].sort_values("net", ascending=False).head(10)
+print("== Euro02 X top by net"); print(x[["e", "s", "t", "n", "win", "net", "pf", "dd", "nA", "netA", "pfA", "nB", "netB", "pfB"]].round(2).to_string(index=False))
