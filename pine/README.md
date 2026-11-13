@@ -7,10 +7,17 @@
 
 ## Checks when you load them
 
-- **v3.1 with T3 on**, 5-minute chart from Nov 17 2025: the Python replica gives 136 trades and +$29,866 through Nov 12 2026 (the v3 script gave 151 trades and +$28,825). With T3 off nothing changes from v3.
-- **Overnight**, 15-minute chart from Jan 2 2026: the port gives LX 160 trades, +$8,767 and GM 90 trades, +$3,086 through Nov 13 2026.
+- **v3.1 is your script plus the additions.** With T3 on, T3 Monday on and "T3: no trade while expanding" off, the Strategy Tester on the 5-minute chart must show the v3 result again: 151 trades, +$28,825.32 through Nov 12 2026. All 152 inherited input defaults were checked against the saved "T2 Combo" script.
+- **v3.1 defaults with T3 on**, same chart: the Python replica gives 136 trades and +$29,866. With T3 off nothing changes from v3.
+- **Overnight**, 15-minute extended-hours chart from Jan 2 2026: the port gives LX 160 trades, +$8,767 and GM 90 trades, +$3,086 through Nov 13 2026.
 
-Neither file has been compiled in TradingView. If the editor reports an error, the line number and message are enough to fix it. Run both on a simulator account before live use.
+## What TradingView has and has not seen
+
+- The overnight script compiled in TradingView. The connector used for the check runs the regular session only, so it was not backtested there.
+- The new v3.1 code (T3 weekday switches, regime arrays, T3 skip, T2R dial, status-table row) compiled in TradingView, and its regime reading matched the Python value on five dates to four decimals (for example 1.5828 on Nov 10 2026).
+- The whole v3.1 file was not compiled in one piece. If the editor reports an error, the line number and message are enough to fix it.
+
+Run both on a simulator account before live use.
 
 The research and the evidence for each default are in `research/mnq_t2_review/` and
 `output/2026.11.13-mnq-t2-review/dashboard.html`.

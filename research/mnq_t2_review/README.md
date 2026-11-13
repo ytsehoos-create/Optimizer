@@ -11,6 +11,7 @@ Research behind `pine/mnq_t2_v3_1.pine` and `pine/mnq_overnight.pine`. The findi
 | `seng.py` | "Session opening range" tester used for the overnight search: any range window, five setup types, conservative fills (a limit must be traded through; when a bar holds both stop and target, the stop counts). |
 | `onsim.py` | Port of `pine/mnq_overnight.pine`, statement for statement, on the same fill emulator. It gives the same trades as `seng.py`. |
 | `ibstruct.py`, `feats.py` | Per-day opening-range structure and the daily regime features, all known before 10:30 of the trade day. |
+| `deep_backtest_results.json` | TradingView Deep Backtesting runs of the saved script on Nov 2023 – Nov 2025 (exact 5-minute fills). |
 | everything else | One script per analysis step. `run_all.sh` lists them in order with a line on each. |
 
 ## Running it
@@ -39,7 +40,8 @@ Re-export the charts and the trade list, run `run_all.sh`, and look at three thi
 
 ## What the numbers rest on
 
-- Exact fills exist only for the 12 months of 5-minute history (Nov 2025 – Nov 2026), which is also the window the settings were tuned on.
-- Earlier years use the same rules on 15-minute bars. That understates T2R (it captures about 40% of the exact profit in the overlap year) but is the same yardstick each year. T3 enters at the 10:30 open with fixed levels, so it is exact for all three years.
+- Exact chart fills exist for the 12 months of 5-minute history (Nov 2025 – Nov 2026), which is also the window the settings were tuned on.
+- For Nov 2023 – Nov 2025 the T2 legs were run through TradingView Deep Backtesting on the saved script (`deep_backtest_results.json`). Tuned as shipped: 257 trades, +$4,412, PF 1.11, drawdown $5,266. One setting for all weekdays: 382 trades, +$5,200, PF 1.11. T2X alone: 110 trades, +$4,307, PF 1.32. Those are totals; the connector returns no trade list for a script with this many inputs.
+- The same rules on 15-minute bars (`prior.py`, `regime*.py`) were the first look at earlier years. They are close for the one-setting version and overstate the tuned one, so prefer the Deep Backtesting figures. T3 enters at the 10:30 open with fixed levels, so it is exact on 15-minute bars for all three years.
 - The overnight setups come from a search over about 1,400 combinations on 10.5 months of data. Treat their figures as an upper bound.
-- Neither Pine file has been through TradingView's compiler. Both were checked through the Python ports above.
+- Pine: the overnight script and the new v3.1 code compiled in TradingView, and the regime reading matched the Python value on five dates. The whole v3.1 file was not compiled in one piece; `pine/README.md` has the acceptance test.

@@ -1,0 +1,115 @@
+{
+  "source": "TradingView Deep Backtesting via the TradingView connector, saved script 'T2 Combo' (MNQ v3 \u00b7 T2R + T2X (one account), version 12.0), CME_MINI:MNQ1! 5m, regular session, run 2026-11-13",
+  "runs": [
+    {
+      "label": "as shipped, T3 on",
+      "from": "2025-11-17",
+      "to": "2026-11-12",
+      "trades": 154,
+      "net": 27653.88,
+      "pf": 2.918,
+      "win": 0.558,
+      "max_dd": 1227.28,
+      "note": "chart backtest of the same script over the same dates: 151 trades, 28825.32. Deep Backtesting stops a day earlier and its bars differ on a few days."
+    },
+    {
+      "label": "as shipped, T3 off (T2R + T2X)",
+      "from": "2023-11-01",
+      "to": "2025-11-17",
+      "trades": 257,
+      "net": 4411.98,
+      "pf": 1.108,
+      "win": 0.307,
+      "max_dd": 5266.44,
+      "long": {
+        "trades": 130,
+        "net": 4571.14,
+        "pf": 1.236
+      },
+      "short": {
+        "trades": 127,
+        "net": -159.16,
+        "pf": 0.993
+      }
+    },
+    {
+      "label": "one setting for all weekdays, flat $200, no IB sizing, T3 off",
+      "from": "2023-11-01",
+      "to": "2025-11-17",
+      "trades": 382,
+      "net": 5200.26,
+      "pf": 1.115,
+      "win": 0.343,
+      "max_dd": 5743.4,
+      "inputs": {
+        "in_2": false,
+        "in_16": true,
+        "in_22": 0.2,
+        "in_23": 0.3,
+        "in_30": 0,
+        "in_32": 0.2,
+        "in_33": 0.3,
+        "in_34": 0.25,
+        "in_41": true,
+        "in_67": 0.2,
+        "in_68": 0.6,
+        "in_69": 0.3,
+        "in_74": 0.3,
+        "in_80": 0,
+        "in_81": true,
+        "in_87": 0.2,
+        "in_89": 0.3,
+        "in_91": true,
+        "in_102": 0.3,
+        "in_106": true,
+        "in_112": 0.3
+      }
+    },
+    {
+      "label": "T2X alone (all T2R rows off), tuned, T3 off",
+      "from": "2023-11-01",
+      "to": "2025-11-17",
+      "trades": 110,
+      "net": 4307.22,
+      "pf": 1.324,
+      "win": 0.391,
+      "max_dd": 3242.86,
+      "long": {
+        "trades": 76,
+        "net": 571.46,
+        "pf": 1.057
+      },
+      "short": {
+        "trades": 34,
+        "net": 3735.76,
+        "pf": 2.121
+      },
+      "inputs": {
+        "in_21": false,
+        "in_26": false,
+        "in_31": false,
+        "in_36": false,
+        "in_46": false,
+        "in_51": false,
+        "in_56": false,
+        "in_61": false
+      }
+    }
+  ],
+  "replica_last_12_months_chart_data": {
+    "tuned_T3_off": {
+      "trades": 95,
+      "net": 26048,
+      "pf": 3.72,
+      "max_dd": 1108
+    },
+    "one_setting_T3_off": {
+      "trades": 134,
+      "net": 10774,
+      "pf": 1.9,
+      "max_dd": 1371
+    }
+  },
+  "overnight_script": "pine/mnq_overnight.pine compiled in TradingView (it ran to its own extended-hours guard). The connector only offers the regular session, so it could not be backtested there.",
+  "v31_additions_check": "The new v3.1 code compiled in TradingView. Regime reading from Pine vs Python: 2026-09-15 1.3019/1.3019, 2026-10-01 1.3669/1.3669, 2026-10-15 1.325/1.3250, 2026-10-30 1.6195/1.6195, 2026-11-10 1.5828/1.5828."
+}

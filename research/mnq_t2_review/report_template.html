@@ -95,19 +95,19 @@ footer { color: var(--muted); font-size: 13px; border-top: 1px solid var(--rule)
 <header>
   <div class="kicker">MNQ1! · 5-min RTH · Nov 17 2025 – Nov 12 2026 · reviewed Nov 13 2026</div>
   <h1>The T2 script has a real edge, a smaller one than its backtest, and a regime it depends on</h1>
-  <p class="lede">I rebuilt the strategy in Python and it reproduces your TradingView list exactly: 151 of 151 trades, same times, prices, sizes and P&amp;L. Everything below is measured on that replica, on your 3-year 15-minute file, and on your overnight files.</p>
+  <p class="lede">I rebuilt the strategy in Python and it reproduces your TradingView list exactly: 151 of 151 trades, same times, prices, sizes and P&amp;L. Everything below is measured on that replica, on TradingView Deep Backtesting of your saved script for 2023–2025, on your 3-year 15-minute file, and on your overnight files.</p>
 </header>
 
 <section>
   <div class="answers">
     <div><div class="q"><span>QUESTION 1</span>Improve current results</div>
-      <div class="a"><strong>Small gain from the existing rules, a larger one from where risk sits.</strong> Two T3 changes lift the 12 months from $28,825 to $29,866 and the last six from $9,099 to $9,696, with a lower drawdown. Over 40 other changes to the existing settings added nothing reliable. Moving risk toward T2X, the one leg that paid in all three years, is the bigger lever.</div></div>
+      <div class="a"><strong>Small gain from the existing rules, a larger one from where risk sits.</strong> Two T3 changes lift the 12 months from $28,825 to $29,866 and the last six from $9,099 to $9,696, with a lower drawdown. Over 40 other changes to the existing settings added nothing reliable. Moving risk toward T2X, the one leg that made money before the tuning window, is the bigger lever.</div></div>
     <div><div class="q"><span>QUESTION 2</span>Another session</div>
       <div class="a"><strong>Two candidates out of about 1,400 tested.</strong> A London-open pullback (02:00–03:00 ET range) and a Globex first-hour momentum trade (18:00–19:00 ET). Both were profitable in both halves of 2026 and are uncorrelated with the day script. Both come from a search on ten months of data, so treat them as simulator candidates.</div></div>
     <div><div class="q"><span>QUESTION 3</span>The last six months</div>
       <div class="a"><strong>Still profitable, at about half the pace.</strong> As traded: $19,726 in the first six months, $9,099 in the last six (profit factor 3.6, then 2.6). Every table below shows the last six months separately.</div></div>
     <div><div class="q"><span>QUESTION 4</span>Regime warnings</div>
-      <div class="a"><strong>Most of the before-and-after gap is tuning; part of it is a regime you can measure.</strong> The last 12 months had days that stayed unusually close to their first-hour range. The script now shows that reading every day, skips T3 when it turns, and I give drawdown limits for the rest, because last month's P&amp;L predicts nothing about the next.</div></div>
+      <div class="a"><strong>Tuning explains most of the gap; a regime you can measure explains the rest.</strong> With exact fills on the two years before your window, the tuned script and a one-setting version both made a profit factor of 1.11. In the last 12 months the one-setting version made 1.90: the market stayed unusually close to its first-hour range. The script now shows that reading every day and skips T3 when it turns. Drawdown limits cover the rest, because last month's P&amp;L predicts nothing about the next.</div></div>
   </div>
 </section>
 
@@ -136,18 +136,25 @@ footer { color: var(--muted); font-size: 13px; border-top: 1px solid var(--rule)
 </section>
 
 <section>
-  <h2>Before November 2025</h2>
-  <p class="sub">Your 5-minute history stops at the tuning window, so for earlier years I ran the same rules on the 15-minute file. That yardstick is harsh on T2R (in the overlap year it captures 40% of the exact profit) but it is the same yardstick in every year. T3 enters at the 10:30 open with fixed levels, so its numbers are exact in all three years.</p>
+  <h2>Before November 2025, with exact fills</h2>
+  <p class="sub">Your TradingView connector came online during this review, so I ran your saved script through Deep Backtesting on 5-minute bars for the two years before the tuning window. On the last 12 months it lands close to the chart (154 trades and $27,654 against 151 and $28,825), so I trust it for the earlier years.</p>
   <div class="tw"><table>
-    <thead><tr><th>Same rules, 15-min bars</th><th class="n">Nov 23 – Nov 24</th><th class="n">Nov 24 – Nov 25</th><th class="n">Nov 25 – Nov 26</th></tr></thead>
+    <thead><tr><th>Exact 5-minute fills</th><th class="n">Nov 2023 – Nov 2025 (two years)</th><th class="n">Last 12 months</th></tr></thead>
     <tbody>
-      <tr><td>Tuned settings, all legs · PF</td><td class="n">1.38</td><td class="n">1.04</td><td class="n">1.84</td></tr>
-      <tr><td>One setting for all weekdays · PF</td><td class="n">1.24</td><td class="n">0.96</td><td class="n">1.39</td></tr>
-      <tr><td>T2X only, tuned · net</td><td class="n">$5,466</td><td class="n">$2,840</td><td class="n">$4,184</td></tr>
-      <tr><td>T2R only, tuned · net</td><td class="n">$2,697</td><td class="n neg">−$2,013</td><td class="n">$4,536</td></tr>
-      <tr><td>T3 as shipped (exact) · net</td><td class="n neg">−$179</td><td class="n neg">−$145</td><td class="n">$2,777</td></tr>
-    </tbody></table></div>
-  <p class="cap">The last year is the best on every row, and the gap between years shrinks once tuning is removed. T2X is the only leg that paid in all three.</p>
+      <tr><td>T2R + T2X, tuned as shipped</td><td class="n">257 trades · $4,412 · PF 1.11 · DD $5,266</td><td class="n">95 trades · $26,048 · PF 3.72 · DD $1,108</td></tr>
+      <tr><td>T2R + T2X, one setting for all weekdays</td><td class="n">382 trades · $5,200 · PF 1.11 · DD $5,743</td><td class="n">134 trades · $10,774 · PF 1.90 · DD $1,371</td></tr>
+      <tr><td>T2X alone, tuned</td><td class="n">110 trades · $4,307 · PF 1.32 · DD $3,243</td><td class="n">41 trades · $8,815 · PF 4.44 · DD $586</td></tr>
+      <tr><td>T3 as shipped</td><td class="n">66 trades · <span class="neg">−$324</span></td><td class="n">56 trades · $2,777</td></tr>
+      <tr><td>T3 with the v3.1 rules</td><td class="n">30 trades · $1,563</td><td class="n">41 trades · $3,818</td></tr>
+    </tbody>
+  </table></div>
+  <p class="cap">Net profit, profit factor and maximum drawdown at the script's own risk settings. Two-year T2 rows are TradingView Deep Backtesting of your saved script; T3 rows and the last 12 months are the replica.</p>
+  <ul>
+    <li><strong>The tuning added nothing outside its window.</strong> Before November 2025 the tuned script and the one-setting version made the same profit factor, 1.11. Every dollar of lift from weekday-specific settings sits inside the 12 months they were chosen on.</li>
+    <li><strong>The idea itself did get better.</strong> The one-setting version went from 1.11 to 1.90. That part is the market, and the next section measures it.</li>
+    <li><strong>T2X carried the earlier years.</strong> It made $4,307 of the $4,412. T2R added almost nothing and most of the drawdown.</li>
+  </ul>
+  <p class="sub">A fair expectation for the two T2 legs is therefore the one-setting range: about $2,500 a year with $5,000 drawdowns in a market like 2024–2025, about $10,000 a year in a market like the last 12 months.</p>
 </section>
 
 <section>
@@ -173,7 +180,7 @@ footer { color: var(--muted); font-size: 13px; border-top: 1px solid var(--rule)
   <p class="cap">Net profit (trades). Across all weekdays T3 made PF 1.8 at or below 1.7 and PF 0.5 above it. A shuffle test puts the chance of a gap that size at under 1%, before allowing for the 50 measures I tried.</p>
   <ul>
     <li><strong>T3</strong> depends on it most. That is why it was flat for two years and good in the third.</li>
-    <li><strong>T2R</strong> leans the same way but less cleanly. In the exact year it made PF 4.3 with the reading at or below 1.6 and PF 2.2 above; at 1.7 the two sides were equal. On the 15-minute yardstick its average trade was 0.25R below the 3-year median reading and about zero above.</li>
+    <li><strong>T2R</strong> leans the same way. With exact fills it made almost nothing across the two earlier years, when 43% of sessions were expanding and 1% were calm. Inside the last 12 months it made PF 4.3 with the reading at or below 1.6 and PF 2.2 above.</li>
     <li><strong>T2X</strong> goes the other way, as a continuation trade should: PF 9.6 above 1.6 against 3.4 below. It is the leg that carries an expanding market.</li>
     <li><strong>IB size</strong> matters separately. T2 sits out when the IB exceeds 0.9% of price, which was 34% of days in the last 12 months against 20% before, so in volatile stretches the script is mostly T3.</li>
   </ul>
@@ -182,15 +189,15 @@ footer { color: var(--muted); font-size: 13px; border-top: 1px solid var(--rule)
 <section>
   <h2>Changes to the day script (v3.1)</h2>
   <div class="tw"><table>
-    <thead><tr><th>5-min exact</th><th class="n">Trades</th><th class="n">12 mo net</th><th class="n">PF</th><th class="n">Max DD</th><th class="n">Last 6 mo</th><th class="n">PF</th><th class="n">Prior 2 yr*</th></tr></thead>
+    <thead><tr><th>5-min exact</th><th class="n">Trades</th><th class="n">12 mo net</th><th class="n">PF</th><th class="n">Max DD</th><th class="n">Last 6 mo</th><th class="n">PF</th></tr></thead>
     <tbody>
-      <tr><td>As traded</td><td class="n">151</td><td class="n">$28,825</td><td class="n">3.16</td><td class="n">$978</td><td class="n">$9,099</td><td class="n">2.57</td><td class="n">$8,665</td></tr>
-      <tr><td>T3 Monday off</td><td class="n">139</td><td class="n">$29,563</td><td class="n">3.46</td><td class="n">$978</td><td class="n">$9,696</td><td class="n">2.90</td><td class="n">$9,304</td></tr>
-      <tr class="hi"><td><strong>+ T3 skipped above 1.7 (new default)</strong></td><td class="n">136</td><td class="n">$29,866</td><td class="n">3.57</td><td class="n">$774</td><td class="n">$9,696</td><td class="n">2.90</td><td class="n">$10,554</td></tr>
-      <tr><td>Option: T2X rows at $300 risk</td><td class="n">136</td><td class="n">$34,952</td><td class="n">3.76</td><td class="n">$1,005</td><td class="n">$11,096</td><td class="n">3.02</td><td class="n">$16,363</td></tr>
-      <tr><td>Option: T2R half risk above 1.7</td><td class="n">136</td><td class="n">$28,805</td><td class="n">3.65</td><td class="n">$774</td><td class="n">$9,524</td><td class="n">2.87</td><td class="n">$8,448</td></tr>
+      <tr><td>As traded</td><td class="n">151</td><td class="n">$28,825</td><td class="n">3.16</td><td class="n">$978</td><td class="n">$9,099</td><td class="n">2.57</td></tr>
+      <tr><td>T3 Monday off</td><td class="n">139</td><td class="n">$29,563</td><td class="n">3.46</td><td class="n">$978</td><td class="n">$9,696</td><td class="n">2.90</td></tr>
+      <tr class="hi"><td><strong>+ T3 skipped above 1.7 (new default)</strong></td><td class="n">136</td><td class="n">$29,866</td><td class="n">3.57</td><td class="n">$774</td><td class="n">$9,696</td><td class="n">2.90</td></tr>
+      <tr><td>Option: T2X rows at $300 risk</td><td class="n">136</td><td class="n">$34,952</td><td class="n">3.76</td><td class="n">$1,005</td><td class="n">$11,096</td><td class="n">3.02</td></tr>
+      <tr><td>Option: T2R half risk above 1.7</td><td class="n">136</td><td class="n">$28,805</td><td class="n">3.65</td><td class="n">$774</td><td class="n">$9,524</td><td class="n">2.87</td></tr>
     </tbody></table></div>
-  <p class="cap">The highlighted row is the new default. *Nov 2023 – Nov 2025 on the 15-minute yardstick. The two options are inputs you set yourself: T2X risk is the last field on each T2X row; the T2R dial is in the new Regime group and ships at ×1.</p>
+  <p class="cap">The highlighted row is the new default. On the two earlier years, with exact fills, the as-traded set made $4,088 and the new default $5,975. The two options are inputs you set yourself: T2X risk is the last field on each T2X row; the T2R dial is in the new Regime group and ships at ×1.</p>
   <ul>
     <li><strong>T3 Monday is off.</strong> It lost in each of the three years: 20 trades, −$1,377.</li>
     <li><strong>T3 is skipped while the reading is above 1.7.</strong> This costs nothing in the last six months, when the reading was rarely that high, and removes most of T3's losses in the two earlier years.</li>
@@ -238,7 +245,7 @@ footer { color: var(--muted); font-size: 13px; border-top: 1px solid var(--rule)
     <div class="rule"><h3>Large-IB days</h3><div class="now">now 7 of the last 20 · <span class="pill watch">watch</span></div>
       <p>When more than half the last 20 sessions have an IB above 0.9%, T2 is sidelined and you are running T3 alone, the weakest leg. October and November made $469 and $340.</p></div>
     <div class="rule"><h3>Drawdown from the peak</h3><div class="now">backtest worst $774</div>
-      <p>Reshuffling the year's own trades 5,000 times gives a 12-month drawdown of $1,286 at the median, $2,150 at the 95th percentile and $2,750 at the 99th. At $2,200 halve the size; at $2,750 stop and re-test.</p></div>
+      <p>Reshuffling the year's own trades 5,000 times gives a 12-month drawdown of $1,286 at the median, $2,150 at the 95th percentile and $2,750 at the 99th. At $2,200 halve the size; at $2,750 stop and re-test. Before the tuning window the script drew down $5,266, so these limits would have stopped it early in that market, which is their job.</p></div>
     <div class="rule"><h3>Re-tuning</h3><div class="now">monthly</div>
       <p>When you re-tune, also run the one-setting version. If it turns negative over the last six months while the tuned version still looks good, the tuning is doing all the work.</p></div>
   </div>
@@ -247,14 +254,14 @@ footer { color: var(--muted); font-size: 13px; border-top: 1px solid var(--rule)
 <section>
   <h2>What this work cannot tell you</h2>
   <ul>
-    <li>Exact T2R and T2X results exist only for the 12 months they were tuned on. The earlier years rest on 15-minute bars, which understate T2R. If you export the Deep Backtesting trade list for November 2023 to November 2025, I can tie the regime work to exact trades.</li>
+    <li>The exact results for the earlier years are totals. The connector returned no trade list for a script with this many inputs, so I could not tie individual T2R and T2X trades before November 2025 to the regime reading. T3 is exact trade by trade in all three years.</li>
     <li>The overnight candidates have ten and a half months of history and were chosen by searching it. There is no earlier intraday data to test them on.</li>
-    <li>I could not compile Pine here. The day script's v3.1 additions and the overnight script each match a Python port of the same logic, and the overnight port reproduces the search engine's results trade for trade, but neither file has been through TradingView's compiler. Check the 12-month net against $29,866 (T3 on) when you load v3.1, and run both on Sim101 first. Alerts ship off in the overnight script.</li>
+    <li>TradingView's compiler accepted the overnight script and the new v3.1 code, and its regime reading matched mine on five dates to four decimals. The connector runs the regular session only, so the overnight script was not backtested there, and the whole v3.1 file was not pushed through it in one piece. All 152 inherited input defaults match your saved script. To confirm v3.1 yourself: turn T3 on, turn T3 Monday on and the T3 regime skip off, and the Strategy Tester must show your 151 trades and $28,825.32 again.</li>
     <li>The regime threshold was found by looking at many measures. It held in each of three years and across 10-, 20- and 40-session windows, which is why I trust it for T3, but it is evidence and not proof.</li>
   </ul>
 </section>
 
-<footer>Costs as in the script: $0.62 per contract per side, one tick of slippage on stops and market orders. Data: TradingView exports of MNQ1! (5-min RTH, 5-min and 15-min extended hours, 15-min RTH from Nov 2023, daily from 2019).</footer>
+<footer>Costs as in the script: $0.62 per contract per side, one tick of slippage on stops and market orders. Data: TradingView exports of MNQ1! (5-min RTH, 5-min and 15-min extended hours, 15-min RTH from Nov 2023, daily from 2019) and TradingView Deep Backtesting of the saved script.</footer>
 </div>
 
 <script>
