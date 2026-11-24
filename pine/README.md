@@ -411,6 +411,11 @@ destination=tradovate;
 
 **Live fills:** the alert fires at the 10:25 close, a moment before the 10:30 bar opens. The live fill is the market price at that moment, which is usually within a tick or two of the backtest's 10:30 open.
 
+**Late-signal guard (added Nov 24 2026):** if the 10:25 close reaches the script more than 60 seconds after 10:30, T3 sends nothing and the strategy doesn't enter. The status table says "no T3: the 10:25 close arrived … s late".
+- **Why:** on Nov 24 the alert ran on TradingView's 10-minute-delayed CME data. CrossTrade received the T3 order at 10:40:07. Price had already reached the target and come back, and the trade lost about $330 where the backtest won $207.
+- **Where it applies:** live bars only, so backtests don't change. The limit is an input beside the other T3 settings (0 switches the guard off).
+- **What it doesn't cover:** T2's resting orders and the 15:55 flatten still go out when they arrive. A real-time CME data subscription on TradingView is what keeps every alert on time.
+
 **Re-tuning:** `t2_retune.py` simulates T3 when `t3=T3_DEFAULT` is set, but it doesn't re-tune it.
 
 ### Re-tuning the levels every 1–2 months

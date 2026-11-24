@@ -37,6 +37,8 @@
 //     top zone    → SHORT · stop IBH + s·R · target IBH − b·R
 //     bottom zone → LONG  · stop IBL − s·R · target IBL + b·R
 //   Same risk per trade and ceiling as T2. It never overlaps a T2 day.
+//   Live, T3 sends nothing if the 10:25 close reaches the script more than 60 s late
+//   (delayed market data, a backlog at the alert server): a late market entry would chase.
 //
 //   Flatten everything at the 15:55 bar close. Size = max(1, floor(risk $ ÷ stop $)).
 //   Defaults: $200 per trade; Wednesday T2R breakout fades and Wednesday T2X
@@ -250,6 +252,8 @@ t3Zone  = input.float(0.25, "   Outer zone at 10:25 (× R from the edge)", minva
 t3StopX = input.float(0.15, "   Stop beyond the IB edge (× R)", minval = 0, step = 0.05, group = G7)
 t3Back  = input.float(0.40, "   Target back inside from the edge (× R)", minval = 0.05, step = 0.05, group = G7)
 t3Risk  = input.float(0, "   Risk $ (0 = Risk per trade)", minval = 0, step = 25, group = G7)
+t3MaxLate = input.int(60, "   Skip if the 10:25 close arrives more than (seconds) late, 0 = off", minval = 0, group = G7,
+     tooltip = "Live bars only. If the 10:25 bar's close is processed more than this long after 10:30 (delayed market data, or a backlog at TradingView's alert servers), T3 sends nothing and the strategy doesn't enter: a market entry that late would chase price. Backtests are unaffected.")
 
 // A blank CrossTrade key or account holds back every alert (the backtest still runs);
 // the status table on the chart says so.
@@ -574,10 +578,15 @@ if lastIBBar and not na(ibH)
                 tg3 = sd3 < 0 ? f_tickDn(ibH - t3Back * R) : f_tickUp(ibL + t3Back * R)
                 n3 = f_lots(t3Risk > 0 ? t3Risk : riskCap, math.abs(close - s3))
                 rk3 = n3 * math.abs(close - s3) * syminfo.pointvalue
+                // Seconds between the bar's close (10:30:00) and this run; live bars only.
+                late3 = barstate.isrealtime ? (timenow - time_close) / 1000.0 : 0.0
                 if (tg3 - close) * sd3 <= 0
                     t3Note := "no T3: price already past the target"
                 else if maxRisk > 0 and rk3 > maxRisk
                     t3Note := "no T3: " + str.tostring(n3) + " lot risks $" + str.tostring(rk3, "#")
+                else if t3MaxLate > 0 and late3 > t3MaxLate
+                    t3Note := "no T3: the 10:25 close arrived " + str.tostring(late3, "#") + " s late (limit " + str.tostring(t3MaxLate) + " s)"
+                    evt3 := f_add(evt3, t3Note)
                 else
                     t3St := 1
                     t3Side := sd3
